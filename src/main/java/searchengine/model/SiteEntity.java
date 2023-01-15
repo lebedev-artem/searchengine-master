@@ -5,23 +5,24 @@ import lombok.Setter;
 
 import javax.persistence.*;
 import java.sql.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Setter
 @Getter
 @Entity
 @Table(name = "site")
-public class Site {
+public class SiteEntity {
 	@Id
 	@Column (nullable = false)
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private int id;
 
 	@Column(columnDefinition = "ENUM('INDEXING', 'INDEXED', 'FAILED')", nullable = false)
-	private Status status;
+	private String status;
 
 	@Column(name = "status_time", nullable = false)
-	private Date statusTime;
+	private LocalDateTime statusTime;
 
 	@Column(columnDefinition = "TEXT", name = "last_error", nullable = true, length = 500)
 	private String lastError;
@@ -32,11 +33,11 @@ public class Site {
 	@Column(columnDefinition = "VARCHAR(255)", nullable = false)
 	private String name;
 
-	@OneToMany(mappedBy = "site")
-	private List<Page> pages;
+	@OneToMany(mappedBy = "siteEntity")
+	private List<PageEntity> pageEntities;
 
-	@OneToMany(mappedBy = "site")
-	private List<Lemma> lemmas;
+	@OneToMany(mappedBy = "siteEntity")
+	private List<LemmaEntity> lemmaEntities;
 }
 
 /*

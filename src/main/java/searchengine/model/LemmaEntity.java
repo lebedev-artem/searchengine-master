@@ -8,17 +8,17 @@ import javax.persistence.*;
 @Getter
 @Entity
 @Table(name = "lemma")
-public class Lemma {
+public class LemmaEntity {
 	@Id
 	@Column(nullable = false)
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private int id;
 
-	@ManyToOne(fetch = FetchType.LAZY, targetEntity = Site.class, cascade = CascadeType.DETACH, optional = false)
+	@ManyToOne(fetch = FetchType.LAZY, targetEntity = SiteEntity.class, cascade = CascadeType.DETACH, optional = false)
 	@JoinColumn(foreignKey = @ForeignKey(name = "site_id_key_lemma"), columnDefinition = "Integer",
 			referencedColumnName = "id", name = "site_id", nullable = false, updatable = false)
 //	@Column(nullable = false, name = "site_id")
-	private Site site;
+	private SiteEntity siteEntity;
 
 	@Column(columnDefinition = "VARCHAR(255)", nullable = false)
 	private String lemma;

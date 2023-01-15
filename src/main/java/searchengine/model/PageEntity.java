@@ -2,9 +2,6 @@ package searchengine.model;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.BatchSize;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.stereotype.Indexed;
 
 import javax.persistence.*;
 import java.util.List;
@@ -14,18 +11,18 @@ import java.util.List;
 @Entity
 //@Table(name = "page", indexes = {@Index(name = "pathIndex", columnList = "path")})
 @Table(name = "page")
-public class Page {
+public class PageEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(nullable = false)
 	private int id;
 
-	@ManyToOne(fetch = FetchType.LAZY, targetEntity = Site.class, cascade = CascadeType.DETACH, optional = false)
+	@ManyToOne(fetch = FetchType.LAZY, targetEntity = SiteEntity.class, cascade = CascadeType.DETACH, optional = false)
 	@JoinColumn(foreignKey = @ForeignKey(name = "site_id_key_page"), columnDefinition = "Integer",
 			referencedColumnName = "id", name = "site_id", nullable = false, updatable = false)
 //	@Column(name = "site_id", nullable = false)
-	private Site site;
+	private SiteEntity siteEntity;
 
 //	columnDefinition = "TEXT"
 	@Column(name = "path", columnDefinition = "TEXT NOT NULL, KEY path_index (path(255))")
@@ -37,8 +34,8 @@ public class Page {
 	@Column(columnDefinition = "MEDIUMTEXT", nullable = false)
 	private String content;
 
-	@OneToMany(mappedBy = "page")
-	private List<SearchIndex> searchIndices;
+	@OneToMany(mappedBy = "pageEntity")
+	private List<SearchIndexEntity> searchIndexEntities;
 }
 
 /*

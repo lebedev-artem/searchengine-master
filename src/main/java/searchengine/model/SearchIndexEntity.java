@@ -9,18 +9,17 @@ import javax.persistence.*;
 @Getter
 @Entity
 @Table(name = "search_index")
-public class SearchIndex {
+public class SearchIndexEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(nullable = false)
 	private int id;
 
-	//	@Column(name = "page_id", nullable = false)
-	@ManyToOne(fetch = FetchType.LAZY, targetEntity = Page.class, cascade = CascadeType.DETACH, optional = false)
+	@ManyToOne(fetch = FetchType.LAZY, targetEntity = PageEntity.class, cascade = CascadeType.DETACH, optional = false)
 	@JoinColumn(foreignKey = @ForeignKey(name = "page_id_key"), columnDefinition = "Integer",
 			referencedColumnName = "id", name = "page_id", nullable = false, updatable = false)
-	private Page page;
+	private PageEntity pageEntity;
 
 	@Column(name = "lemma_id", nullable = false)
 	private int lemmaId;
