@@ -16,13 +16,16 @@ public class SearchIndexEntity {
 	@Column(nullable = false)
 	private int id;
 
-	@ManyToOne(fetch = FetchType.LAZY, targetEntity = PageEntity.class, cascade = CascadeType.DETACH, optional = false)
-	@JoinColumn(foreignKey = @ForeignKey(name = "page_id_key"), columnDefinition = "Integer",
+	@OneToOne(fetch = FetchType.LAZY, targetEntity = PageEntity.class, cascade = CascadeType.DETACH, optional = false)
+	@JoinColumn(foreignKey = @ForeignKey(name = "page_id_key_search_index"), columnDefinition = "Integer",
 			referencedColumnName = "id", name = "page_id", nullable = false, updatable = false)
 	private PageEntity pageEntity;
 
-	@Column(name = "lemma_id", nullable = false)
-	private int lemmaId;
+
+	@OneToOne(fetch = FetchType.LAZY, targetEntity = LemmaEntity.class, cascade = CascadeType.DETACH, optional = false)
+	@JoinColumn(foreignKey = @ForeignKey(name = "lemma_id_key_search_index"), columnDefinition = "Integer",
+			name = "lemma_id", referencedColumnName = "id", nullable = false)
+	private LemmaEntity lemmaEntity;
 
 	@Column(name = "lemma_rank", nullable = false)
 	private float lemmaRank;

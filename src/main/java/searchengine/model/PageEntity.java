@@ -31,11 +31,14 @@ public class PageEntity {
 	@Column(nullable = false)
 	private int code;
 
-	@Column(columnDefinition = "MEDIUMTEXT", nullable = false)
+	@Column(columnDefinition = "MEDIUMTEXT CHARECTER SET utf8mb4 COLLATE utf8mb4_general_ci", nullable = false, length = 16777215)
 	private String content;
 
 	@OneToMany(mappedBy = "pageEntity")
 	private List<SearchIndexEntity> searchIndexEntities;
+
+	@OneToOne(mappedBy = "pageEntity")
+	private SearchIndexEntity searchIndexEntity;
 }
 
 /*

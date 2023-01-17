@@ -21,4 +21,16 @@ public class Task {
 		task.setLevel(level + 1);
 		subTasks.add(task);
 	}
+
+	public Map<String, Integer> getLinksOfTask() {
+		return links;
+	}
+
+	public void setLevel(int level) {
+		this.level = level;
+	}
+
+	public void setLinksTask(Map<String, Integer> linksOfTask) {
+		this.links.putAll(linksOfTask);
+	}
 }

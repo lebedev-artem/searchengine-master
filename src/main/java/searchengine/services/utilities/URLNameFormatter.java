@@ -21,7 +21,7 @@ public class URLNameFormatter {
 	}
 
 	//    делает ссылку вида host1.hostname.com из http://www.host1.hostname.com/valera/nastalo/tvoe/vremya/
-	public String setZeroLevelURL(String r) {
+	public String createZeroLevelURL(String r) {
 		r = r.replaceAll(regexProtocol, "");
 		if (r.lastIndexOf("/") == r.length() - 1) {
 			r = r.substring(r.indexOf(r), r.length() - 1);

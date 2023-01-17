@@ -1,42 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration status="TRACE">
-
+<Configuration status="WARN">
     <Properties>
-        <Property
-                name="CLR">{FATAL=bright red bold, ERROR=red, WARN=bright yellow, INFO=Green, DEBUG=cyan, TRACE=blue}
-        </Property>
-        <Property
-                name="LOG_PATTERN">%highlight{%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n}${CLR}
-        </Property>
+        <Property name="LOG_EXCEPTION_CONVERSION_WORD">%xwEx</Property>
+        <Property name="LOG_PATH">./logs/</Property>
+        <Property name="LOG_LEVEL_PATTERN">%5p</Property>
+        <Property name="LOG_DATEFORMAT_PATTERN">yyyy-MM-dd'T'HH:mm:ss.SSSXXX</Property>
+        <Property name="CONSOLE_LOG_PATTERN">%clr{%d{${sys:LOG_DATEFORMAT_PATTERN}}}{faint} %clr{${sys:LOG_LEVEL_PATTERN}} %clr{%pid}{magenta} %clr{---}{faint} %clr{[%15.15t]}{faint} %clr{%-40.40c{1.}}{cyan} %clr{:}{faint} %m%n${sys:LOG_EXCEPTION_CONVERSION_WORD}</Property>
+        <Property name="FILE_LOG_PATTERN">%d{${sys:LOG_DATEFORMAT_PATTERN}} ${sys:LOG_LEVEL_PATTERN} %pid --- [%t] %-40.40c{1.} : %m%n${sys:LOG_EXCEPTION_CONVERSION_WORD}</Property>
     </Properties>
-
-    <appenders>
+    <Appenders>
         <Console name="Console" target="SYSTEM_OUT" follow="true">
-            <!--            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>-->
-            <PatternLayout pattern="${LOG_PATTERN}" disableAnsi="false"/>
+            <PatternLayout pattern="${sys:CONSOLE_LOG_PATTERN}" charset="${sys:CONSOLE_LOG_CHARSET}" />
         </Console>
-        <RollingFile name="RollingFile"
-                     fileName="./logs/spring-boot-logger-log4j2.log"
-                     filePattern="./logs/$${date:yyyy-MM}/spring-boot-logger-log4j2-%d{-dd-MMMM-yyyy}-%i.log.gz">
-            <PatternLayout>
-                <pattern>%d %p %C{1.} [%t] %m%n</pattern>
-            </PatternLayout>
+        <RollingFile name="File" fileName="${sys:LOG_FILE}" filePattern="${sys:LOG_PATH}/$${date:yyyy-MM}/app-%d{yyyy-MM-dd-HH}-%i.log.gz">
+            <PatternLayout pattern="${sys:FILE_LOG_PATTERN}" charset="${sys:FILE_LOG_CHARSET}"/>
             <Policies>
-                <!-- rollover on startup, daily and when the file reaches
-                    10 MegaBytes -->
-                <OnStartupTriggeringPolicy />
-                <SizeBasedTriggeringPolicy
-                        size="10 MB" />
-                <TimeBasedTriggeringPolicy />
+                <SizeBasedTriggeringPolicy size="10 MB" />
             </Policies>
         </RollingFile>
-    </appenders>
-
+    </Appenders>
     <Loggers>
+        <Logger name="org.apache.catalina.startup.DigesterFactory" level="error" />
+        <Logger name="org.apache.catalina.util.LifecycleBase" level="error" />
+        <Logger name="org.apache.coyote.http11.Http11NioProtocol" level="warn" />
+        <Logger name="org.apache.sshd.common.util.SecurityUtils" level="warn"/>
+        <Logger name="org.apache.tomcat.util.net.NioSelectorPool" level="warn" />
+        <Logger name="org.eclipse.jetty.util.component.AbstractLifeCycle" level="error" />
+        <Logger name="org.hibernate.validator.internal.util.Version" level="warn" />
+        <Logger name="org.springframework.boot.actuate.endpoint.jmx" level="warn"/>
         <Root level="info">
-            <AppenderRef ref="Console" />
-            <AppenderRef ref="RollingFile" />
+            <AppenderRef ref="Console" level="debug"/>
+            <AppenderRef ref="File" level="debug"/>
         </Root>
-        <Logger name="search_engine_diplom" level="trace"></Logger>
     </Loggers>
-</configuration>
+</Configuration>

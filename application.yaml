@@ -7,6 +7,10 @@ spring:
     username: root
     password: password
     url: jdbc:mysql://localhost:3306/search_engine?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true
+  output:
+      ansi:
+        enabled: always
+
   jpa:
     properties:
       hibernate:
@@ -19,6 +23,8 @@ spring:
 
 indexing-settings:
   sites:
+    - url: http://www.tema.ru
+      name: Артемий Лебедев
     - url: https://www.lenta.ru
       name: Лента.ру
     - url: https://www.skillbox.ru

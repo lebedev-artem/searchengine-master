@@ -3,19 +3,15 @@ package searchengine.services.indexing;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.Marker;
-import org.apache.logging.log4j.MarkerManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.Site;
-import searchengine.model.SiteEntity;
 import searchengine.model.Status;
 import searchengine.repositories.SiteRepository;
-import searchengine.services.utilities.ParsingEngine;
-import searchengine.services.utilities.URLNameFormatter;
+import searchengine.services.utilities.FillEntity;
 
-import java.time.LocalDateTime;
+import java.util.concurrent.ForkJoinPool;
 
 @Transactional
 @Component
@@ -24,20 +20,21 @@ public class IndexServiceImpl implements IndexService{
 
 	@Autowired
 	private SiteRepository siteRepository;
-//	private static Logger logger;
-	private static final Marker INFO = MarkerManager.getMarker("INFO");
-	private static final Marker INPUT_ERR = MarkerManager.getMarker("INPUT_ERR");
-	private static final Marker EXCEPTIONS = MarkerManager.getMarker("EXCEPTIONS");
+	@Autowired
+	private FillEntity fillEntity;
+	private static final Logger logger = LogManager.getRootLogger();
 
 	@Override
 	public void indexingStart(Site site) {
-		SiteEntity siteEntity = new SiteEntity();
-		siteEntity.setUrl(site.getUrl());
-		siteEntity.setName(site.getName());
-		siteEntity.setStatus(Status.INDEXING.toString());
-		siteEntity.setLastError("last error");
-		siteEntity.setStatusTime(LocalDateTime.now());
-		siteRepository.save(siteEntity);
+		Task rootTask = new Task(site.getUrl());
+		ParseSite parseSite = new ParseSite(rootTask);
+		logger.info("Info about " + site.getName() + " was added to search_engine.site");
+		siteRepository.save(fillEntity.fillSiteEntity(Status.INDEXING, "", site.getUrl(), site.getName()));
+		siteRepository.flush();
+		ForkJoinPool pool = new ForkJoinPool();
+		pool.invoke(parseSite);
+		logger.info(rootTask.getLinksOfTask().size() + " links was parsed from " + rootTask.getURL());
+
 	}
 
 	@Override

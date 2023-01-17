@@ -25,6 +25,11 @@ public class LemmaEntity {
 
 	@Column(nullable = false)
 	private int frequency;
+
+	@OneToOne(mappedBy = "lemmaEntity")
+	private SearchIndexEntity searchIndexEntity;
+
+
 }
 
 /*

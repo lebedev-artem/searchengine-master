@@ -21,7 +21,7 @@ public class SiteEntity {
 	@Column(columnDefinition = "ENUM('INDEXING', 'INDEXED', 'FAILED')", nullable = false)
 	private String status;
 
-	@Column(name = "status_time", nullable = false)
+	@Column(name = "status_time", nullable = false, columnDefinition = "DATETIME")
 	private LocalDateTime statusTime;
 
 	@Column(columnDefinition = "TEXT", name = "last_error", nullable = true, length = 500)
@@ -38,6 +38,7 @@ public class SiteEntity {
 
 	@OneToMany(mappedBy = "siteEntity")
 	private List<LemmaEntity> lemmaEntities;
+
 }
 
 /*
