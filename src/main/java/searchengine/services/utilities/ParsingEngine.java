@@ -1,10 +1,14 @@
 package searchengine.services.utilities;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jsoup.Jsoup;
 import org.jsoup.UnsupportedMimeTypeException;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import searchengine.controllers.ApiController;
+
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
@@ -19,6 +23,7 @@ public class ParsingEngine {
 	String regexValidURL = "^(ht|f)tp(s?)://[0-9a-zA-Z]([-.\\w]*[0-9a-zA-Z])*(:(0-9)*)*(/?)([a-zA-Z0-9\\-.?,'/\\\\+&%_]*)?$";
 	URLNameFormatter URLFormatter = new URLNameFormatter();
 	private String zeroLevelURL;
+	private static final Logger logger = LogManager.getLogger(ParsingEngine.class);
 
 	public ParsingEngine(){
 	}
@@ -84,7 +89,8 @@ public class ParsingEngine {
 			System.out.println(formatter.format(date) + " Exception in <getElementsFromURL>. " + URL + " not available");
 		} catch (SocketTimeoutException ex) {
 //            ex.printStackTrace();
-			System.out.println(formatter.format(date) + " Connect timed out / Read timed out");
+			logger.error("Connect timed out / Read timed out");
+//			System.out.println(formatter.format(date) + " Connect timed out / Read timed out");
 		} catch (UnsupportedMimeTypeException ex) {
 //            ex.printStackTrace();
 			System.out.println(formatter.format(date) + " Unhandled content type. Must be text/*, application/xml, or application/*+xml. Mimetype=application/json, URL= " + URL);
