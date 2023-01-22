@@ -9,7 +9,9 @@ import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.Site;
 import searchengine.model.Status;
 import searchengine.repositories.SiteRepository;
+import searchengine.services.ShutdownService;
 import searchengine.services.utilities.FillEntity;
+
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
@@ -22,10 +24,14 @@ public class IndexServiceImpl implements IndexService{
 	@Autowired
 	private FillEntity fillEntity;
 	private static final Logger logger = LogManager.getRootLogger();
-	ForkJoinPool pool = new ForkJoinPool();
+	private ForkJoinPool pool = new ForkJoinPool();
+
+	public ForkJoinPool getPool() {
+		return pool;
+	}
 
 	@Override
-	public synchronized Runnable indexingStart(Site site) {
+	public synchronized boolean indexingStart(Site site)  {
 		siteRepository.deleteByName(site.getName());
 		logger.info("Info about " + site.getName() + " was added to search_engine.site");
 		siteRepository.save(fillEntity.fillSiteEntity(Status.INDEXING, "", site.getUrl(), site.getName()));
@@ -36,26 +42,12 @@ public class IndexServiceImpl implements IndexService{
 		logger.info(rootTask.getLinksOfTask().size() + " links was parsed from " + rootTask.getURL());
 		logger.warn("Status of " + site.getName() + " was changed to INDEXED");
 		siteRepository.changeSiteStatus("INDEXED", site.getName());
-		return null;
+		return true;
 	}
 
 	@Override
 	public void indexingStop() {
-	pool.shutdown();
-		try {
-			// Wait a while for existing tasks to terminate
-			if (!pool.awaitTermination(60, TimeUnit.SECONDS)) {
-				pool.shutdownNow(); // Cancel currently executing tasks
-				// Wait a while for tasks to respond to being cancelled
-				if (!pool.awaitTermination(60, TimeUnit.SECONDS))
-					System.err.println("Pool did not terminate");
-			}
-		} catch (InterruptedException ie) {
-			// (Re-)Cancel if current thread also interrupted
-			pool.shutdownNow();
-			// Preserve interrupt status
-			Thread.currentThread().interrupt();
-		}
+		ShutdownService service = new ShutdownService();
+		service.stop(pool);
 	}
-
 }
