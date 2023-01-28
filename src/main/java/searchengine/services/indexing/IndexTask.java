@@ -2,7 +2,7 @@ package searchengine.services.indexing;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.springframework.stereotype.Component;
+import searchengine.config.Site;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -11,15 +11,16 @@ import java.util.TreeMap;
 @Getter
 @Setter
 @RequiredArgsConstructor
-public class Task {
+public class IndexTask {
 	private final String URL;
-	private final ArrayList<Task> subTasks = new ArrayList<>();
+	private final ArrayList<IndexTask> subIndexTasks = new ArrayList<>();
 	private int level = 0;
 	private final Map<String, Integer> links = new TreeMap<>();
+	private final Site site;
 
-	public void addSubTask(Task task) {
-		task.setLevel(level + 1);
-		subTasks.add(task);
+	public void addSubTask(IndexTask indexTask) {
+		indexTask.setLevel(level + 1);
+		subIndexTasks.add(indexTask);
 	}
 
 	public Map<String, Integer> getLinksOfTask() {

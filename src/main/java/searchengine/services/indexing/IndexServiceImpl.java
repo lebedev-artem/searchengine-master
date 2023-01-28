@@ -4,50 +4,83 @@ import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.Site;
-import searchengine.model.Status;
+import searchengine.config.SitesList;
 import searchengine.repositories.SiteRepository;
 import searchengine.services.ShutdownService;
-import searchengine.services.utilities.FillEntity;
+import searchengine.services.interfaces.IndexService;
+import searchengine.services.utilities.FillEntityImpl;
 
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.*;
 
 @Transactional
 @Component
 @RequiredArgsConstructor
-public class IndexServiceImpl implements IndexService{
+public class IndexServiceImpl implements IndexService {
 	@Autowired
-	private SiteRepository siteRepository;
+	private final SiteRepository siteRepository;
 	@Autowired
-	private FillEntity fillEntity;
-	private static final Logger logger = LogManager.getRootLogger();
+	private FillEntityImpl fillEntityImpl;
+	private static final Logger logger = LogManager.getLogger(IndexService.class);
 	private ForkJoinPool pool = new ForkJoinPool();
+	List<CompletableFuture<Void>> futures = new ArrayList<CompletableFuture<Void>>();
+	private ExecutorService poolOfSites;
+	private IndexResponse indexResponse = new IndexResponse();
+	Thread t;
+
 
 	public ForkJoinPool getPool() {
 		return pool;
 	}
 
 	@Override
-	public synchronized boolean indexingStart(Site site)  {
-		siteRepository.deleteByName(site.getName());
-		logger.info("Info about " + site.getName() + " was added to search_engine.site");
-		siteRepository.save(fillEntity.fillSiteEntity(Status.INDEXING, "", site.getUrl(), site.getName()));
-		logger.info("Start indexing " + site.getName() + " " + site.getUrl());
-		Task rootTask = new Task(site.getUrl());
-		ParseSite parseSite = new ParseSite(rootTask);
-		pool.invoke(parseSite);
-		logger.info(rootTask.getLinksOfTask().size() + " links was parsed from " + rootTask.getURL());
-		logger.warn("Status of " + site.getName() + " was changed to INDEXED");
-		siteRepository.changeSiteStatus("INDEXED", site.getName());
-		return true;
+	@Transactional
+	public ResponseEntity<?> indexingStart(SitesList sitesList) throws ExecutionException, InterruptedException {
+
+		ExecutorService executor = Executors.newFixedThreadPool(10);
+
+		t = new Thread(() -> {
+			for (Site site : sitesList.getSites()) {
+
+				logger.info("Status of site " + site.getName() + " set to INDEXING");
+				Runnable siteTask = () -> {
+					IndexTask rootIndexTask = new IndexTask(site.getUrl(), site);
+					ParseSite parseSite = new ParseSite(rootIndexTask, site);
+					pool.invoke(parseSite);
+					logger.info("Invoke " + site.getName() + " " + site.getUrl());
+
+				};
+				executor.execute(siteTask);
+				Future<String> result = executor.submit(siteTask, "DONE");
+				try {
+					result.get();
+				} catch (InterruptedException | RuntimeException | ExecutionException e) {
+//					e.printStackTrace();
+					logger.warn(e.getMessage());
+				}
+				if (result.isDone() == true) {
+					siteRepository.changeSiteStatus("INDEXED", site.getName());
+					logger.info("Status of site " + site.getName() + " set to INDEXED");
+				}
+
+			}
+		});
+		t.start();
+
+		logger.warn("All sites was indexed");
+		return indexResponse.successfully();
 	}
 
 	@Override
 	public void indexingStop() {
-		ShutdownService service = new ShutdownService();
-		service.stop(pool);
+		ShutdownService shutdownService = new ShutdownService();
+		t.interrupt();
+		shutdownService.stop(pool);
+
 	}
 }

@@ -1479,7 +1479,7 @@ var API = function(){
                 }
             }
         },
-        stopIndexing: {
+        Indexing: {
             address: '/stopIndexing',
             type: 'GET',
             action: function(result, $this){

@@ -2,6 +2,9 @@ package searchengine.services.indexing;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import searchengine.config.Site;
+import searchengine.repositories.SiteRepository;
 import searchengine.services.utilities.ParsingEngine;
 import searchengine.services.utilities.URLNameFormatter;
 
@@ -11,29 +14,34 @@ import java.util.*;
 import java.util.concurrent.RecursiveTask;
 
 public class ParseSite extends RecursiveTask<Map<String, Integer>> {
-	private static final Logger logger = LogManager.getRootLogger();
+	private static final Logger logger = LogManager.getLogger(ParseSite.class);
 	SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss");
-	private final Task rootTask;
+	private final IndexTask rootIndexTask;
 	private final String zeroLevelURL;
 	URLNameFormatter URLFormatter = new URLNameFormatter();
 	ParsingEngine parsingEngine = new ParsingEngine();
+	@Autowired
+	private SiteRepository siteRepository;
+	@Autowired
+	private Site site;
 
-	public ParseSite(Task t) {
-		this.rootTask = t;
-		String URL = rootTask.getURL();
+	public ParseSite(IndexTask t, Site site) {
+		this.rootIndexTask = t;
+		String URL = rootIndexTask.getURL();
 		zeroLevelURL = URLFormatter.createZeroLevelURL(URL);
 		parsingEngine.setZeroLevelURL(URLFormatter.createZeroLevelURL(URL));
+		this.site = site;
 	}
 
 	@Override
 	protected Map<String, Integer> compute() {
 		Map<String, Integer> links = new TreeMap<>();
-		String URLOfTask = rootTask.getURL(); //получаем у задачи ссылку
+		String URLOfTask = rootIndexTask.getURL(); //получаем у задачи ссылку
 
 		if (parsingEngine.linkIsFile(URLOfTask)) { //проверяем если ссылка - файл, то записываем в Map и возвращаем
-			links.put(rootTask.getURL(), URLFormatter.getLevel(rootTask.getURL()));
-			rootTask.setLinksTask(links);
-			return rootTask.getLinksOfTask();
+			links.put(rootIndexTask.getURL(), URLFormatter.getLevel(rootIndexTask.getURL()));
+			rootIndexTask.setLinksTask(links);
+			return rootIndexTask.getLinksOfTask();
 		}
 
 		List<ParseSite> subTasks = new LinkedList<>(); //Создаем List для подзадач
@@ -50,16 +58,16 @@ public class ParseSite extends RecursiveTask<Map<String, Integer>> {
 
 		if (subLinks != null) {
 			for (String subLink : subLinks.keySet()) {
-				Task subTask = new Task(subLink); //Создаем подзадачу для каждой ссылки
-				ParseSite fork_task = new ParseSite(subTask); //Рекурсия. Создаем экземпляр ParseLink для FJP от подзадачи
+				IndexTask subIndexTask = new IndexTask(subLink, site); //Создаем подзадачу для каждой ссылки
+				ParseSite fork_task = new ParseSite(subIndexTask, site); //Рекурсия. Создаем экземпляр ParseLink для FJP от подзадачи
 				fork_task.fork();
 				subTasks.add(fork_task); //Добавляем задачу в список задач
-				rootTask.addSubTask(subTask); //добавляем подзадачу в список подзадач вызвавшей задачи
+				rootIndexTask.addSubTask(subIndexTask); //добавляем подзадачу в список подзадач вызвавшей задачи
 			}
 			for (ParseSite join_task : subTasks) links.putAll(join_task.join());
 		}
-		rootTask.setLinksTask(links);
-		rootTask.setLinksTask(subLinks);
-		return rootTask.getLinksOfTask();
+		rootIndexTask.setLinksTask(links);
+		rootIndexTask.setLinksTask(subLinks);
+		return rootIndexTask.getLinksOfTask();
 	}
 }

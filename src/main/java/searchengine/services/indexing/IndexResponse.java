@@ -26,4 +26,9 @@ public class IndexResponse{
 	public ResponseEntity<IndexResponse> stopFailed(){
 		return new ResponseEntity<>(new IndexResponse(false, "Индексация не запущена"), HttpStatus.BAD_REQUEST);
 	}
+
+	public ResponseEntity<IndexResponse> indexPageFailed(){
+		return new ResponseEntity<>(new IndexResponse(false, "Данная страница находится за пределами сайтов, " +
+				"указанных в конфигурационном файле"), HttpStatus.NOT_FOUND);
+	}
 }

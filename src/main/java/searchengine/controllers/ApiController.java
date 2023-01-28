@@ -3,24 +3,20 @@ package searchengine.controllers;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.statistics.StatisticsResponse;
+import searchengine.repositories.CommonRepository;
 import searchengine.repositories.SiteRepository;
-import searchengine.services.ShutdownService;
 import searchengine.services.indexing.IndexResponse;
-import searchengine.services.indexing.IndexService;
-import searchengine.services.StatisticsService;
-import searchengine.services.indexing.IndexServiceImpl;
-import searchengine.services.utilities.FillEntity;
+import searchengine.services.interfaces.IndexService;
+import searchengine.services.interfaces.StatisticsService;
+import searchengine.services.utilities.FillEntityImpl;
 
-import java.util.ArrayList;
-import java.util.List;
+import javax.servlet.http.HttpServletRequest;
+import java.time.LocalDateTime;
 import java.util.concurrent.*;
 
 @RestController
@@ -34,13 +30,17 @@ public class ApiController {
 	@Autowired
 	private SiteRepository siteRepository;
 	@Autowired
+	private CommonRepository commonRepository;
+	@Autowired
 	private IndexService indexService;
 	@Autowired
-	private FillEntity fillEntity;
+	private FillEntityImpl fillEntityImpl;
 	private IndexResponse indexResponse = new IndexResponse();
-	private ExecutorService poolOfSites;
+	private ForkJoinPool forkJoinPool = new ForkJoinPool();
+	Thread t;
+
 	private volatile boolean isStarted = false;
-	List<Future<Boolean>> futures = new ArrayList<>();
+
 
 	public ApiController(StatisticsService statisticsService, SitesList sitesList, IndexService indexService) {
 		this.statisticsService = statisticsService;
@@ -54,31 +54,31 @@ public class ApiController {
 	}
 
 	@GetMapping("/startIndexing")
-	public ResponseEntity<?> startIndexing() {//        if we have to reset index to 0
-		List<Site> sites = sitesList.getSites();
-		poolOfSites = Executors.newFixedThreadPool(sites.size());
-		if (isStarted) {
-			return indexResponse.startFailed();
-		}
+	public ResponseEntity<?> startIndexing() throws ExecutionException, InterruptedException {
 		isStarted = true;
-		for (Site s : sites) {
-			futures.add(CompletableFuture.supplyAsync(() -> indexService.indexingStart(s), poolOfSites));
-		}
-		poolOfSites.shutdown();
-		return indexResponse.successfully();
+		return indexService.indexingStart(sitesList);
 	}
 
 	@GetMapping("/stopIndexing")
-	public ResponseEntity<?> stopIndexing() throws InterruptedException {
+	public ResponseEntity<?> stopIndexing(){
 		if (!isStarted) {
 			logger.error("@GetMapping (\"/stopIndexing). Failed to stop.");
 			return indexResponse.stopFailed();
 		}
 		indexService.indexingStop();
-		ShutdownService service = new ShutdownService();
-		service.stop(poolOfSites);
-
 		isStarted = false;
+		return indexResponse.successfully();
+	}
+
+
+	@PostMapping("/indexPage")
+	public ResponseEntity<?> indexPage(HttpServletRequest request){
+		boolean urlNotPresent = true;
+		for (Site sL : sitesList.getSites())
+			if (sL.getUrl().equals(request.getParameter("url"))) {
+				urlNotPresent = false;
+			}
+		if (urlNotPresent) return indexResponse.indexPageFailed();
 		return indexResponse.successfully();
 	}
 }

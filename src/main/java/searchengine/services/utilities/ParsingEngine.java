@@ -44,7 +44,8 @@ public class ParsingEngine {
 					if (s.matches(regexValidURL) //Проверяем валидность сслыки
 							&& s.contains(URLFormatter.cleanURLName(zeroLevelURL)) //Ссылка того же домена как и домен вызвавшей
 							&& !cleanS.equals(URLFormatter.cleanURLName(url)) //Ссылка не равна вызвавшей ссылке, loop
-							&& cleanS.indexOf(URLFormatter.cleanURLName(url)) == 0 //Ссылка того же уровня как вызвавшая, тоже устраняет loop
+							&& cleanS.indexOf(URLFormatter.cleanURLName(url)) == 0
+							//Ссылка того же уровня как вызвавшая, тоже устраняет loop
 							//как проверять итоговую коллекцию на предмет наличия ссылки еще не додумал
 							//под ТЗ подходит. Ссылки не уходят на уровень вниз, т.е. строят дерево вперед, и за стартовую страницу
 							//берут тот уровень ссылки, которая на входе
