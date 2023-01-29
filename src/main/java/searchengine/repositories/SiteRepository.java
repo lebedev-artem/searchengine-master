@@ -29,16 +29,19 @@ public interface SiteRepository extends JpaRepository<SiteEntity, Long> {
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "UPDATE `site` SET `status` = :status WHERE `name`=:name", nativeQuery = true)
-	void changeSiteStatus(String status, String name);
+	void updateSiteStatus(String status, String name);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "INSERT INTO `site` (status, status_time, last_error, url, name) VALUES (:status, :statusTime, :lastError, :url, :name)", nativeQuery = true)
 	void saveSiteEntity(String status, LocalDateTime statusTime, String lastError, String url, String name);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
-	@Query(value = "DELETE from `site`;" + "ALTER TABLE `site` AUTO_INCREMENT = 0", nativeQuery = true)
-	void deleteAllAndResetIndex();
+	@Query(value = "UPDATE `site` SET `status_time` = :statusTime WHERE `name`=:name", nativeQuery = true)
+	void updateStatusTime(String name, LocalDateTime statusTime);
 
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime, `last_error` = :error WHERE `status` = \"INDEXING\"", nativeQuery = true)
+	void updateAllSitesStatusTimeError(String status, LocalDateTime statusTime, String error);
 }
 
 

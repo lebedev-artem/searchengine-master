@@ -9,13 +9,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
+import searchengine.repositories.CommonRepository;
 import searchengine.repositories.SiteRepository;
 import searchengine.services.ShutdownService;
+import searchengine.services.interfaces.FillEntity;
 import searchengine.services.interfaces.IndexService;
-import searchengine.services.utilities.FillEntityImpl;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDateTime;
 import java.util.concurrent.*;
 
 @Transactional
@@ -25,62 +25,65 @@ public class IndexServiceImpl implements IndexService {
 	@Autowired
 	private final SiteRepository siteRepository;
 	@Autowired
-	private FillEntityImpl fillEntityImpl;
+	private CommonRepository commonRepository;
+	@Autowired
+	private FillEntity fillEntity;
 	private static final Logger logger = LogManager.getLogger(IndexService.class);
-	private ForkJoinPool pool = new ForkJoinPool();
-	List<CompletableFuture<Void>> futures = new ArrayList<CompletableFuture<Void>>();
-	private ExecutorService poolOfSites;
+	private ForkJoinPool fjpPool = new ForkJoinPool();
 	private IndexResponse indexResponse = new IndexResponse();
-	Thread t;
-
-
-	public ForkJoinPool getPool() {
-		return pool;
-	}
+	Thread singleTask;
+	Future<String> future;
+	ExecutorService executor = Executors.newSingleThreadExecutor();
+	private volatile boolean started = false;
 
 	@Override
 	@Transactional
-	public ResponseEntity<?> indexingStart(SitesList sitesList) throws ExecutionException, InterruptedException {
-
-		ExecutorService executor = Executors.newFixedThreadPool(10);
-
-		t = new Thread(() -> {
+	public synchronized ResponseEntity<?> indexingStart(SitesList sitesList) throws Exception {
+		singleTask = new Thread(() -> {
+			siteRepository.deleteAll();
+			commonRepository.resetIndex();
+			logger.info("Initialization of `site` table");
+			siteRepository.saveAll(fillEntity.initSiteEntity());
 			for (Site site : sitesList.getSites()) {
-
-				logger.info("Status of site " + site.getName() + " set to INDEXING");
-				Runnable siteTask = () -> {
-					IndexTask rootIndexTask = new IndexTask(site.getUrl(), site);
-					ParseSite parseSite = new ParseSite(rootIndexTask, site);
-					pool.invoke(parseSite);
-					logger.info("Invoke " + site.getName() + " " + site.getUrl());
-
-				};
-				executor.execute(siteTask);
-				Future<String> result = executor.submit(siteTask, "DONE");
-				try {
-					result.get();
-				} catch (InterruptedException | RuntimeException | ExecutionException e) {
-//					e.printStackTrace();
-					logger.warn(e.getMessage());
+				if (!singleTask.isInterrupted()) {
+					Callable<String> siteTask = () -> {
+						IndexTask rootIndexTask = new IndexTask(site.getUrl(), site);
+						ParseSite parseSite = new ParseSite(rootIndexTask, site);
+						fjpPool.invoke(parseSite);
+						logger.info("Invoke " + site.getName() + " " + site.getUrl());
+						return "Done";
+					};
+					future = executor.submit(siteTask);
+					try {
+						future.get();
+					} catch (InterruptedException | RuntimeException | ExecutionException e) {
+						logger.warn(e.getMessage());
+					}
+					if (future.isDone()) {
+						siteRepository.updateSiteStatus("INDEXED", site.getName());
+						siteRepository.updateStatusTime(site.getName(), LocalDateTime.now());
+						logger.info("Status of site " + site.getName() + " set to INDEXED");
+					}
 				}
-				if (result.isDone() == true) {
-					siteRepository.changeSiteStatus("INDEXED", site.getName());
-					logger.info("Status of site " + site.getName() + " set to INDEXED");
-				}
-
 			}
+			logger.warn("All sites was indexed");
+			fjpPool.shutdown();
 		});
-		t.start();
-
-		logger.warn("All sites was indexed");
+		singleTask.start();
 		return indexResponse.successfully();
 	}
 
 	@Override
-	public void indexingStop() {
+	public void indexingStop() throws ExecutionException, InterruptedException {
 		ShutdownService shutdownService = new ShutdownService();
-		t.interrupt();
-		shutdownService.stop(pool);
-
+		future.cancel(true);
+		logger.warn("future isCanceled - " + future.isCancelled());
+		singleTask.interrupt();
+		logger.warn("singleTask isInterrupted - " + singleTask.isInterrupted());
+		shutdownService.stop(executor);
+		logger.warn("executor.isShutdown() - " + executor.isShutdown());
+		shutdownService.stop(fjpPool);
+		logger.warn("fjpPool.isShutdown() - " + executor.isShutdown());
+		siteRepository.updateAllSitesStatusTimeError("FAILED", LocalDateTime.now(), "Индексация остановлена пользователем");
 	}
 }

@@ -23,8 +23,8 @@ spring:
 
 indexing-settings:
   sites:
-    - url: http://www.bbc.com
-      name: BBC.com
+#    - url: http://www.bbc.com
+#      name: BBC.com
     - url: http://www.tema.ru
       name: Артемий Лебедев
     - url: https://www.lenta.ru

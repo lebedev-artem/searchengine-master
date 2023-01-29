@@ -10,9 +10,9 @@ import java.util.concurrent.ForkJoinPool;
 @Service
 public interface IndexService{
 
-	public ResponseEntity<?> indexingStart(SitesList site) throws ExecutionException, InterruptedException;
+	public ResponseEntity<?> indexingStart(SitesList site) throws Exception;
 
-	public void indexingStop();
+	public void indexingStop() throws ExecutionException, InterruptedException;
 
-	public ForkJoinPool getPool();
+
 }

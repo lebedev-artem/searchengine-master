@@ -30,15 +30,12 @@ public class ApiController {
 	@Autowired
 	private SiteRepository siteRepository;
 	@Autowired
-	private CommonRepository commonRepository;
-	@Autowired
 	private IndexService indexService;
 	@Autowired
 	private FillEntityImpl fillEntityImpl;
 	private IndexResponse indexResponse = new IndexResponse();
 	private ForkJoinPool forkJoinPool = new ForkJoinPool();
 	Thread t;
-
 	private volatile boolean isStarted = false;
 
 
@@ -54,13 +51,14 @@ public class ApiController {
 	}
 
 	@GetMapping("/startIndexing")
-	public ResponseEntity<?> startIndexing() throws ExecutionException, InterruptedException {
+	public ResponseEntity<?> startIndexing() throws Exception {
+		if (isStarted) return indexResponse.startFailed();
 		isStarted = true;
 		return indexService.indexingStart(sitesList);
 	}
 
 	@GetMapping("/stopIndexing")
-	public ResponseEntity<?> stopIndexing(){
+	public ResponseEntity<?> stopIndexing() throws ExecutionException, InterruptedException {
 		if (!isStarted) {
 			logger.error("@GetMapping (\"/stopIndexing). Failed to stop.");
 			return indexResponse.stopFailed();
