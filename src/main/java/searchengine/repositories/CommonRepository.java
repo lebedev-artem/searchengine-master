@@ -16,9 +16,6 @@ import java.util.Optional;
 @Transactional
 @Repository
 public interface CommonRepository extends JpaRepository<CommonEntity, String> {
-	@Modifying(clearAutomatically = true, flushAutomatically = true)
-	@Query(value = "DELETE from `site`;\n" + "ALTER TABLE `site` AUTO_INCREMENT = 0", nativeQuery = true)
-	void deleteAllAndResetIndex();
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "ALTER TABLE `site` AUTO_INCREMENT = 0", nativeQuery = true)
