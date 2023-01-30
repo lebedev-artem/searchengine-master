@@ -4,7 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import searchengine.config.Site;
-import searchengine.repositories.SiteRepository;
+import searchengine.repositories.SiteEntityRepository;
 import searchengine.services.utilities.ParsingEngine;
 import searchengine.services.utilities.URLNameFormatter;
 
@@ -21,7 +21,7 @@ public class ParseSite extends RecursiveTask<Map<String, Integer>> {
 	URLNameFormatter URLFormatter = new URLNameFormatter();
 	ParsingEngine parsingEngine = new ParsingEngine();
 	@Autowired
-	private SiteRepository siteRepository;
+	private SiteEntityRepository siteEntityRepository;
 	@Autowired
 	private final Site site;
 	public static volatile boolean allowed = true;

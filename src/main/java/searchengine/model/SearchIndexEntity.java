@@ -9,7 +9,8 @@ import javax.persistence.*;
 @Getter
 @Entity
 @Table(name = "search_index")
-public class SearchIndexEntity {
+public class SearchIndexEntity implements BaseEntity{
+	private Boolean deleted;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

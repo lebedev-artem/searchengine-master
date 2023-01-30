@@ -1,17 +1,14 @@
 package searchengine.repositories;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.model.SiteEntity;
 
 import java.time.LocalDateTime;
 
-@Service
 @Transactional
 @org.springframework.stereotype.Repository
-public interface SiteRepository extends JpaRepository<SiteEntity, Long> {
+public interface SiteEntityRepository extends BaseRepository<SiteEntity, Long> {
 
 	/**
 	 * Для создания SQL запроса, необходимо указать nativeQuery = true<
@@ -25,7 +22,6 @@ public interface SiteRepository extends JpaRepository<SiteEntity, Long> {
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "DELETE from `site` WHERE `name` = :name", nativeQuery = true)
 	void deleteByName(String name);
-
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "UPDATE `site` SET `status` = :status WHERE `name`=:name", nativeQuery = true)

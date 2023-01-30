@@ -1,9 +1,14 @@
 package searchengine.model;
-import javax.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
+import javax.persistence.*;
+@Getter
+@Setter
 @Entity
 @Table(name = "sites_lemmas")
-public class SitesLemmasEntity {
+public class SitesLemmasEntity implements BaseEntity{
+	private Boolean deleted;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

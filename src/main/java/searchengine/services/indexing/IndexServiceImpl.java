@@ -1,40 +1,42 @@
 package searchengine.services.indexing;
 
+import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
-import searchengine.repositories.CommonRepository;
-import searchengine.repositories.SiteRepository;
-import searchengine.services.ShutdownService;
+import searchengine.repositories.SiteEntityRepository;
 import searchengine.services.interfaces.FillEntity;
 import searchengine.services.interfaces.IndexService;
 
 import java.time.LocalDateTime;
 import java.util.concurrent.*;
 
-@Transactional
-@Component
+@Service
 @RequiredArgsConstructor
+@AllArgsConstructor
 public class IndexServiceImpl implements IndexService {
+
 	@Autowired
-	private final SiteRepository siteRepository;
-	@Autowired
-	private CommonRepository commonRepository;
-	@Autowired
+	SiteEntityRepository siteEntityRepository;
 	private FillEntity fillEntity;
 	private static final Logger logger = LogManager.getLogger(IndexService.class);
 	private final IndexResponse indexResponse = new IndexResponse();
 	private static final ThreadLocal<Thread> singleTask = new ThreadLocal<Thread>();
-	private static Future<String> future;
+	private static Future<Integer> future;
 	private volatile boolean allowed = true;
 	private static ParseSite parseSite;
 
+//	public IndexServiceImpl(SiteEntityRepository siteEntityRepository, FillEntity fillEntity, boolean allowed) {
+//		this.siteEntityRepository = siteEntityRepository;
+//		this.fillEntity = fillEntity;
+//		this.allowed = allowed;
+//	}
 
 	@Override
 	@Transactional
@@ -42,37 +44,27 @@ public class IndexServiceImpl implements IndexService {
 		ForkJoinPool fjpPool = new ForkJoinPool();
 		ExecutorService executor = Executors.newSingleThreadExecutor();
 		allowed = true;
-		siteRepository.deleteAll();
-		commonRepository.resetIndex();
+		siteEntityRepository.deleteAll();
+		siteEntityRepository.resetIndex();
 		logger.warn("Initialization of `site` table");
-		siteRepository.saveAll(fillEntity.initSiteEntity());
+		siteEntityRepository.saveAll(fillEntity.initSiteEntity());
 
 		singleTask.set(new Thread(() -> {
 			for (Site site : sitesList.getSites()) {
-				if (!allowed) {
+				if (allowed) {
+					try {
+						future = executor.submit(() -> forkSiteTask(fjpPool, site));
+						logger.warn("Site " + site.getUrl() + " was parsed with " + future.get() + " links.");
+					} catch (InterruptedException | RuntimeException | ExecutionException e) {
+						logger.error("Error in adding a task to the pool");
+						logger.error("Error in future.get()");
+						logger.error(e.getStackTrace());
+					}
+					updateSiteAfterParse(site);
+				} else {
 					fjpPool.shutdownNow();
 					executor.shutdownNow();
 					break;
-				}
-				Callable<String> siteTask = () -> {
-					IndexTask rootIndexTask = new IndexTask(site.getUrl(), site);
-					parseSite = new ParseSite(rootIndexTask, site);
-					parseSite.setAllowed(true);
-					logger.info("Invoke " + site.getName() + " " + site.getUrl());
-					fjpPool.invoke(parseSite);
-					return "Done";
-				};
-				try {
-					future = executor.submit(siteTask);
-					future.get();
-				} catch (InterruptedException | RuntimeException | ExecutionException e) {
-					logger.warn("Faulty submit task to executor");
-					e.printStackTrace();
-				}
-				if (future.isDone() && allowed) {
-					siteRepository.updateSiteStatus("INDEXED", site.getName());
-					siteRepository.updateStatusTime(site.getName(), LocalDateTime.now());
-					logger.info("Status of site " + site.getName() + " set to INDEXED");
 				}
 			}
 			logger.info("Exit from thread");
@@ -85,7 +77,24 @@ public class IndexServiceImpl implements IndexService {
 	public ResponseEntity<?> indexingStop() throws ExecutionException, InterruptedException {
 		allowed = false;
 		parseSite.setAllowed(false);
-		siteRepository.updateAllSitesStatusTimeError("FAILED", LocalDateTime.now(), "Индексация остановлена пользователем");
+		siteEntityRepository.updateAllSitesStatusTimeError("FAILED", LocalDateTime.now(), "Индексация остановлена пользователем");
 		return indexResponse.successfully();
+	}
+
+	private static int forkSiteTask(ForkJoinPool fjpPool, Site site) {
+		IndexTask rootIndexTask = new IndexTask(site.getUrl(), site);
+		parseSite = new ParseSite(rootIndexTask, site);
+		parseSite.setAllowed(true);
+		logger.info("Invoke " + site.getName() + " " + site.getUrl());
+		fjpPool.invoke(parseSite);
+		return rootIndexTask.getLinksOfTask().size();
+	}
+
+	private void updateSiteAfterParse(Site site) {
+		if (future.isDone() && allowed) {
+			siteEntityRepository.updateSiteStatus("INDEXED", site.getName());
+			siteEntityRepository.updateStatusTime(site.getName(), LocalDateTime.now());
+			logger.info("Status of site " + site.getName() + " set to INDEXED");
+		}
 	}
 }

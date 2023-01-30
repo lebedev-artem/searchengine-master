@@ -9,7 +9,8 @@ import java.util.Set;
 @Getter
 @Entity
 @Table(name = "page")
-public class PageEntity {
+public class PageEntity implements BaseEntity {
+	private Boolean deleted;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -9,7 +9,9 @@ import java.util.Set;
 @Getter
 @Entity
 @Table(name = "site")
-public class SiteEntity {
+public class SiteEntity implements BaseEntity{
+	private Boolean deleted;
+
 	@Id
 	@Column (nullable = false)
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

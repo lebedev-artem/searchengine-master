@@ -9,7 +9,9 @@ import java.util.Set;
 @Getter
 @Entity
 @Table(name = "lemma")
-public class LemmaEntity {
+public class LemmaEntity implements BaseEntity {
+	private Boolean deleted;
+
 	@Id
 	@Column(nullable = false)
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,4 +28,5 @@ public class LemmaEntity {
 
 	@OneToOne(mappedBy = "lemmaEntity")
 	private SearchIndexEntity searchIndexEntity;
+
 }

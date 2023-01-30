@@ -9,11 +9,11 @@ import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.TotalStatistics;
-import searchengine.repositories.SiteRepository;
 import searchengine.services.indexing.IndexResponse;
 import searchengine.services.interfaces.IndexService;
 import searchengine.services.interfaces.StatisticsService;
 import searchengine.services.utilities.FillEntityImpl;
+
 import javax.servlet.http.HttpServletRequest;
 import java.util.concurrent.*;
 
@@ -25,8 +25,6 @@ public class ApiController {
 	@Autowired
 	private final SitesList sitesList;
 	private static final Logger logger = LogManager.getLogger(ApiController.class);
-	@Autowired
-	private SiteRepository siteRepository;
 	@Autowired
 	private final IndexService indexService;
 	@Autowired
@@ -57,19 +55,15 @@ public class ApiController {
 	@GetMapping("/stopIndexing")
 	public ResponseEntity<?> stopIndexing() throws ExecutionException, InterruptedException {
 		if (!isStarted) return indexResponse.stopFailed();
-		indexService.indexingStop();
 		isStarted = false;
-		return indexResponse.successfully();
+		return indexService.indexingStop();
 	}
 
-
 	@PostMapping("/indexPage")
-	public ResponseEntity<?> indexPage(HttpServletRequest request){
+	public ResponseEntity<?> indexPage(HttpServletRequest request) {
 		boolean urlNotPresent = true;
 		for (Site sL : sitesList.getSites())
-			if (sL.getUrl().equals(request.getParameter("url"))) {
-				urlNotPresent = false;
-			}
+			if (request.getParameter("url").equals(sL.getUrl())) urlNotPresent = false;
 		if (urlNotPresent) return indexResponse.indexPageFailed();
 		return indexResponse.successfully();
 	}
