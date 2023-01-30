@@ -1648,7 +1648,7 @@ var API = function(){
                             $this.removeClass('Tabs-block_update')
                         });
                     });
-                    if (result.statistics.total.isIndexing) {
+                    if (result.statistics.total.indexing) {
                         var $btnIndex = $('.btn[data-send="startIndexing"]'),
                             text = $btnIndex.find('.btn-content').text();
                         $btnIndex.find('.btn-content').text($btnIndex.data('alttext'));

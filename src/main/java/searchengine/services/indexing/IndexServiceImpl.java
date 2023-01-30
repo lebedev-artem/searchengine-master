@@ -29,61 +29,63 @@ public class IndexServiceImpl implements IndexService {
 	@Autowired
 	private FillEntity fillEntity;
 	private static final Logger logger = LogManager.getLogger(IndexService.class);
-	private ForkJoinPool fjpPool = new ForkJoinPool();
-	private IndexResponse indexResponse = new IndexResponse();
-	Thread singleTask;
-	Future<String> future;
-	ExecutorService executor = Executors.newSingleThreadExecutor();
-	private volatile boolean started = false;
+	private final IndexResponse indexResponse = new IndexResponse();
+	private static final ThreadLocal<Thread> singleTask = new ThreadLocal<Thread>();
+	private static Future<String> future;
+	private volatile boolean allowed = true;
+	private static ParseSite parseSite;
+
 
 	@Override
 	@Transactional
 	public synchronized ResponseEntity<?> indexingStart(SitesList sitesList) throws Exception {
-		singleTask = new Thread(() -> {
-			siteRepository.deleteAll();
-			commonRepository.resetIndex();
-			logger.info("Initialization of `site` table");
-			siteRepository.saveAll(fillEntity.initSiteEntity());
+		ForkJoinPool fjpPool = new ForkJoinPool();
+		ExecutorService executor = Executors.newSingleThreadExecutor();
+		allowed = true;
+		siteRepository.deleteAll();
+		commonRepository.resetIndex();
+		logger.warn("Initialization of `site` table");
+		siteRepository.saveAll(fillEntity.initSiteEntity());
+
+		singleTask.set(new Thread(() -> {
 			for (Site site : sitesList.getSites()) {
-				if (!singleTask.isInterrupted()) {
-					Callable<String> siteTask = () -> {
-						IndexTask rootIndexTask = new IndexTask(site.getUrl(), site);
-						ParseSite parseSite = new ParseSite(rootIndexTask, site);
-						fjpPool.invoke(parseSite);
-						logger.info("Invoke " + site.getName() + " " + site.getUrl());
-						return "Done";
-					};
+				if (!allowed) {
+					fjpPool.shutdownNow();
+					executor.shutdownNow();
+					break;
+				}
+				Callable<String> siteTask = () -> {
+					IndexTask rootIndexTask = new IndexTask(site.getUrl(), site);
+					parseSite = new ParseSite(rootIndexTask, site);
+					parseSite.setAllowed(true);
+					logger.info("Invoke " + site.getName() + " " + site.getUrl());
+					fjpPool.invoke(parseSite);
+					return "Done";
+				};
+				try {
 					future = executor.submit(siteTask);
-					try {
-						future.get();
-					} catch (InterruptedException | RuntimeException | ExecutionException e) {
-						logger.warn(e.getMessage());
-					}
-					if (future.isDone()) {
-						siteRepository.updateSiteStatus("INDEXED", site.getName());
-						siteRepository.updateStatusTime(site.getName(), LocalDateTime.now());
-						logger.info("Status of site " + site.getName() + " set to INDEXED");
-					}
+					future.get();
+				} catch (InterruptedException | RuntimeException | ExecutionException e) {
+					logger.warn("Faulty submit task to executor");
+					e.printStackTrace();
+				}
+				if (future.isDone() && allowed) {
+					siteRepository.updateSiteStatus("INDEXED", site.getName());
+					siteRepository.updateStatusTime(site.getName(), LocalDateTime.now());
+					logger.info("Status of site " + site.getName() + " set to INDEXED");
 				}
 			}
-			logger.warn("All sites was indexed");
-			fjpPool.shutdown();
-		});
-		singleTask.start();
+			logger.info("Exit from thread");
+		}));
+		singleTask.get().start();
 		return indexResponse.successfully();
 	}
 
 	@Override
-	public void indexingStop() throws ExecutionException, InterruptedException {
-		ShutdownService shutdownService = new ShutdownService();
-		future.cancel(true);
-		logger.warn("future isCanceled - " + future.isCancelled());
-		singleTask.interrupt();
-		logger.warn("singleTask isInterrupted - " + singleTask.isInterrupted());
-		shutdownService.stop(executor);
-		logger.warn("executor.isShutdown() - " + executor.isShutdown());
-		shutdownService.stop(fjpPool);
-		logger.warn("fjpPool.isShutdown() - " + executor.isShutdown());
+	public ResponseEntity<?> indexingStop() throws ExecutionException, InterruptedException {
+		allowed = false;
+		parseSite.setAllowed(false);
 		siteRepository.updateAllSitesStatusTimeError("FAILED", LocalDateTime.now(), "Индексация остановлена пользователем");
+		return indexResponse.successfully();
 	}
 }

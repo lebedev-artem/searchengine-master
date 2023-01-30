@@ -23,7 +23,9 @@ public class ParseSite extends RecursiveTask<Map<String, Integer>> {
 	@Autowired
 	private SiteRepository siteRepository;
 	@Autowired
-	private Site site;
+	private final Site site;
+	public static volatile boolean allowed = true;
+
 
 	public ParseSite(IndexTask t, Site site) {
 		this.rootIndexTask = t;
@@ -33,19 +35,32 @@ public class ParseSite extends RecursiveTask<Map<String, Integer>> {
 		this.site = site;
 	}
 
+	public boolean getAllowed() {
+		return allowed;
+	}
+
+	public void setAllowed(boolean allowed) {
+		ParseSite.allowed = allowed;
+	}
+
 	@Override
 	protected Map<String, Integer> compute() {
 		Map<String, Integer> links = new TreeMap<>();
 		String URLOfTask = rootIndexTask.getURL(); //получаем у задачи ссылку
+		List<ParseSite> subTasks = new LinkedList<>(); //Создаем List для подзадач
+		Map<String, Integer> subLinks = null; //Создаем Map для ссылок от вызвавшей ссылки
 
+		if (!allowed) {
+			extracted(links, subTasks, subLinks);
+//			System.out.println("I am here parseSite line 52");
+			return rootIndexTask.getLinksOfTask(); //Внешний флаг от метода indexStop
+		}
 		if (parsingEngine.linkIsFile(URLOfTask)) { //проверяем если ссылка - файл, то записываем в Map и возвращаем
 			links.put(rootIndexTask.getURL(), URLFormatter.getLevel(rootIndexTask.getURL()));
 			rootIndexTask.setLinksTask(links);
 			return rootIndexTask.getLinksOfTask();
 		}
 
-		List<ParseSite> subTasks = new LinkedList<>(); //Создаем List для подзадач
-		Map<String, Integer> subLinks = null; //Создаем Map для ссылок от вызвавшей ссылки
 		try {
 			subLinks = parsingEngine.getChildLinksFromElements(URLOfTask); //Получаем все ссылки от вызвавшей ссылки
 		} catch (InterruptedException ex) {
@@ -56,6 +71,13 @@ public class ParseSite extends RecursiveTask<Map<String, Integer>> {
 			logger.debug("java.io.IOException: Underlying input stream returned zero byte");
 		}
 
+		extracted(links, subTasks, subLinks);
+		rootIndexTask.setLinksTask(links);
+		rootIndexTask.setLinksTask(subLinks);
+		return rootIndexTask.getLinksOfTask();
+	}
+
+	private void extracted(Map<String, Integer> links, List<ParseSite> subTasks, Map<String, Integer> subLinks) {
 		if (subLinks != null) {
 			for (String subLink : subLinks.keySet()) {
 				IndexTask subIndexTask = new IndexTask(subLink, site); //Создаем подзадачу для каждой ссылки
@@ -66,8 +88,5 @@ public class ParseSite extends RecursiveTask<Map<String, Integer>> {
 			}
 			for (ParseSite join_task : subTasks) links.putAll(join_task.join());
 		}
-		rootIndexTask.setLinksTask(links);
-		rootIndexTask.setLinksTask(subLinks);
-		return rootIndexTask.getLinksOfTask();
 	}
 }

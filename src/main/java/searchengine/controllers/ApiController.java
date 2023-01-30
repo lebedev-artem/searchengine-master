@@ -8,15 +8,13 @@ import org.springframework.web.bind.annotation.*;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.statistics.StatisticsResponse;
-import searchengine.repositories.CommonRepository;
+import searchengine.dto.statistics.TotalStatistics;
 import searchengine.repositories.SiteRepository;
 import searchengine.services.indexing.IndexResponse;
 import searchengine.services.interfaces.IndexService;
 import searchengine.services.interfaces.StatisticsService;
 import searchengine.services.utilities.FillEntityImpl;
-
 import javax.servlet.http.HttpServletRequest;
-import java.time.LocalDateTime;
 import java.util.concurrent.*;
 
 @RestController
@@ -30,12 +28,11 @@ public class ApiController {
 	@Autowired
 	private SiteRepository siteRepository;
 	@Autowired
-	private IndexService indexService;
+	private final IndexService indexService;
 	@Autowired
 	private FillEntityImpl fillEntityImpl;
-	private IndexResponse indexResponse = new IndexResponse();
-	private ForkJoinPool forkJoinPool = new ForkJoinPool();
-	Thread t;
+	TotalStatistics totalStatistics = new TotalStatistics();
+	private final IndexResponse indexResponse = new IndexResponse();
 	private volatile boolean isStarted = false;
 
 
@@ -59,10 +56,7 @@ public class ApiController {
 
 	@GetMapping("/stopIndexing")
 	public ResponseEntity<?> stopIndexing() throws ExecutionException, InterruptedException {
-		if (!isStarted) {
-			logger.error("@GetMapping (\"/stopIndexing). Failed to stop.");
-			return indexResponse.stopFailed();
-		}
+		if (!isStarted) return indexResponse.stopFailed();
 		indexService.indexingStop();
 		isStarted = false;
 		return indexResponse.successfully();

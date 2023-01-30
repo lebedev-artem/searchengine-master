@@ -10,6 +10,7 @@ spring:
   output:
       ansi:
         enabled: always
+  log:
 
   jpa:
     properties:
@@ -20,19 +21,26 @@ spring:
       show-sql: true
       format_sql: true
       use_sql_comments: true
+  jsoup:
+    userAgent:
 
 indexing-settings:
   sites:
-#    - url: http://www.bbc.com
-#      name: BBC.com
     - url: http://www.tema.ru
       name: Артемий Лебедев
+    - url: http://twitter.com
+      name: TWITTER
+    - url: http://slenta.ru/
+      name: sLenta
+    - url: http://www.bbc.com
+      name: BBC.com
+    - url: https://www.rambler.ru
+      name: Rambler.Ru
     - url: https://www.lenta.ru
       name: Лента.ру
     - url: https://www.skillbox.ru
       name: Skillbox
     - url: https://www.playback.ru
       name: PlayBack.Ru
-    - url: https://www.rambler.ru
-      name: Rambler.Ru
+
 
