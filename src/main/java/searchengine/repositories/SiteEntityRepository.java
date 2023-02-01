@@ -1,14 +1,16 @@
 package searchengine.repositories;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.model.SiteEntity;
 
 import java.time.LocalDateTime;
 
 @Transactional
-@org.springframework.stereotype.Repository
-public interface SiteEntityRepository extends BaseRepository<SiteEntity, Long> {
+@Repository
+public interface SiteEntityRepository extends JpaRepository<SiteEntity, Long> {
 
 	/**
 	 * Для создания SQL запроса, необходимо указать nativeQuery = true<

@@ -6,8 +6,7 @@ spring:
   datasource:
     username: root
     password: password
-#    driver-class-name: mysql-connector-java
-    url: jdbc:mysql://localhost:3306/search_engine?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true;
+    url: jdbc:mysql://localhost:3306/search_engine?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true
   output:
       ansi:
         enabled: always

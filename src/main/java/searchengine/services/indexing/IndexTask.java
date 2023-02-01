@@ -2,6 +2,8 @@ package searchengine.services.indexing;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import searchengine.config.Site;
 
 import java.util.ArrayList;
@@ -22,6 +24,7 @@ public class IndexTask {
 		indexTask.setLevel(level + 1);
 		subIndexTasks.add(indexTask);
 	}
+
 
 	public Map<String, Integer> getLinksOfTask() {
 		return links;

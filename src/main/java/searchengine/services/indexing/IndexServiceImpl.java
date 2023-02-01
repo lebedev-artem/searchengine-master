@@ -14,29 +14,21 @@ import searchengine.repositories.SiteEntityRepository;
 import searchengine.services.interfaces.FillEntity;
 import searchengine.services.interfaces.IndexService;
 
-import java.time.LocalDateTime;
 import java.util.concurrent.*;
 
 @Service
 @RequiredArgsConstructor
-@AllArgsConstructor
 public class IndexServiceImpl implements IndexService {
 
-	@Autowired
-	SiteEntityRepository siteEntityRepository;
-	private FillEntity fillEntity;
+	private final FillEntity fillEntity;
 	private static final Logger logger = LogManager.getLogger(IndexService.class);
 	private final IndexResponse indexResponse = new IndexResponse();
 	private static final ThreadLocal<Thread> singleTask = new ThreadLocal<Thread>();
 	private static Future<Integer> future;
 	private volatile boolean allowed = true;
-	private static ParseSite parseSite;
-
-//	public IndexServiceImpl(SiteEntityRepository siteEntityRepository, FillEntity fillEntity, boolean allowed) {
-//		this.siteEntityRepository = siteEntityRepository;
-//		this.fillEntity = fillEntity;
-//		this.allowed = allowed;
-//	}
+	@Autowired
+	private static ParseSiteService parseSiteService;
+//	private final SiteEntityRepository siteEntityRepository;
 
 	@Override
 	@Transactional
@@ -44,10 +36,10 @@ public class IndexServiceImpl implements IndexService {
 		ForkJoinPool fjpPool = new ForkJoinPool();
 		ExecutorService executor = Executors.newSingleThreadExecutor();
 		allowed = true;
-		siteEntityRepository.deleteAll();
-		siteEntityRepository.resetIndex();
+//		siteEntityRepository.deleteAll();
+//		siteEntityRepository.resetIndex();
 		logger.warn("Initialization of `site` table");
-		siteEntityRepository.saveAll(fillEntity.initSiteEntity());
+//		siteEntityRepository.saveAll(fillEntity.initSiteEntity());
 
 		singleTask.set(new Thread(() -> {
 			for (Site site : sitesList.getSites()) {
@@ -76,24 +68,24 @@ public class IndexServiceImpl implements IndexService {
 	@Override
 	public ResponseEntity<?> indexingStop() throws ExecutionException, InterruptedException {
 		allowed = false;
-		parseSite.setAllowed(false);
-		siteEntityRepository.updateAllSitesStatusTimeError("FAILED", LocalDateTime.now(), "Индексация остановлена пользователем");
+		parseSiteService.setAllowed(false);
+//		siteEntityRepository.updateAllSitesStatusTimeError("FAILED", LocalDateTime.now(), "Индексация остановлена пользователем");
 		return indexResponse.successfully();
 	}
 
 	private static int forkSiteTask(ForkJoinPool fjpPool, Site site) {
 		IndexTask rootIndexTask = new IndexTask(site.getUrl(), site);
-		parseSite = new ParseSite(rootIndexTask, site);
-		parseSite.setAllowed(true);
+		parseSiteService = new ParseSiteService(rootIndexTask, site);
+		parseSiteService.setAllowed(true);
 		logger.info("Invoke " + site.getName() + " " + site.getUrl());
-		fjpPool.invoke(parseSite);
+		fjpPool.invoke(parseSiteService);
 		return rootIndexTask.getLinksOfTask().size();
 	}
 
 	private void updateSiteAfterParse(Site site) {
 		if (future.isDone() && allowed) {
-			siteEntityRepository.updateSiteStatus("INDEXED", site.getName());
-			siteEntityRepository.updateStatusTime(site.getName(), LocalDateTime.now());
+//			siteEntityRepository.updateSiteStatus("INDEXED", site.getName());
+//			siteEntityRepository.updateStatusTime(site.getName(), LocalDateTime.now());
 			logger.info("Status of site " + site.getName() + " set to INDEXED");
 		}
 	}
