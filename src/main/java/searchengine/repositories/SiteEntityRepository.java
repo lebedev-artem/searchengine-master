@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 
 @Transactional
 @Repository
-public interface SiteEntityRepository extends JpaRepository<SiteEntity, Long> {
+public interface SiteEntityRepository extends BaseRepository<SiteEntity, Long> {
 
 	/**
 	 * Для создания SQL запроса, необходимо указать nativeQuery = true<

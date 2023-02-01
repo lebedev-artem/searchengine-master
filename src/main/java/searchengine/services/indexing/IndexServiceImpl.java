@@ -1,6 +1,5 @@
 package searchengine.services.indexing;
 
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -8,12 +7,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.yaml.snakeyaml.scanner.Constant;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.repositories.SiteEntityRepository;
 import searchengine.services.interfaces.FillEntity;
 import searchengine.services.interfaces.IndexService;
 
+import java.lang.constant.Constable;
+import java.time.LocalDateTime;
 import java.util.concurrent.*;
 
 @Service
@@ -28,25 +30,27 @@ public class IndexServiceImpl implements IndexService {
 	private volatile boolean allowed = true;
 	@Autowired
 	private static ParseSiteService parseSiteService;
-//	private final SiteEntityRepository siteEntityRepository;
+	@Autowired
+	private final SiteEntityRepository siteEntityRepository;
 
 	@Override
 	@Transactional
 	public synchronized ResponseEntity<?> indexingStart(SitesList sitesList) throws Exception {
 		ForkJoinPool fjpPool = new ForkJoinPool();
 		ExecutorService executor = Executors.newSingleThreadExecutor();
+		logger.warn("--- Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started---");
 		allowed = true;
-//		siteEntityRepository.deleteAll();
-//		siteEntityRepository.resetIndex();
-		logger.warn("Initialization of `site` table");
-//		siteEntityRepository.saveAll(fillEntity.initSiteEntity());
+		siteEntityRepository.deleteAll();
+		siteEntityRepository.resetIndex();
+		logger.warn("--- Initialization of `site` table ---");
+		siteEntityRepository.saveAll(fillEntity.initSiteEntity());
 
 		singleTask.set(new Thread(() -> {
 			for (Site site : sitesList.getSites()) {
 				if (allowed) {
 					try {
 						future = executor.submit(() -> forkSiteTask(fjpPool, site));
-						logger.warn("Site " + site.getUrl() + " was parsed with " + future.get() + " links.");
+						logger.warn("--- Site " + site.getUrl() + " was parsed with " + future.get() + " links. ---");
 					} catch (InterruptedException | RuntimeException | ExecutionException e) {
 						logger.error("Error in adding a task to the pool");
 						logger.error("Error in future.get()");
@@ -67,13 +71,15 @@ public class IndexServiceImpl implements IndexService {
 
 	@Override
 	public ResponseEntity<?> indexingStop() throws ExecutionException, InterruptedException {
+		logger.warn("--- Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started---");
 		allowed = false;
 		parseSiteService.setAllowed(false);
-//		siteEntityRepository.updateAllSitesStatusTimeError("FAILED", LocalDateTime.now(), "Индексация остановлена пользователем");
+		siteEntityRepository.updateAllSitesStatusTimeError("FAILED", LocalDateTime.now(), "Индексация остановлена пользователем");
 		return indexResponse.successfully();
 	}
 
 	private static int forkSiteTask(ForkJoinPool fjpPool, Site site) {
+		logger.warn("--- Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started---");
 		IndexTask rootIndexTask = new IndexTask(site.getUrl(), site);
 		parseSiteService = new ParseSiteService(rootIndexTask, site);
 		parseSiteService.setAllowed(true);
@@ -83,9 +89,10 @@ public class IndexServiceImpl implements IndexService {
 	}
 
 	private void updateSiteAfterParse(Site site) {
+		logger.warn("--- Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started---");
 		if (future.isDone() && allowed) {
-//			siteEntityRepository.updateSiteStatus("INDEXED", site.getName());
-//			siteEntityRepository.updateStatusTime(site.getName(), LocalDateTime.now());
+			siteEntityRepository.updateSiteStatus("INDEXED", site.getName());
+			siteEntityRepository.updateStatusTime(site.getName(), LocalDateTime.now());
 			logger.info("Status of site " + site.getName() + " set to INDEXED");
 		}
 	}
