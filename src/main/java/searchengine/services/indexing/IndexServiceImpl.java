@@ -7,14 +7,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.yaml.snakeyaml.scanner.Constant;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
-import searchengine.repositories.SiteEntityRepository;
+import searchengine.repositories.*;
 import searchengine.services.interfaces.FillEntity;
 import searchengine.services.interfaces.IndexService;
 
-import java.lang.constant.Constable;
 import java.time.LocalDateTime;
 import java.util.concurrent.*;
 
@@ -30,8 +28,11 @@ public class IndexServiceImpl implements IndexService {
 	private volatile boolean allowed = true;
 	@Autowired
 	private static ParseSiteService parseSiteService;
-	@Autowired
 	private final SiteEntityRepository siteEntityRepository;
+	private final PageEntityRepository pageEntityRepository;
+	private  final LemmaEntityRepository lemmaEntityRepository;
+	private final SearchIndexEntityRepository searchIndexEntityRepository;
+
 
 	@Override
 	@Transactional
@@ -41,21 +42,26 @@ public class IndexServiceImpl implements IndexService {
 		logger.warn("--- Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started---");
 		allowed = true;
 		siteEntityRepository.deleteAll();
-		siteEntityRepository.resetIndex();
+		siteEntityRepository.resetIdOnSite();
 		logger.warn("--- Initialization of `site` table ---");
-		siteEntityRepository.saveAll(fillEntity.initSiteEntity());
+		siteEntityRepository.saveAll(fillEntity.initSiteTable());
 
 		singleTask.set(new Thread(() -> {
 			for (Site site : sitesList.getSites()) {
 				if (allowed) {
 					try {
+//						Запускаем парсинг ссылок
 						future = executor.submit(() -> forkSiteTask(fjpPool, site));
 						logger.warn("--- Site " + site.getUrl() + " was parsed with " + future.get() + " links. ---");
 					} catch (InterruptedException | RuntimeException | ExecutionException e) {
 						logger.error("Error in adding a task to the pool");
 						logger.error("Error in future.get()");
-						logger.error(e.getStackTrace());
+						e.printStackTrace();
 					}
+//					Запускаем индексацию страниц
+
+
+//					Записываем в таблицу site статусы и время
 					updateSiteAfterParse(site);
 				} else {
 					fjpPool.shutdownNow();

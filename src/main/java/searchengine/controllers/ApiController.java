@@ -1,10 +1,8 @@
 package searchengine.controllers;
 
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
-import org.jsoup.internal.NonnullByDefault;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,7 +10,11 @@ import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.TotalStatistics;
-import searchengine.repositories.BaseRepository;
+import searchengine.model.SearchIndexEntity;
+import searchengine.repositories.LemmaEntityRepository;
+import searchengine.repositories.PageEntityRepository;
+import searchengine.repositories.SearchIndexEntityRepository;
+import searchengine.repositories.SiteEntityRepository;
 import searchengine.services.indexing.IndexResponse;
 import searchengine.services.interfaces.IndexService;
 import searchengine.services.interfaces.StatisticsService;
@@ -23,30 +25,34 @@ import java.util.concurrent.*;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class ApiController {
 
-//	@Autowired
-//	private final PageEntityRepository pageEntityRepository;
-	private final StatisticsService statisticsService;
 	@Autowired
-	private final SitesList sitesList;
-//	@Autowired
-//	private final SiteEntityRepository siteEntityRepository;
-	private static final Logger logger = LogManager.getLogger(ApiController.class);
+	private final PageEntityRepository pageEntityRepository;
+	@Autowired
+	private final SiteEntityRepository siteEntityRepository;
+	@Autowired
+	private final LemmaEntityRepository lemmaEntityRepository;
+	@Autowired
+	private final SearchIndexEntityRepository searchIndexEntityRepository;
 	@Autowired
 	private final IndexService indexService;
 	@Autowired
-	private FillEntityImpl fillEntityImpl;
+	private final SitesList sitesList;
+
+	private final StatisticsService statisticsService;
+	private static final Logger logger = LogManager.getLogger(ApiController.class);
 	TotalStatistics totalStatistics = new TotalStatistics();
 	private final IndexResponse indexResponse = new IndexResponse();
 	private volatile boolean isStarted = false;
 
 
-	public ApiController(StatisticsService statisticsService, SitesList sitesList, IndexService indexService) {
-		this.statisticsService = statisticsService;
-		this.sitesList = sitesList;
-		this.indexService = indexService;
-	}
+//	public ApiController(StatisticsService statisticsService, SitesList sitesList, IndexService indexService, ) {
+//		this.statisticsService = statisticsService;
+//		this.sitesList = sitesList;
+//		this.indexService = indexService;
+//	}
 
 //	public ApiController() {
 //	}

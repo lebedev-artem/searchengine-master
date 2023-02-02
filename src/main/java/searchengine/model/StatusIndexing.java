@@ -1,5 +1,5 @@
 package searchengine.model;
-public enum Status
+public enum StatusIndexing
 {
 	INDEXING,
 	INDEXED,

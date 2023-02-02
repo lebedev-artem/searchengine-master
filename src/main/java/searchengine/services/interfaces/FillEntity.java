@@ -5,7 +5,7 @@ import searchengine.model.SiteEntity;
 import java.util.List;
 
 public interface FillEntity {
-	List<SiteEntity> initSiteEntity();
+	List<SiteEntity> initSiteTable();
 
-	SiteEntity initSiteEntity(Site site);
+	SiteEntity initSiteTable(Site site);
 }

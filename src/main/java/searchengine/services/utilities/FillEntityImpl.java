@@ -22,16 +22,16 @@ public class FillEntityImpl implements FillEntity {
 	}
 
 	@Override
-	public List<SiteEntity> initSiteEntity() {
+	public List<SiteEntity> initSiteTable() {
 		List<SiteEntity> siteEntities = new ArrayList<>();
 		for (Site site : sitesList.getSites()) {
-			siteEntities.add(initSiteEntity(site));
+			siteEntities.add(initSiteTable(site));
 		};
 		return siteEntities;
 	}
 
 	@Override
-	public SiteEntity initSiteEntity(Site site){
+	public SiteEntity initSiteTable(Site site){
 		siteEntity = new SiteEntity();
 		siteEntity.setStatus("INDEXING");
 		siteEntity.setStatusTime(LocalDateTime.now());

@@ -1,5 +1,7 @@
 package searchengine.repositories;
 
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.support.JpaEntityInformation;
 import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +26,6 @@ public class BaseRepositoryImpl<T extends BaseEntity, ID extends Serializable> e
 	}
 
 	@Override
-	public void resetIndex() {
+	public void resetIdOnSite() {
 	}
 }

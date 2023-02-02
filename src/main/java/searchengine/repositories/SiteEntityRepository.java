@@ -1,12 +1,14 @@
 package searchengine.repositories;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.model.SiteEntity;
+import searchengine.model.StatusIndexing;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Transactional
 @Repository
@@ -20,6 +22,26 @@ public interface SiteEntityRepository extends BaseRepository<SiteEntity, Long> {
 
 //	@Query(value = "SELECT * from site where name LIKE %:namePart% LIMIT :limit", nativeQuery = true)
 //	List<SiteEntity> findAllContains(String namePart, int limit);
+
+/*
+Надо проверить скорость работы с параметром и без clearAutomatically = true, flushAutomatically = true
+ */
+
+	@Query(value = "SELECT COUNT(*) FROM SiteEntity", nativeQuery = true)
+	int findCount();
+
+	@Query(value = "SELECT se FROM SiteEntity se WHERE se.status = :status", nativeQuery = true)
+	Iterable<SiteEntity> findByStatus(@Param("status") StatusIndexing statusIndexing);
+
+	@Query(value = "SELECT se FROM SiteEntity s", nativeQuery = true)
+	List<SiteEntity> findAllSites();
+
+	@Query(value = "SELECT u FROM SiteEntity se WHERE se.url = :url", nativeQuery = true)
+	SiteEntity findByUrl(@Param("url") String url);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query(value = "DELETE FROM SiteEntity se WHERE se.url = :url", nativeQuery = true)
+	void removeAllByUrl(@Param("url") String url);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "DELETE from `site` WHERE `name` = :name", nativeQuery = true)

@@ -15,5 +15,5 @@ import java.io.Serializable;
 
 		@Modifying(clearAutomatically = true, flushAutomatically = true)
 		@Query(value = "ALTER TABLE `site` AUTO_INCREMENT = 0", nativeQuery = true)
-		void resetIndex();
+		void resetIdOnSite();
 }

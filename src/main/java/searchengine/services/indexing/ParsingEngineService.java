@@ -1,4 +1,4 @@
-package searchengine.services.utilities;
+package searchengine.services.indexing;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -7,7 +7,8 @@ import org.jsoup.UnsupportedMimeTypeException;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import searchengine.controllers.ApiController;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import searchengine.services.utilities.URLNameFormatter;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
@@ -17,15 +18,15 @@ import java.util.Date;
 import java.util.Map;
 import java.util.TreeMap;
 
-public class ParsingEngine {
+public class ParsingEngineService {
 	SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss");
 	String regexLinkIsFile = "http[s]?:/(?:/[^/]+){1,}/[А-Яа-яёЁ\\w ]+\\.[a-z]{3,5}(?![/]|[\\wА-Яа-яёЁ])";
 	String regexValidURL = "^(ht|f)tp(s?)://[0-9a-zA-Z]([-.\\w]*[0-9a-zA-Z])*(:(0-9)*)*(/?)([a-zA-Z0-9\\-.?,'/\\\\+&%_]*)?$";
 	URLNameFormatter URLFormatter = new URLNameFormatter();
 	private String zeroLevelURL;
-	private static final Logger logger = LogManager.getLogger(ParsingEngine.class);
+	private static final Logger logger = LogManager.getLogger(ParsingEngineService.class);
 
-	public ParsingEngine(){
+	public ParsingEngineService(){
 	}
 
 	public boolean linkIsFile(String link){
@@ -39,7 +40,13 @@ public class ParsingEngine {
 			Elements t_elements = getElementsFromURL(url);
 			if (t_elements != null && t_elements.size() != 0) {
 				for (Element element : t_elements) {
+//					String outputPathFile = "./src/main/resources/content_" + element.baseUri() + "_.txt";
+//					String content = element.html();
 					String s = URLFormatter.extractLink(element);
+//					PrintWriter writer = new PrintWriter(outputPathFile);
+//					writer.println(content);
+//					writer.flush();
+//					writer.close();
 					String cleanS = URLFormatter.cleanURLName(s);
 					if (s.matches(regexValidURL) //Проверяем валидность сслыки
 							&& s.contains(URLFormatter.cleanURLName(zeroLevelURL)) //Ссылка того же домена как и домен вызвавшей
@@ -74,29 +81,34 @@ public class ParsingEngine {
 		return t_links;
 	}
 
-	private Elements getElementsFromURL(String URL){
+	@ConfigurationProperties(prefix = "jsoup-setting")
+	private Elements getElementsFromURL(String url){
 		Date date = new Date();
-		Elements elements = null;
+		Elements elements = new Elements();
+//		Connection.Response conResponse;
+//		try {
+//			conResponse = Jsoup.connect(url).execute();
+//		} catch (IOException e) {
+//			throw new RuntimeException(e);
+//		}
+//		System.out.println(conResponse);
+
 		try {
-			Document doc = Jsoup.connect(URL)
-					.userAgent("Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:25.0) Gecko/20100101 Firefox/25.0")
-					.referrer("http://www.google.com")
-					.timeout(1000 * 10) //it's in milliseconds, so this means 5 seconds.
-					.ignoreHttpErrors(true)
+			Document doc = Jsoup.connect(url)
 					.get();
 			elements = doc.select("a[href]");
 		} catch (UnknownHostException ex) {
 //            ex.printStackTrace();
-			System.out.println(formatter.format(date) + " Exception in <getElementsFromURL>. " + URL + " not available");
+			System.out.println(formatter.format(date) + " Exception in <getElementsFromURL>. " + url + " not available");
 		} catch (SocketTimeoutException ex) {
 //            ex.printStackTrace();
 			logger.error("Connect timed out / Read timed out");
 //			System.out.println(formatter.format(date) + " Connect timed out / Read timed out");
 		} catch (UnsupportedMimeTypeException ex) {
 //            ex.printStackTrace();
-			System.out.println(formatter.format(date) + " Unhandled content type. Must be text/*, application/xml, or application/*+xml. Mimetype=application/json, URL= " + URL);
+			System.out.println(formatter.format(date) + " Unhandled content type. Must be text/*, application/xml, or application/*+xml. Mimetype=application/json, URL= " + url);
 		} catch (IOException ex) {
-			System.out.println(formatter.format(date) + " Too many redirects occurred trying to load URL " + URL);
+			System.out.println(formatter.format(date) + " Too many redirects occurred trying to load URL " + url);
 		}
 		return elements;
 	}

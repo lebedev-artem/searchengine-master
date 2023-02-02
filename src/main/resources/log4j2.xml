@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="WARN" debug="true">
+<Configuration statusIndexing="WARN" debug="true">
     <Appenders>
         <Console name="Console" target="SYSTEM_OUT" follow="true">
            <PatternLayout disableAnsi="false" pattern="%clr{%d{yyyy-MM-dd HH:mm:ss.SSS}}{faint} %clr{%5p} %clr{${sys:PID}}{magenta} %clr{---}{faint} %clr{[%15.15t]}{faint} %clr{%-40.40c{1.}}{cyan} %clr{:}{faint} %clr{%m%n%xwEx}"/>
