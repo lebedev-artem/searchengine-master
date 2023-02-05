@@ -1,0 +1,12 @@
+        https://nikoartgallery.com/afisha/ 200 сделелали запрос получили ответ записли в итоговую коллекцию
+        Мы же пройдем по каждой ссылке, значит получим код
+                https://nikoartgallery.com/afisha/aleksey-lyubimov-brams-ostorozhnaya-strastnost-/
+                https://nikoartgallery.com/afisha/frank-debyussi-ravel-mila-frayenova-i-yuriy-favorin/
+                https://nikoartgallery.com/afisha/moi-stikhii-muzyka-i-media-opera/
+                https://nikoartgallery.com/afisha/script-src-https-ticketscloud-com-static-scripts-widget-tcwidget-js-script/
+                https://nikoartgallery.com/afisha/serdtsa-chetyryekh-ili-v-gostyakh-u-shumanov/
+                https://nikoartgallery.com/afisha/sergey-artsibashev-est-v-kraskakh-otzvuki-i-zvuki-kontsert-vtoroy/
+                https://nikoartgallery.com/afisha/tsikl-chistaya-klassika-kontsert-pyatyy-betkhoven-/
+                https://nikoartgallery.com/afisha/vintskevich-trio-leonid-vintskevich-vardan-babayan-andrey-dudchenko/
+                https://nikoartgallery.com/afisha/yakov-katsnelson-chaykovskiy-prokofev/
+                https://nikoartgallery.com/afisha/zara-ambartsumyan-l-v-betkhoven/

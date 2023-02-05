@@ -12,7 +12,7 @@ import java.util.List;
 
 @Transactional
 @Repository
-public interface SiteEntityRepository extends BaseRepository<SiteEntity, Long> {
+public interface SiteRepository extends BaseRepository<SiteEntity, Long> {
 
 	/**
 	 * Для создания SQL запроса, необходимо указать nativeQuery = true<
@@ -27,20 +27,20 @@ public interface SiteEntityRepository extends BaseRepository<SiteEntity, Long> {
 Надо проверить скорость работы с параметром и без clearAutomatically = true, flushAutomatically = true
  */
 
-	@Query(value = "SELECT COUNT(*) FROM SiteEntity", nativeQuery = true)
+	@Query("SELECT COUNT(*) FROM SiteEntity")
 	int findCount();
 
-	@Query(value = "SELECT se FROM SiteEntity se WHERE se.status = :status", nativeQuery = true)
+	@Query("SELECT s FROM SiteEntity s WHERE s.status = :status")
 	Iterable<SiteEntity> findByStatus(@Param("status") StatusIndexing statusIndexing);
 
-	@Query(value = "SELECT se FROM SiteEntity s", nativeQuery = true)
+	@Query("SELECT s FROM SiteEntity s")
 	List<SiteEntity> findAllSites();
 
-	@Query(value = "SELECT u FROM SiteEntity se WHERE se.url = :url", nativeQuery = true)
+	@Query("SELECT s FROM SiteEntity s WHERE s.url = :url")
 	SiteEntity findByUrl(@Param("url") String url);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
-	@Query(value = "DELETE FROM SiteEntity se WHERE se.url = :url", nativeQuery = true)
+	@Query("DELETE FROM SiteEntity s WHERE s.url = :url")
 	void removeAllByUrl(@Param("url") String url);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)

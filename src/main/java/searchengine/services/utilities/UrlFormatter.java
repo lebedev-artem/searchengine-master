@@ -3,14 +3,14 @@ package searchengine.services.utilities;
 import org.apache.commons.lang3.StringUtils;
 import org.jsoup.nodes.Element;
 
-public class URLNameFormatter {
+public class UrlFormatter {
 	String regexProtocol = "^(http|https)://(www.)?";
 
 	public Integer getLevel(String url) {
 		return StringUtils.countMatches(url, "/");
 	}
 
-	public String cleanURLName(String s) {
+	public String cleanUrl(String s) {
 //        Удаляем протокол слэши и двоеточие
 		s = s.replaceAll(regexProtocol, "");
 //       Удаляем последний слэш
@@ -21,7 +21,7 @@ public class URLNameFormatter {
 	}
 
 	//    делает ссылку вида host1.hostname.com из http://www.host1.hostname.com/valera/nastalo/tvoe/vremya/
-	public String createZeroLevelURL(String r) {
+	public String createZeroLevelUrl(String r) {
 		r = r.replaceAll(regexProtocol, "");
 		if (r.lastIndexOf("/") == r.length() - 1) {
 			r = r.substring(r.indexOf(r), r.length() - 1);

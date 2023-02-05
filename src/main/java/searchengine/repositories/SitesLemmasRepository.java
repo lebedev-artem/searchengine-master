@@ -6,5 +6,5 @@ import searchengine.model.SitesLemmasEntity;
 
 @Transactional
 @Repository
-public interface SitesLemmasEntityRepository extends BaseRepository<SitesLemmasEntity, Long>{
+public interface SitesLemmasRepository extends BaseRepository<SitesLemmasEntity, Long>{
 }

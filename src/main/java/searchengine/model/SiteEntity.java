@@ -7,10 +7,21 @@ import java.util.Set;
 
 @Setter
 @Getter
-@Entity
+@Entity(name = "SiteEntity")
 @Table(name = "site")
 public class SiteEntity implements BaseEntity{
 	private Boolean deleted;
+
+	public SiteEntity(String status, LocalDateTime statusTime, String lastError, String url, String name) {
+		this.status = status;
+		this.statusTime = statusTime;
+		this.lastError = lastError;
+		this.url = url;
+		this.name = name;
+	}
+
+	public SiteEntity() {
+	}
 
 	@Id
 	@Column (nullable = false)

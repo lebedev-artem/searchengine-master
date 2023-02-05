@@ -15,8 +15,6 @@ public class FillEntityImpl implements FillEntity {
 	@Autowired
 	private final SitesList sitesList;
 
-	private SiteEntity siteEntity = new SiteEntity();
-
 	public FillEntityImpl(SitesList sitesList) {
 		this.sitesList = sitesList;
 	}
@@ -32,7 +30,7 @@ public class FillEntityImpl implements FillEntity {
 
 	@Override
 	public SiteEntity initSiteTable(Site site){
-		siteEntity = new SiteEntity();
+		SiteEntity siteEntity = new SiteEntity();
 		siteEntity.setStatus("INDEXING");
 		siteEntity.setStatusTime(LocalDateTime.now());
 		siteEntity.setLastError("");

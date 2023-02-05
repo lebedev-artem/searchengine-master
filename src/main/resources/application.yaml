@@ -30,21 +30,27 @@ jsoup-setting:
 
 indexing-settings:
   sites:
-#    - url: http://www.tema.ru
-#      name: Артемий Лебедев
-    - url: http://twitter.com
-      name: TWITTER
-    - url: http://slenta.ru/
-      name: sLenta
-    - url: http://www.bbc.com
-      name: BBC.com
-#    - url: https://www.rambler.ru
-#      name: Rambler.Ru
-#    - url: https://www.lenta.ru
-#      name: Лента.ру
-#    - url: https://www.skillbox.ru
-#      name: Skillbox
-#    - url: https://www.playback.ru
-#      name: PlayBack.Ru
+#    - url: https://www.bbc.com/travel/destinations/armenia
+#      name: arm
+#    - url: https://www.bbc.com/travel/destinations/
+#      name: Benin
+##    - url: http://www.tema.ru
+##      name: Артемий Лебедев
+#    - url: http://twitter.com
+#      name: TWITTER
+#    - url: http://slenta.ru/
+#      name: sLenta
+#    - url: http://www.bbc.com
+#      name: BBC.com
+    - url: https://www.rambler.ru
+      name: Rambler.Ru
+    - url: https://www.lenta.ru
+      name: Лента.ру
+    - url: https://www.skillbox.ru
+      name: Skillbox
+    - url: https://www.playback.ru
+      name: PlayBack.Ru
+    - url: https://volochek.life/
+      name: Volochek
 
 

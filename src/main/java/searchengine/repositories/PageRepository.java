@@ -2,9 +2,9 @@ package searchengine.repositories;
 
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-import searchengine.model.SearchIndexEntity;
+import searchengine.model.PageEntity;
 
 @Transactional
 @Repository
-public interface SearchIndexEntityRepository extends BaseRepository<SearchIndexEntity, Long> {
+public interface PageRepository extends BaseRepository<PageEntity, Long> {
 }

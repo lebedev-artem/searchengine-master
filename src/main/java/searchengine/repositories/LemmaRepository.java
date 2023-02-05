@@ -6,5 +6,5 @@ import searchengine.model.LemmaEntity;
 
 @Transactional
 @Repository
-public interface LemmaEntityRepository extends BaseRepository<LemmaEntity, Long>{
+public interface LemmaRepository extends BaseRepository<LemmaEntity, Long>{
 }
