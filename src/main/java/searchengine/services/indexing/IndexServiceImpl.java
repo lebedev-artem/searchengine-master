@@ -1,8 +1,6 @@
 package searchengine.services.indexing;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.model.PageEntity;
+import searchengine.model.SiteEntity;
 import searchengine.repositories.*;
 import searchengine.services.interfaces.FillEntity;
 import searchengine.services.interfaces.IndexService;
@@ -22,7 +21,6 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.*;
 
 @Setter
@@ -34,17 +32,17 @@ public class IndexServiceImpl implements IndexService {
 	private final FillEntity fillEntity;
 	private static final Logger logger = LogManager.getLogger(IndexService.class);
 	private final IndexResponse indexResponse = new IndexResponse();
-	private static final ThreadLocal<Thread> singleTask = new ThreadLocal<Thread>();
+	private static final ThreadLocal<Thread> singleTask = new ThreadLocal<>();
 	private static Future<Integer> future;
-	private volatile boolean allowed = true;
-
-	private volatile boolean isStarted = false;
+	public boolean allowed = true;
+	public boolean isStarted = false;
 	@Autowired
 	private static ParseSiteService parseSiteService;
 	private HashMap<String, Integer> mainLinks = new HashMap<>();
 	private Set<PageEntity> pages = new HashSet<>();
-
+	@Autowired
 	private final SiteRepository siteRepository;
+	@Autowired
 	private final PageRepository pageRepository;
 	private final LemmaRepository lemmaRepository;
 	private final SearchIndexRepository searchIndexRepository;
@@ -52,11 +50,11 @@ public class IndexServiceImpl implements IndexService {
 	@Override
 	@Transactional
 	public synchronized ResponseEntity<?> indexingStart(SitesList sitesList) throws Exception {
+		setStarted(true);
 		ForkJoinPool fjpPool = new ForkJoinPool();
 		ExecutorService executor = Executors.newSingleThreadExecutor();
 		logger.warn("--- Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started---");
-		allowed = true;
-		isStarted = true;
+		pageRepository.deleteAll();
 		siteRepository.deleteAll();
 		siteRepository.resetIdOnSite();
 		logger.warn("--- Initialization of `site` table ---");
@@ -65,12 +63,15 @@ public class IndexServiceImpl implements IndexService {
 		singleTask.set(new Thread(() -> {
 			for (Site site : sitesList.getSites()) {
 				if (allowed) {
+					SiteEntity siteEntity = siteRepository.findByUrl(site.getUrl());
 					try {
 //						Запускаем парсинг ссылок
-						future = executor.submit(() -> forkSiteTask(fjpPool, site));
+						long time = System.currentTimeMillis();
+						future = executor.submit(() -> forkSiteTask(fjpPool, site, siteEntity));
 						logger.warn("--- Site " + site.getUrl() + " was parsed with " + future.get() + " links. ---");
 						logger.warn("--- Site " + site.getUrl() + " contains " + mainLinks.size() + " links with codes");
 						logger.warn("--- Site " + site.getUrl() + " contains " + pages.size() + " pages");
+						logger.warn("--- " + site.getUrl() + " parsed in " + (System.currentTimeMillis() - time) + " ms");
 					} catch (InterruptedException | RuntimeException | ExecutionException e) {
 						logger.error("Error in adding a task to the pool");
 						logger.error("Error in future.get()");
@@ -81,13 +82,17 @@ public class IndexServiceImpl implements IndexService {
 
 //					Записываем в таблицу site статусы и время
 					updateSiteAfterParse(site);
+					logger.warn("--- Start add pages to DB from " + site.getUrl() + " ---");
+					long time = System.currentTimeMillis();
+					pageRepository.saveAll(pages);
+					logger.warn("--- site " + site.getUrl() + " DB filled in " + (System.currentTimeMillis() - time) + " ms");
 				} else {
 					fjpPool.shutdownNow();
 					executor.shutdownNow();
 					break;
 				}
 			}
-			logger.info("Exit from thread");
+			logger.info("--- Parsing finished ---");
 		}));
 		singleTask.get().start();
 		return indexResponse.successfully();
@@ -96,17 +101,16 @@ public class IndexServiceImpl implements IndexService {
 	@Override
 	public ResponseEntity<?> indexingStop() throws ExecutionException, InterruptedException {
 		logger.warn("--- Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started---");
-		allowed = false;
-		isStarted = false;
-		parseSiteService.setAllowed(false);
+		setStarted(false);
+		setAllowed(false);
 		siteRepository.updateAllSitesStatusTimeError("FAILED", LocalDateTime.now(), "Индексация остановлена пользователем");
 		return indexResponse.successfully();
 	}
 
-	private int forkSiteTask(ForkJoinPool fjpPool, Site site) {
+	private int forkSiteTask(ForkJoinPool fjpPool, Site site, SiteEntity siteEntity) {
 		logger.warn("--- Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started---");
 		ParseTask rootParseTask = new ParseTask(site.getUrl());
-		parseSiteService = new ParseSiteService(rootParseTask, this);
+		parseSiteService = new ParseSiteService(rootParseTask, this, site, siteEntity);
 		parseSiteService.setAllowed(true);
 		logger.info("Invoke " + site.getName() + " " + site.getUrl());
 		fjpPool.invoke(parseSiteService);
@@ -115,6 +119,7 @@ public class IndexServiceImpl implements IndexService {
 
 	private void updateSiteAfterParse(Site site) {
 		logger.warn("--- Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started---");
+		//надо опдумать записывать ли коллекицю если прервали стопом
 		if (future.isDone() && allowed) {
 			siteRepository.updateSiteStatus("INDEXED", site.getName());
 			siteRepository.updateStatusTime(site.getName(), LocalDateTime.now());
@@ -122,5 +127,13 @@ public class IndexServiceImpl implements IndexService {
 		}
 	}
 
+	@Override
+	public Boolean getStarted() {
+		return isStarted;
+	}
 
+	@Override
+	public Boolean getAllowed() {
+		return allowed;
+	}
 }

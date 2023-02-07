@@ -7,4 +7,5 @@ import searchengine.model.PageEntity;
 @Transactional
 @Repository
 public interface PageRepository extends BaseRepository<PageEntity, Long> {
+
 }

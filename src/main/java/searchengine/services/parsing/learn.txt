@@ -10,3 +10,75 @@
                 https://nikoartgallery.com/afisha/vintskevich-trio-leonid-vintskevich-vardan-babayan-andrey-dudchenko/
                 https://nikoartgallery.com/afisha/yakov-katsnelson-chaykovskiy-prokofev/
                 https://nikoartgallery.com/afisha/zara-ambartsumyan-l-v-betkhoven/
+
+                2023-02-07 23:28:28.030  WARN 6088 --- [nio-8080-exec-1] s.s.i.IndexService                       : --- Method <indexingStart> started---
+                2023-02-07 23:28:29.496  WARN 6088 --- [nio-8080-exec-1] s.s.i.IndexService                       : --- Initialization of `site` table ---
+                2023-02-07 23:28:29.534  WARN 6088 --- [pool-2-thread-1] s.s.i.IndexService                       : --- Method <forkSiteTask> started---
+                2023-02-07 23:28:29.536  INFO 6088 --- [pool-2-thread-1] s.s.i.IndexService                       : Invoke Лента.ру https://www.lenta.ru
+                2023-02-07 23:29:23.996 ERROR 6088 --- [Pool-1-worker-2] s.s.p.ParseSiteService                   : connectionResponse = Jsoup.connect(url).execute(). Not acceptable content type
+                2023-02-07 23:29:23.996  WARN 6088 --- [Pool-1-worker-2] s.s.p.ParseSiteService                   : https://lenta.ru/rss
+                2023-02-07 23:29:57.887  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- Site https://www.lenta.ru was parsed with 362 links. ---
+                2023-02-07 23:29:57.890  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- Site https://www.lenta.ru contains 362 links with codes
+                2023-02-07 23:29:57.890  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- Site https://www.lenta.ru contains 366 pages
+                2023-02-07 23:29:57.891  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- https://www.lenta.ru parsed in 88357 ms
+                2023-02-07 23:29:57.891  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- Method <updateSiteAfterParse> started---
+                2023-02-07 23:29:57.914  INFO 6088 --- [       Thread-1] s.s.i.IndexService                       : Status of site Лента.ру set to INDEXED
+                2023-02-07 23:29:57.915  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- Start add pages to DB from https://www.lenta.ru ---
+                2023-02-07 23:29:58.626  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- site https://www.lenta.ru DB filled in 711 ms
+                2023-02-07 23:29:58.630  WARN 6088 --- [pool-2-thread-1] s.s.i.IndexService                       : --- Method <forkSiteTask> started---
+                2023-02-07 23:29:58.630  INFO 6088 --- [pool-2-thread-1] s.s.i.IndexService                       : Invoke Skillbox https://www.skillbox.ru
+                2023-02-07 23:30:19.821  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- Site https://www.skillbox.ru was parsed with 988 links. ---
+                2023-02-07 23:30:19.822  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- Site https://www.skillbox.ru contains 1035 links with codes
+                2023-02-07 23:30:19.822  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- Site https://www.skillbox.ru contains 1090 pages
+                2023-02-07 23:30:19.822  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- https://www.skillbox.ru parsed in 21192 ms
+                2023-02-07 23:30:19.822  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- Method <updateSiteAfterParse> started---
+                2023-02-07 23:30:19.830  INFO 6088 --- [       Thread-1] s.s.i.IndexService                       : Status of site Skillbox set to INDEXED
+                2023-02-07 23:30:19.830  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- Start add pages to DB from https://www.skillbox.ru ---
+                2023-02-07 23:30:21.309  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- site https://www.skillbox.ru DB filled in 1479 ms
+                2023-02-07 23:30:21.312  WARN 6088 --- [pool-2-thread-1] s.s.i.IndexService                       : --- Method <forkSiteTask> started---
+                2023-02-07 23:30:21.312  INFO 6088 --- [pool-2-thread-1] s.s.i.IndexService                       : Invoke PlayBack.Ru https://www.playback.ru
+                2023-02-07 23:30:21.509  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- Site https://www.playback.ru was parsed with 64 links. ---
+                2023-02-07 23:30:21.509  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- Site https://www.playback.ru contains 1036 links with codes
+                2023-02-07 23:30:21.509  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- Site https://www.playback.ru contains 1091 pages
+                2023-02-07 23:30:21.509  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- https://www.playback.ru parsed in 197 ms
+                2023-02-07 23:30:21.509  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- Method <updateSiteAfterParse> started---
+                2023-02-07 23:30:21.517  INFO 6088 --- [       Thread-1] s.s.i.IndexService                       : Status of site PlayBack.Ru set to INDEXED
+                2023-02-07 23:30:21.517  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- Start add pages to DB from https://www.playback.ru ---
+                2023-02-07 23:30:22.578  WARN 6088 --- [       Thread-1] s.s.i.IndexService                       : --- site https://www.playback.ru DB filled in 1061 ms
+                2023-02-07 23:30:22.578  INFO 6088 --- [       Thread-1] s.s.i.IndexService                       : Exit from thread
+                =====
+                2023-02-08 00:20:59.676  WARN 13428 --- [nio-8080-exec-1] s.s.i.IndexService                       : --- Method <indexingStart> started---
+                2023-02-08 00:21:04.651  WARN 13428 --- [nio-8080-exec-1] s.s.i.IndexService                       : --- Initialization of `site` table ---
+                2023-02-08 00:21:04.756  WARN 13428 --- [pool-2-thread-1] s.s.i.IndexService                       : --- Method <forkSiteTask> started---
+                2023-02-08 00:21:04.761  INFO 13428 --- [pool-2-thread-1] s.s.i.IndexService                       : Invoke Лента.ру https://www.lenta.ru
+                2023-02-08 00:21:57.247 ERROR 13428 --- [Pool-1-worker-6] s.s.p.ParseSiteService                   : connectionResponse = Jsoup.connect(url).execute(). Not acceptable content type
+                2023-02-08 00:21:57.266  WARN 13428 --- [Pool-1-worker-6] s.s.p.ParseSiteService                   : https://lenta.ru/rssapplication/rss+xml; charset=utf-8200OK
+                2023-02-08 00:22:29.042  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- Site https://www.lenta.ru was parsed with 364 links. ---
+                2023-02-08 00:22:29.046  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- Site https://www.lenta.ru contains 364 links with codes
+                2023-02-08 00:22:29.047  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- Site https://www.lenta.ru contains 369 pages
+                2023-02-08 00:22:29.047  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- https://www.lenta.ru parsed in 84304 ms
+                2023-02-08 00:22:29.048  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- Method <updateSiteAfterParse> started---
+                2023-02-08 00:22:29.167  INFO 13428 --- [       Thread-1] s.s.i.IndexService                       : Status of site Лента.ру set to INDEXED
+                2023-02-08 00:22:29.169  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- Start add pages to DB from https://www.lenta.ru ---
+                2023-02-08 00:22:30.960  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- site https://www.lenta.ru DB filled in 1790 ms
+                2023-02-08 00:22:30.972  WARN 13428 --- [pool-2-thread-1] s.s.i.IndexService                       : --- Method <forkSiteTask> started---
+                2023-02-08 00:22:30.973  INFO 13428 --- [pool-2-thread-1] s.s.i.IndexService                       : Invoke Skillbox https://www.skillbox.ru
+                2023-02-08 00:22:51.891  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- Site https://www.skillbox.ru was parsed with 927 links. ---
+                2023-02-08 00:22:51.891  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- Site https://www.skillbox.ru contains 1011 links with codes
+                2023-02-08 00:22:51.891  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- Site https://www.skillbox.ru contains 1068 pages
+                2023-02-08 00:22:51.891  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- https://www.skillbox.ru parsed in 20920 ms
+                2023-02-08 00:22:51.892  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- Method <updateSiteAfterParse> started---
+                2023-02-08 00:22:51.910  INFO 13428 --- [       Thread-1] s.s.i.IndexService                       : Status of site Skillbox set to INDEXED
+                2023-02-08 00:22:51.910  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- Start add pages to DB from https://www.skillbox.ru ---
+                2023-02-08 00:22:54.822  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- site https://www.skillbox.ru DB filled in 2912 ms
+                2023-02-08 00:22:54.827  WARN 13428 --- [pool-2-thread-1] s.s.i.IndexService                       : --- Method <forkSiteTask> started---
+                2023-02-08 00:22:54.828  INFO 13428 --- [pool-2-thread-1] s.s.i.IndexService                       : Invoke PlayBack.Ru https://www.playback.ru
+                2023-02-08 00:22:55.396  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- Site https://www.playback.ru was parsed with 64 links. ---
+                2023-02-08 00:22:55.396  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- Site https://www.playback.ru contains 1012 links with codes
+                2023-02-08 00:22:55.396  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- Site https://www.playback.ru contains 1069 pages
+                2023-02-08 00:22:55.396  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- https://www.playback.ru parsed in 569 ms
+                2023-02-08 00:22:55.397  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- Method <updateSiteAfterParse> started---
+                2023-02-08 00:22:55.404  INFO 13428 --- [       Thread-1] s.s.i.IndexService                       : Status of site PlayBack.Ru set to INDEXED
+                2023-02-08 00:22:55.405  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- Start add pages to DB from https://www.playback.ru ---
+                2023-02-08 00:22:57.657  WARN 13428 --- [       Thread-1] s.s.i.IndexService                       : --- site https://www.playback.ru DB filled in 2252 ms
+                2023-02-08 00:22:57.657  INFO 13428 --- [       Thread-1] s.s.i.IndexService                       : --- Parsing finished ---

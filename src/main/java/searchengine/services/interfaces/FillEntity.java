@@ -8,4 +8,6 @@ public interface FillEntity {
 	List<SiteEntity> initSiteTable();
 
 	SiteEntity initSiteTable(Site site);
+
+
 }

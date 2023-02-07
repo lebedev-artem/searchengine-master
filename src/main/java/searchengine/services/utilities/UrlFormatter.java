@@ -10,29 +10,13 @@ public class UrlFormatter {
 		return StringUtils.countMatches(url, "/");
 	}
 
-	public String cleanUrl(String s) {
-//        Удаляем протокол слэши и двоеточие
-		s = s.replaceAll(regexProtocol, "");
-//       Удаляем последний слэш
-		if (s.lastIndexOf("/") == s.length() - 1) {
-			s = s.substring(s.indexOf(s), s.length() - 1);
-		}
-		return s;
+	public String cleanHref(String str) {
+		str = str.replaceAll(regexProtocol, "");
+		if (str.lastIndexOf("/") == str.length() - 1) str = str.substring(str.indexOf(str), str.length() - 1);
+		return str;
 	}
 
-	//    делает ссылку вида host1.hostname.com из http://www.host1.hostname.com/valera/nastalo/tvoe/vremya/
-	public String createZeroLevelUrl(String r) {
-		r = r.replaceAll(regexProtocol, "");
-		if (r.lastIndexOf("/") == r.length() - 1) {
-			r = r.substring(r.indexOf(r), r.length() - 1);
-		}
-		if (r.contains("/")) {
-			r = r.substring(0, r.indexOf("/"));
-		}
-		return r;
-	}
-
-	public String extractLink(Element element) {
+	public String getHref(Element element) {
 		if (element != null) {
 			return element.absUrl("href");
 		}
@@ -40,4 +24,5 @@ public class UrlFormatter {
 //        Во время тестирования приложения, случались эксепшены с нулевой строкой, с которой я хочу сделать или
 //        substring или equal. Пусть ллучше это будет такая строка, чем эксепнш, логику работы она не портит
 	}
+
 }

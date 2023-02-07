@@ -43,7 +43,7 @@ public class SiteEntity implements BaseEntity{
 	@Column(columnDefinition = "VARCHAR(255)", nullable = false)
 	private String name;
 
-	@OneToMany(mappedBy = "siteEntity")
+	@OneToMany(mappedBy = "siteEntity", cascade = CascadeType.MERGE)
 	private Set<PageEntity> pageEntities;
 
 	@ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.DETACH, CascadeType.MERGE, CascadeType.REFRESH})

@@ -22,8 +22,6 @@ import searchengine.services.interfaces.StatisticsService;
 import javax.servlet.http.HttpServletRequest;
 import java.util.concurrent.*;
 
-import static searchengine.services.interfaces.IndexService.isStarted;
-
 @Setter
 @RestController
 @RequestMapping("/api")
@@ -46,16 +44,7 @@ public class ApiController {
 	private static final Logger logger = LogManager.getLogger(ApiController.class);
 	private final StatisticsService statisticsService;
 	TotalStatistics totalStatistics = new TotalStatistics();
-	private final IndexResponse indexResponse = new IndexResponse();
-
-//	public ApiController(StatisticsService statisticsService, SitesList sitesList, IndexService indexService, ) {
-//		this.statisticsService = statisticsService;
-//		this.sitesList = sitesList;
-//		this.indexService = indexService;
-//	}
-
-//	public ApiController() {
-//	}
+	private static final IndexResponse indexResponse = new IndexResponse();
 
 	@GetMapping("/statistics")
 	public ResponseEntity<StatisticsResponse> statistics() {
@@ -64,13 +53,13 @@ public class ApiController {
 
 	@GetMapping("/startIndexing")
 	public ResponseEntity<?> startIndexing() throws Exception {
-		if (isStarted) return indexResponse.startFailed();
+		if (indexService.getStarted()) return indexResponse.startFailed();
 		return indexService.indexingStart(sitesList);
 	}
 
 	@GetMapping("/stopIndexing")
 	public ResponseEntity<?> stopIndexing() throws ExecutionException, InterruptedException {
-		if (!isStarted) return indexResponse.stopFailed();
+		if (!indexService.getStarted()) return indexResponse.stopFailed();
 		return indexService.indexingStop();
 	}
 

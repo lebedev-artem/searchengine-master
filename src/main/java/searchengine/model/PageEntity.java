@@ -1,10 +1,8 @@
 package searchengine.model;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import javax.persistence.*;
-import java.util.Set;
 
 @Setter
 @Getter
@@ -13,6 +11,9 @@ import java.util.Set;
 @Table(name = "page")
 public class PageEntity implements BaseEntity {
 	private Boolean deleted;
+
+	public PageEntity() {
+	}
 
 	public PageEntity(SiteEntity siteEntity, String path, int code, String content) {
 		this.siteEntity = siteEntity;
@@ -26,9 +27,10 @@ public class PageEntity implements BaseEntity {
 	@Column(nullable = false)
 	private int id;
 
-	@ManyToOne(fetch = FetchType.LAZY, targetEntity = SiteEntity.class, cascade = CascadeType.DETACH, optional = false)
+//	@ManyToOne(fetch = FetchType.LAZY, targetEntity = SiteEntity.class, cascade = CascadeType.DETACH, optional = false)
+	@ManyToOne(fetch = FetchType.LAZY, targetEntity = SiteEntity.class, cascade = CascadeType.MERGE, optional = false)
 	@JoinColumn(foreignKey = @ForeignKey(name = "site_id_key_page"), columnDefinition = "Integer",
-			referencedColumnName = "id", name = "site_id", nullable = false, updatable = false)
+			referencedColumnName = "id", name = "site_id", nullable = true, updatable = false)
 	private SiteEntity siteEntity;
 
 	@Column(name = "path", columnDefinition = "TEXT NOT NULL, KEY path_index (path(255))")
@@ -37,7 +39,7 @@ public class PageEntity implements BaseEntity {
 	@Column(nullable = false)
 	private int code;
 
-	@Column(columnDefinition = "MEDIUMTEXT CHARECTER SET utf8mb4 COLLATE utf8mb4_general_ci", nullable = false, length = 16777215)
+	@Column(length = 16777215, columnDefinition = "mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", nullable = true)
 	private String content;
 
 //	@OneToMany(mappedBy = "pageEntity")

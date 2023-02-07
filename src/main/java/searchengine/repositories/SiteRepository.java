@@ -36,8 +36,8 @@ public interface SiteRepository extends BaseRepository<SiteEntity, Long> {
 	@Query("SELECT s FROM SiteEntity s")
 	List<SiteEntity> findAllSites();
 
-	@Query("SELECT s FROM SiteEntity s WHERE s.url = :url")
-	SiteEntity findByUrl(@Param("url") String url);
+//	@Query("SELECT s FROM SiteEntity s WHERE s.url = :url")
+	SiteEntity findByUrl(String url);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("DELETE FROM SiteEntity s WHERE s.url = :url")

@@ -22,9 +22,7 @@ public class FillEntityImpl implements FillEntity {
 	@Override
 	public List<SiteEntity> initSiteTable() {
 		List<SiteEntity> siteEntities = new ArrayList<>();
-		for (Site site : sitesList.getSites()) {
-			siteEntities.add(initSiteTable(site));
-		};
+		for (Site site : sitesList.getSites()) siteEntities.add(initSiteTable(site));
 		return siteEntities;
 	}
 
@@ -38,5 +36,6 @@ public class FillEntityImpl implements FillEntity {
 		siteEntity.setName(site.getName());
 		return siteEntity;
 	}
+
 
 }
