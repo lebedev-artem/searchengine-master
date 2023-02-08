@@ -8,4 +8,7 @@ import searchengine.model.PageEntity;
 @Repository
 public interface PageRepository extends BaseRepository<PageEntity, Long> {
 
+	//	@Query("SELECT s FROM SiteEntity s WHERE s.url = :url")
+	PageEntity findByPath(String path);
+
 }

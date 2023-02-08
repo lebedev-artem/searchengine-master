@@ -26,33 +26,33 @@ jsoup-setting:
   jsoup:
     userAgent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:25.0) Gecko/20100101 Firefox/25.0
     referrer: http://www:google:com"
-    timeout: 10000
+    timeout: 5000
     ignoreHttpErrors: true
     followRedirects: false
 
 indexing-settings:
   sites:
-#    - url: https://www.bbc.com/travel/destinations/armenia
-#      name: arm
-#    - url: https://www.bbc.com/travel/destinations/
-#      name: Benin
-#    - url: http://www.tema.ru
-#      name: Артемий Лебедев
-#    - url: http://twitter.com
-#      name: TWITTER
-#    - url: http://slenta.ru/
-#      name: sLenta
-#    - url: http://www.bbc.com
-#      name: BBC.com
-#    - url: https://www.rambler.ru
-#      name: Rambler.Ru
-    - url: https://www.lenta.ru
-      name: Лента.ру
-    - url: https://www.skillbox.ru
-      name: Skillbox
+    - url: http://radiomv.ru/
+      name: Радио_MV
+    - url: https://ipfran.ru/
+      name: IP_fran
+    - url: https://dimonvideo.ru/
+      name: Димон_Видео
+    - url: http://www.bbc.com
+      name: BBC.com
+    - url: https://nikoartgallery.com/
+      name: Niko_Art_Gallery
+    - url: https://et-cetera.ru/mobile/
+      name: Et_Cetera_4_mobile
+    - url: https://www.lutherancathedral.ru/
+      name: Lutheran_cathedral
     - url: https://www.playback.ru
       name: PlayBack.Ru
-#    - url: https://volochek.life/
-#      name: Volochek
+    - url: https://volochek.life/
+      name: Volochek
+    - url: https://dombulgakova.ru/
+      name: Дом_Булгакова
+    - url: https://www.svetlovka.ru/
+      name: Светловка
 
 

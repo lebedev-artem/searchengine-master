@@ -10,6 +10,8 @@ public interface IndexService{
 
 	ResponseEntity<?> indexingStart(SitesList site) throws Exception;
 
+	ResponseEntity<?> singleIndexingStart(String input) throws Exception;
+
 	ResponseEntity<?> indexingStop() throws ExecutionException, InterruptedException;
 
 	Boolean getStarted();

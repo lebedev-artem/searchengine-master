@@ -17,6 +17,8 @@ import searchengine.services.interfaces.IndexService;
 import searchengine.services.parsing.ParseSiteService;
 import searchengine.services.parsing.ParseTask;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -34,11 +36,11 @@ public class IndexServiceImpl implements IndexService {
 	private final IndexResponse indexResponse = new IndexResponse();
 	private static final ThreadLocal<Thread> singleTask = new ThreadLocal<>();
 	private static Future<Integer> future;
-	public boolean allowed = true;
-	public boolean isStarted = false;
+	public volatile boolean allowed = true;
+	public volatile boolean isStarted = false;
 	@Autowired
 	private static ParseSiteService parseSiteService;
-	private HashMap<String, Integer> mainLinks = new HashMap<>();
+	private HashMap<String, Integer> links = new HashMap<>();
 	private Set<PageEntity> pages = new HashSet<>();
 	@Autowired
 	private final SiteRepository siteRepository;
@@ -50,7 +52,8 @@ public class IndexServiceImpl implements IndexService {
 	@Override
 	@Transactional
 	public synchronized ResponseEntity<?> indexingStart(SitesList sitesList) throws Exception {
-		setStarted(true);
+		long timeMain = System.currentTimeMillis();
+		isStarted = true;
 		ForkJoinPool fjpPool = new ForkJoinPool();
 		ExecutorService executor = Executors.newSingleThreadExecutor();
 		logger.warn("--- Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started---");
@@ -69,7 +72,7 @@ public class IndexServiceImpl implements IndexService {
 						long time = System.currentTimeMillis();
 						future = executor.submit(() -> forkSiteTask(fjpPool, site, siteEntity));
 						logger.warn("--- Site " + site.getUrl() + " was parsed with " + future.get() + " links. ---");
-						logger.warn("--- Site " + site.getUrl() + " contains " + mainLinks.size() + " links with codes");
+						logger.warn("--- Site " + site.getUrl() + " contains " + links.size() + " links with codes");
 						logger.warn("--- Site " + site.getUrl() + " contains " + pages.size() + " pages");
 						logger.warn("--- " + site.getUrl() + " parsed in " + (System.currentTimeMillis() - time) + " ms");
 					} catch (InterruptedException | RuntimeException | ExecutionException e) {
@@ -92,9 +95,24 @@ public class IndexServiceImpl implements IndexService {
 					break;
 				}
 			}
-			logger.info("--- Parsing finished ---");
+			isStarted = false;
+			logger.info("--- Parsing finished in " + (System.currentTimeMillis() - timeMain) + " ms ---");
 		}));
 		singleTask.get().start();
+		return indexResponse.successfully();
+	}
+
+	@Override
+	public ResponseEntity<?> singleIndexingStart(String url) throws MalformedURLException {
+//		добавить проверку ссылки
+		String path = new URL(url).getPath();
+		PageEntity pageEntity = new PageEntity();
+		pageEntity = pageRepository.findByPath(path);
+		if (pageEntity == null) return indexResponse.indexPageFailed();
+		pageRepository.delete(pageEntity);
+		logger.warn("Удалили запись");
+		logger.warn("Запускаем индекс этой странцы");
+
 		return indexResponse.successfully();
 	}
 

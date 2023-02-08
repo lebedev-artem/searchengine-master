@@ -40,7 +40,7 @@ public class SiteEntity implements BaseEntity{
 	@Column(columnDefinition = "VARCHAR(255)", nullable = false)
 	private String url;
 
-	@Column(columnDefinition = "VARCHAR(255)", nullable = false)
+	@Column(columnDefinition = "VARCHAR(255)", nullable = true)
 	private String name;
 
 	@OneToMany(mappedBy = "siteEntity", cascade = CascadeType.MERGE)

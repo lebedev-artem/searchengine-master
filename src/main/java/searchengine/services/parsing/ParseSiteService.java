@@ -77,15 +77,19 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 			return rootParseTask.getLinksOfTask(); //Внешний флаг от метода indexStop
 		}
 
-//возможно надо перенесте в класс парсе енэине
-		if (linkIsFile(urlOfTask)) { //проверяем если ссылка - файл, то записываем в Map и возвращаем
-			links.put(rootParseTask.getUrl(), urlFormatter.getLevel(rootParseTask.getUrl()));
-			rootParseTask.setLinksTask(links);
-			return rootParseTask.getLinksOfTask();
-		}
+////возможно надо перенесте в класс парсе енэине
+////		сюда добвавить получание статуса
+//		if (linkIsFile(urlOfTask)) { //проверяем если ссылка - файл, то записываем в Map и возвращаем
+//			links.put(rootParseTask.getUrl(), urlFormatter.getLevel(rootParseTask.getUrl()));
+//			rootParseTask.setLinksTask(links);
+//			return rootParseTask.getLinksOfTask();
+//		}
 
 		try {
-			subTaskLinks = getSubLinks(urlOfTask); //Получаем все ссылки от вызвавшей ссылки
+			if (!indexService.getLinks().containsKey(urlOfTask)) {
+				subTaskLinks = getSubLinks(urlOfTask); //Получаем все ссылки от вызвавшей ссылки
+			}
+//			logger.warn("get sublinks from " + urlOfTask );
 		} catch (InterruptedException ex) {
 			logger.debug("Error in subLinks = getChildLinksFromElements(urlTask)");
 		} catch (IOException ex) {
@@ -108,7 +112,6 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 		siteRepository = indexService.getSiteRepository();
 		String content;
 		String path;
-
 		response = getResponseFromUrl(url);
 		if (response == null) return subLinks;
 
@@ -116,12 +119,28 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 		Elements elements = document.select("a[href]");
 		content = getCleanedBody(document);
 		path = new URL(url).getPath();
+		PageEntity pageEntity = new PageEntity(siteEntity, path, statusCode, content);
 
 //		эти две строки надо вынести отдельно, когда получили ссылку, и сразу отправили
-		indexService.getMainLinks().put(url, statusCode); //добавляем ссылку с кодом в мап
-		indexService.getPages().add(new PageEntity(siteEntity, path, statusCode, content)); //добавляем пэдж в сет
+		if (!indexService.getLinks().containsKey(url)) {
+//			logger.warn("indexService.getLinks().put(" + url + ")");
+			indexService.getLinks().put(url, statusCode); //добавляем ссылку с кодом в мап
+		}
+		if (!indexService.getPages().contains(pageEntity)) {
+//			logger.warn("indexService.getPages().add(" + pageEntity.getPath() + ")");
+			indexService.getPages().add(pageEntity); //добавляем пэдж в сет
+//			indexService.getPageRepository().save(pageEntity);
+		}
 
 		if (elements.isEmpty()) return subLinks;
+
+//		Если ссылка - файл, сразу в таблицу
+		if (linkIsFile(url)) {
+			links.put(rootParseTask.getUrl(), statusCode);
+			subLinks.put(url, statusCode);
+			return subLinks;
+		}
+
 		try {
 			for (Element element : elements) {
 				String href = urlFormatter.getHref(element);
@@ -163,7 +182,7 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 
 
 	private @NotNull String getCleanedBody(Document document) {
-		return Jsoup.clean(String.valueOf(document), Safelist.none());
+		return Jsoup.clean(String.valueOf(document), Safelist.relaxed());
 	}
 
 	private void forkTasksFromSubtasks(List<ParseSiteService> subTasks, Map<String, Integer> subLinks) {

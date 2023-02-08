@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,8 @@ import searchengine.services.interfaces.IndexService;
 import searchengine.services.interfaces.StatisticsService;
 
 import javax.servlet.http.HttpServletRequest;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.concurrent.*;
 
 @Setter
@@ -64,15 +67,17 @@ public class ApiController {
 	}
 
 	@PostMapping("/indexPage")
-	public ResponseEntity<?> indexPage(HttpServletRequest request) {
+	public ResponseEntity<?> indexPage(HttpServletRequest request) throws Exception {
 		if (isUrlNotPresent(request)) return indexResponse.indexPageFailed();
-		return indexResponse.successfully();
+
+		return indexService.singleIndexingStart(request.getParameter("url"));
 	}
 
-	private boolean isUrlNotPresent(HttpServletRequest request) {
+	private boolean isUrlNotPresent(@NotNull HttpServletRequest request) throws MalformedURLException {
 		boolean urlNotPresent = true;
+		String hostName = new URL(request.getParameter("url")).getHost();
 		for (Site site : sitesList.getSites())
-			if (request.getParameter("url").equals(site.getUrl())) urlNotPresent = false;
+			if (site.getUrl().contains(hostName)) urlNotPresent = false;
 		return urlNotPresent;
 	}
 }
