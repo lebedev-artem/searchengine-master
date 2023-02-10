@@ -8,7 +8,7 @@ import javax.persistence.*;
 @Entity
 @Table(name = "sites_lemmas")
 public class SitesLemmasEntity implements BaseEntity{
-	private Boolean deleted;
+//	private Boolean deleted;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

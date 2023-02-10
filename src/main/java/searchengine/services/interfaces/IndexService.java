@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.concurrent.ExecutionException;
 
 public interface IndexService{
@@ -11,7 +12,7 @@ public interface IndexService{
 
 	ResponseEntity<?> indexingStart(SitesList site) throws Exception;
 
-	ResponseEntity<?> singleIndexingStart(String input, Site site) throws Exception;
+	ResponseEntity<?> singleIndexingStart(HttpServletRequest request) throws Exception;
 
 	ResponseEntity<?> indexingStop() throws ExecutionException, InterruptedException;
 

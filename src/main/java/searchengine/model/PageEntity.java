@@ -10,7 +10,7 @@ import javax.persistence.*;
 
 @Table(name = "page")
 public class PageEntity implements BaseEntity {
-	private Boolean deleted;
+//	private Boolean deleted;
 
 	public PageEntity() {
 	}

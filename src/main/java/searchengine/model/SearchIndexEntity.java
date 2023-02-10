@@ -10,7 +10,7 @@ import javax.persistence.*;
 @Entity
 @Table(name = "search_index")
 public class SearchIndexEntity implements BaseEntity{
-	private Boolean deleted;
+//	private Boolean deleted;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

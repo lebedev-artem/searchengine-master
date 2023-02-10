@@ -8,12 +8,12 @@ import searchengine.model.BaseEntity;
 
 import java.io.Serializable;
 
-	@NoRepositoryBean
-	public interface BaseRepository <T extends BaseEntity, ID extends Serializable> extends JpaRepository<T, ID> {
+@NoRepositoryBean
+public interface BaseRepository<T extends BaseEntity, ID extends Serializable> extends JpaRepository<T, ID> {
 
-		void delete(T entity);
+//		void delete(T entity);
 
-		@Modifying(clearAutomatically = true, flushAutomatically = true)
-		@Query(value = "ALTER TABLE `site` AUTO_INCREMENT = 0", nativeQuery = true)
-		void resetIdOnSite();
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query(value = "ALTER TABLE `site` AUTO_INCREMENT = 0", nativeQuery = true)
+	void resetIdOnSiteTable();
 }

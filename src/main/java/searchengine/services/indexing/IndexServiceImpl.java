@@ -3,7 +3,9 @@ package searchengine.services.indexing;
 import lombok.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jsoup.safety.Safelist;
+import org.jetbrains.annotations.NotNull;
+import org.jsoup.Connection;
+import org.jsoup.Jsoup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -11,13 +13,17 @@ import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.model.PageEntity;
-import searchengine.model.SiteEntity;
 import searchengine.repositories.*;
-import searchengine.services.interfaces.FillEntity;
+import searchengine.services.interfaces.EntityService;
 import searchengine.services.interfaces.IndexService;
 import searchengine.services.parsing.ParseSiteService;
 import searchengine.services.parsing.ParseTask;
+import searchengine.services.utilities.SingleSiteListCreator;
 
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
@@ -30,20 +36,22 @@ import java.util.concurrent.*;
 @RequiredArgsConstructor
 public class IndexServiceImpl implements IndexService {
 
-	private final FillEntity fillEntity;
+	private final EntityService entityService;
 	private static final Logger logger = LogManager.getLogger(IndexService.class);
 	private final IndexResponse indexResponse = new IndexResponse();
 	private static final ThreadLocal<Thread> singleTask = new ThreadLocal<>();
 	private static Future<Integer> future;
 	public volatile boolean allowed = true;
 	public volatile boolean isStarted = false;
-	@Autowired
 	private static ParseSiteService parseSiteService;
+	private static SingleSiteListCreator singleSiteListCreator;
 	private HashMap<String, Integer> links = new HashMap<>();
 	private Set<PageEntity> pages = new HashSet<>();
-	@Autowired
+
+	private HashMap<String, Integer> linksNeverDelete = new HashMap<>();
+	private Set<PageEntity> pagesNeverDelete = new HashSet<>();
+
 	private static Site site;
-	@Autowired
 	private static SitesList sitesList;
 	@Autowired
 	private final SiteRepository siteRepository;
@@ -54,34 +62,42 @@ public class IndexServiceImpl implements IndexService {
 
 	@Override
 	@Transactional
-	public synchronized ResponseEntity<?> indexingStart(SitesList sitesList) throws Exception {
+	public synchronized ResponseEntity<?> indexingStart(@NotNull SitesList sitesList){
 		long timeMain = System.currentTimeMillis();
+		if (isStarted) return indexResponse.startFailed();
+
 		isStarted = true;
+		allowed = true;
 		ForkJoinPool fjpPool = new ForkJoinPool();
 		ExecutorService executor = Executors.newSingleThreadExecutor();
-		pageRepository.deleteAll();
-		siteRepository.deleteAll();
-		siteRepository.resetIdOnSite();
-		siteRepository.saveAll(fillEntity.initSiteTable());
+
+		if (sitesList.getSites().size() > 1){
+			pageRepository.deleteAll();
+			siteRepository.deleteAll();
+			siteRepository.resetIdOnSiteTable();
+			siteRepository.saveAllAndFlush(entityService.initSiteTable(sitesList));
+		}
 
 		singleTask.set(new Thread(() -> {
 			for (Site site : sitesList.getSites()) {
 				if (allowed) {
-					SiteEntity siteEntity = siteRepository.findByUrl(site.getUrl());
+					int siteId = siteRepository.findEntityByName(site.getName()).getId();
 					try {
 						long time = System.currentTimeMillis();
-						future = executor.submit(() -> forkSiteTask(fjpPool, site, siteEntity));
+						future = executor.submit(() -> forkSiteTask(fjpPool, site, siteId));
 						future.get();
-						logger.warn("--- " + site.getUrl() + " parsed in " + (System.currentTimeMillis() - time) + " ms");
-						logger.warn("--- Site " + site.getUrl() + " contains " + pages.size() + " pages");
+						logger.warn("~ " + site.getUrl() + " parsed in " + (System.currentTimeMillis() - time) + " ms");
+						logger.warn("~ Site " + site.getUrl() + " contains " + pages.size() + " pages");
 					} catch (RuntimeException | ExecutionException | InterruptedException e) {
 						logger.error("Error while getting Future " + Thread.currentThread().getStackTrace()[1].getMethodName());
+						e.printStackTrace();
 					}
-					updateSiteAfterParse(site);
 					long time = System.currentTimeMillis();
 					pageRepository.saveAll(pages);
-					logger.warn("--- site " + site.getUrl() + " DB filled in " + (System.currentTimeMillis() - time) + " ms");
+					logger.warn("~ Site " + site.getUrl() + " DB filled in " + (System.currentTimeMillis() - time) + " ms");
 					pages.clear();
+					links.clear();
+					updateSiteAfterParse(site);
 				} else {
 					fjpPool.shutdownNow();
 					executor.shutdownNow();
@@ -89,68 +105,79 @@ public class IndexServiceImpl implements IndexService {
 				}
 			}
 			isStarted = false;
-			logger.info("--- Parsing finished in " + (System.currentTimeMillis() - timeMain) + " ms ---");
+			logger.warn("~ Parsing finished in " + (System.currentTimeMillis() - timeMain) + " ms, isStarted - " + isStarted + " isAllowed - " + allowed +" ---");
 		}));
 		singleTask.get().start();
 		return indexResponse.successfully();
 	}
 
 	@Override
-	public ResponseEntity<?> singleIndexingStart(String url, Site site) throws Exception {
-		ForkJoinPool fjpPool = new ForkJoinPool();
-		ExecutorService executor = Executors.newSingleThreadExecutor();
-		PageEntity pageEntity = pageRepository.findByPath(new URL(url).getPath());
-		SiteEntity siteEntity = siteRepository.findByUrl(site.getUrl());
-		if (pageEntity == null) return indexResponse.indexPageFailed();
+	public ResponseEntity<?> singleIndexingStart(@NotNull HttpServletRequest request) throws MalformedURLException {
+		setStarted(true);
+		String url = request.getParameter("url");
+		String hostName = url.substring(0, url.indexOf(new URL(url).getPath())+1);
+		String path = new URL(url).getPath();
 
-		pageRepository.delete(pageEntity);
-		logger.warn("Удалили запись");
+		Site site = sitesList.getSites().stream()
+				.filter(s -> hostName.equals(s.getUrl()))
+				.findAny()
+				.orElse(null);
+		PageEntity pageEntity = pageRepository.findByPath(path);
 
-		SitesList singleSiteList = new SitesList();
-		List<Site> setOfSite = Collections.singletonList(site);
-		singleSiteList.setSites(setOfSite);
-		long time1 = System.currentTimeMillis();
-		logger.warn("Запускаем индекс этой страницы");
-		future = executor.submit(() -> forkSiteTask(fjpPool, site, siteEntity));
-		future.get();
-		logger.warn("--- " + site.getUrl() + " parsed in " + (System.currentTimeMillis() - time1) + " ms");
-		logger.warn("--- Site " + site.getUrl() + " contains " + pages.size() + " pages");
-		updateSiteAfterParse(site);
-		long time = System.currentTimeMillis();
-		pageRepository.saveAll(pages);
-		logger.warn("--- site " + site.getUrl() + " DB filled in " + (System.currentTimeMillis() - time) + " ms");
-		pages.clear();
-		singleTask.get().start();
+		if ((site == null) || (pageEntity == null)) return indexResponse.indexPageFailed();
+
+		siteRepository.updateAllSitesStatusTimeError("INDEXING", LocalDateTime.now(), getLastErrorMsg(url));
+		entityService.deleteAllPagesByPath(path);
+
+		SitesList singleSiteList = singleSiteListCreator.getSiteList(url, site);
+
+		indexingStart(singleSiteList);
+
 		return indexResponse.successfully();
 	}
 
 	@Override
-	public ResponseEntity<?> indexingStop() throws ExecutionException, InterruptedException {
-		logger.warn("--- Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started---");
+	public ResponseEntity<?> indexingStop(){
+		if (!isStarted) return indexResponse.stopFailed();
+
+		logger.warn("~ Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started");
 		setStarted(false);
 		setAllowed(false);
 		siteRepository.updateAllSitesStatusTimeError("FAILED", LocalDateTime.now(), "Индексация остановлена пользователем");
 		return indexResponse.successfully();
 	}
 
-	private int forkSiteTask(ForkJoinPool fjpPool, Site site, SiteEntity siteEntity) {
-		logger.warn("--- Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started---");
+	private int forkSiteTask(ForkJoinPool fjpPool, Site site, int siteId) {
+		logger.warn("~ Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started");
 		ParseTask rootParseTask = new ParseTask(site.getUrl());
-		parseSiteService = new ParseSiteService(rootParseTask, this, site, siteEntity);
+		parseSiteService = new ParseSiteService(rootParseTask,this, site, siteId, siteRepository.findEntityById(siteId));
 		parseSiteService.setAllowed(true);
-		logger.info("Invoke " + site.getName() + " " + site.getUrl());
+		logger.warn("~ Invoke " + site.getName() + " " + site.getUrl());
 		fjpPool.invoke(parseSiteService);
 		return rootParseTask.getLinksOfTask().size();
 	}
 
 	private void updateSiteAfterParse(Site site) {
 		//надо опдумать записывать ли коллекицю если прервали стопом
+//		Если прервалось эксепщеном то FAILED
+		// Если failed посчитать колва страниц и если меньше к примеру 10 то файлуд
 		if (future.isDone() && allowed) {
 			siteRepository.updateSiteStatus("INDEXED", site.getName());
 			siteRepository.updateStatusTime(site.getName(), LocalDateTime.now());
-			logger.info("Status of site " + site.getName() + " set to INDEXED");
+			logger.warn("~ Status of site " + site.getName() + " set to INDEXED");
 		}
 	}
+	private String getLastErrorMsg(String url) {
+		Connection.Response response;
+		String error = "";
+		try {
+			response = Jsoup.connect(url).execute();
+		} catch (IOException exception) {
+			error = exception.getMessage();
+		}
+		return error;
+	}
+
 
 	@Override
 	public Boolean getStarted() {
@@ -161,4 +188,5 @@ public class IndexServiceImpl implements IndexService {
 	public Boolean getAllowed() {
 		return allowed;
 	}
+
 }

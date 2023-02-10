@@ -21,7 +21,6 @@ import searchengine.services.interfaces.IndexService;
 import searchengine.services.interfaces.StatisticsService;
 
 import javax.servlet.http.HttpServletRequest;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.concurrent.*;
 
@@ -56,24 +55,16 @@ public class ApiController {
 
 	@GetMapping("/startIndexing")
 	public ResponseEntity<?> startIndexing() throws Exception {
-		if (indexService.getStarted()) return indexResponse.startFailed();
 		return indexService.indexingStart(sitesList);
 	}
 
 	@GetMapping("/stopIndexing")
 	public ResponseEntity<?> stopIndexing() throws ExecutionException, InterruptedException {
-		if (!indexService.getStarted()) return indexResponse.stopFailed();
 		return indexService.indexingStop();
 	}
 
 	@PostMapping("/indexPage")
-	public ResponseEntity<?> indexPage(HttpServletRequest request) throws Exception {
-		String hostName = new URL(request.getParameter("url")).getHost();
-
-		for (Site site : sitesList.getSites())
-			if (site.getUrl().contains(hostName)) {
-				return indexService.singleIndexingStart(request.getParameter("url"), site);
-			}
-		return indexResponse.indexPageFailed();
+	public ResponseEntity<?> indexPage(@NotNull HttpServletRequest request) throws Exception {
+		return indexService.singleIndexingStart(request);
 	}
 }

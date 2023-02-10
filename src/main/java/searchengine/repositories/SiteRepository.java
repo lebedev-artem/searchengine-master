@@ -38,6 +38,9 @@ public interface SiteRepository extends BaseRepository<SiteEntity, Long> {
 
 //	@Query("SELECT s FROM SiteEntity s WHERE s.url = :url")
 	SiteEntity findByUrl(String url);
+	Integer findIdByName(String name);
+	SiteEntity findEntityByName(String name);
+	SiteEntity findEntityById(Integer id);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("DELETE FROM SiteEntity s WHERE s.url = :url")
@@ -62,6 +65,11 @@ public interface SiteRepository extends BaseRepository<SiteEntity, Long> {
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime, `last_error` = :error WHERE `status` = \"INDEXING\"", nativeQuery = true)
 	void updateAllSitesStatusTimeError(String status, LocalDateTime statusTime, String error);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime, `last_error` = :error WHERE `name` = :name", nativeQuery = true)
+	void updateSiteStatusTimeError(String status, LocalDateTime statusTime, String error, String name);
+
 }
 
 

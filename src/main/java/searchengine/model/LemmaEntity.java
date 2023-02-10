@@ -10,7 +10,7 @@ import java.util.Set;
 @Entity
 @Table(name = "lemma")
 public class LemmaEntity implements BaseEntity {
-	private Boolean deleted;
+//	private Boolean deleted;
 
 	@Id
 	@Column(nullable = false)

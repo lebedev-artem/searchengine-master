@@ -32,6 +32,8 @@ jsoup-setting:
 
 indexing-settings:
   sites:
+    - url: http://lenta.ru/
+      name: Lenta
     - url: http://radiomv.ru/
       name: Радио_MV
     - url: https://ipfran.ru/
@@ -54,7 +56,9 @@ indexing-settings:
       name: Дом_Булгакова
     - url: https://www.svetlovka.ru/
       name: Светловка
-    - url: http://artlebedev.ru
+    - url: http://artlebedev.ru/
       name: ArtLebedev
+#    - url: http://www.artlefbgedhehv.by
+#      name: test
 
 

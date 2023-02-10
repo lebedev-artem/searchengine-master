@@ -24,6 +24,7 @@ import searchengine.services.utilities.UrlFormatter;
 import java.io.IOException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.RecursiveTask;
 
@@ -52,16 +53,17 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 	private Connection.Response response;
 	private Site site;
 	int id;
+	Integer siteId;
 	SiteEntity siteEntity;
 
 
-	public ParseSiteService(ParseTask parseTask, IndexServiceImpl indexService, Site site, SiteEntity siteEntity) {
+	public ParseSiteService(ParseTask parseTask, IndexServiceImpl indexService, Site site, Integer siteId, SiteEntity siteEntity) {
 		this.rootParseTask = parseTask;
 		this.indexService = indexService;
 		this.site = site;
-		this.siteEntity = siteEntity;
-		this.id = siteEntity.getId();
+		this.siteId = siteId;
 		parentUrl = site.getUrl();
+		this.siteEntity = siteEntity;
 	}
 
 	@Override
@@ -80,6 +82,7 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 		try {
 			if (!indexService.getLinks().containsKey(urlOfTask)) {
 				subTaskLinks = getSubLinks(urlOfTask); //Получаем все ссылки от вызвавшей ссылки
+//				logger.warn("subTaskLinks contains - " + subTaskLinks.size());
 			}
 //			logger.warn("get sublinks from " + urlOfTask );
 		} catch (InterruptedException ex) {
@@ -101,7 +104,6 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 
 	public Map<String, Integer> getSubLinks(String url) throws InterruptedException, IOException {
 		Map<String, Integer> subLinks = new HashMap<>();
-		siteRepository = indexService.getSiteRepository();
 		String content;
 		String path;
 		response = getResponseFromUrl(url);
@@ -112,16 +114,19 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 		content = getCleanedBody(document);
 //		content = document.html();
 		path = new URL(url).getPath();
+
 		PageEntity pageEntity = new PageEntity(siteEntity, path, statusCode, content);
 
 //		эти две строки надо вынести отдельно, когда получили ссылку, и сразу отправили
-		if (!indexService.getLinks().containsKey(url)) {
+		if (!indexService.getLinksNeverDelete().containsKey(url)) {
 //			logger.warn("indexService.getLinks().put(" + url + ")");
 			indexService.getLinks().put(url, statusCode); //добавляем ссылку с кодом в мап
+			indexService.getLinksNeverDelete().put(url, statusCode);
 		}
-		if (!indexService.getPages().contains(pageEntity)) {
+		if (!indexService.getPagesNeverDelete().contains(pageEntity)) {
 //			logger.warn("indexService.getPages().add(" + pageEntity.getPath() + ")");
 			indexService.getPages().add(pageEntity); //добавляем пэдж в сет
+			indexService.getPagesNeverDelete().add(new PageEntity(siteEntity, path, statusCode, ""));
 //			indexService.getPageRepository().save(pageEntity);
 		}
 
@@ -150,6 +155,7 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 		} catch (NullPointerException ex) {
 			logger.error(" Error in " + Thread.currentThread().getStackTrace()[1].getMethodName() + " Elements from URL is empty\n");
 		}
+//		if (subLinks.size() != 0) logger.warn(subLinks.size() + " links was returned");
 		return subLinks;
 	}
 
@@ -162,6 +168,7 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 			statusMessage = response.statusMessage();
 		} catch (IOException exception) {
 			logger.error("IOException in " + Thread.currentThread().getStackTrace()[1].getMethodName() + ". " + exception);
+			indexService.getSiteRepository().updateSiteStatusTimeError("FAILED", LocalDateTime.now(), exception.getMessage(), site.getName());
 			return null;
 		}
 
@@ -184,7 +191,7 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 		}
 		for (String subLink : subLinks.keySet()) {
 			ParseTask subParseTask = new ParseTask(subLink); //Создаем подзадачу для каждой ссылки
-			ParseSiteService task = new ParseSiteService(subParseTask, indexService, site, siteEntity); //Рекурсия. Создаем экземпляр ParseLink для FJP от подзадачи
+			ParseSiteService task = new ParseSiteService(subParseTask, indexService, site, siteId, siteEntity); //Рекурсия. Создаем экземпляр ParseLink для FJP от подзадачи
 			task.fork();//форкаем
 			subTasks.add(task); //Добавляем задачу в список задач
 			rootParseTask.addSubTask(subParseTask, subLinks.get(subLink)); //добавляем подзадачу в список подзадач вызвавшей задачи
