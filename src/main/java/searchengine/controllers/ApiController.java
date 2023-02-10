@@ -68,16 +68,12 @@ public class ApiController {
 
 	@PostMapping("/indexPage")
 	public ResponseEntity<?> indexPage(HttpServletRequest request) throws Exception {
-		if (isUrlNotPresent(request)) return indexResponse.indexPageFailed();
-
-		return indexService.singleIndexingStart(request.getParameter("url"));
-	}
-
-	private boolean isUrlNotPresent(@NotNull HttpServletRequest request) throws MalformedURLException {
-		boolean urlNotPresent = true;
 		String hostName = new URL(request.getParameter("url")).getHost();
+
 		for (Site site : sitesList.getSites())
-			if (site.getUrl().contains(hostName)) urlNotPresent = false;
-		return urlNotPresent;
+			if (site.getUrl().contains(hostName)) {
+				return indexService.singleIndexingStart(request.getParameter("url"), site);
+			}
+		return indexResponse.indexPageFailed();
 	}
 }

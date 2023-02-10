@@ -77,14 +77,6 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 			return rootParseTask.getLinksOfTask(); //Внешний флаг от метода indexStop
 		}
 
-////возможно надо перенесте в класс парсе енэине
-////		сюда добвавить получание статуса
-//		if (linkIsFile(urlOfTask)) { //проверяем если ссылка - файл, то записываем в Map и возвращаем
-//			links.put(rootParseTask.getUrl(), urlFormatter.getLevel(rootParseTask.getUrl()));
-//			rootParseTask.setLinksTask(links);
-//			return rootParseTask.getLinksOfTask();
-//		}
-
 		try {
 			if (!indexService.getLinks().containsKey(urlOfTask)) {
 				subTaskLinks = getSubLinks(urlOfTask); //Получаем все ссылки от вызвавшей ссылки
@@ -118,6 +110,7 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 		Document document = response.parse();
 		Elements elements = document.select("a[href]");
 		content = getCleanedBody(document);
+//		content = document.html();
 		path = new URL(url).getPath();
 		PageEntity pageEntity = new PageEntity(siteEntity, path, statusCode, content);
 
@@ -182,7 +175,7 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 
 
 	private @NotNull String getCleanedBody(Document document) {
-		return Jsoup.clean(String.valueOf(document), Safelist.relaxed());
+		return Jsoup.clean(String.valueOf(document), Safelist.simpleText());
 	}
 
 	private void forkTasksFromSubtasks(List<ParseSiteService> subTasks, Map<String, Integer> subLinks) {

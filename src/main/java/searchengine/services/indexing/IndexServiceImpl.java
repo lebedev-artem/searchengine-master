@@ -3,6 +3,7 @@ package searchengine.services.indexing;
 import lombok.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jsoup.safety.Safelist;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -20,9 +21,7 @@ import searchengine.services.parsing.ParseTask;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.*;
 
 @Setter
@@ -43,6 +42,10 @@ public class IndexServiceImpl implements IndexService {
 	private HashMap<String, Integer> links = new HashMap<>();
 	private Set<PageEntity> pages = new HashSet<>();
 	@Autowired
+	private static Site site;
+	@Autowired
+	private static SitesList sitesList;
+	@Autowired
 	private final SiteRepository siteRepository;
 	@Autowired
 	private final PageRepository pageRepository;
@@ -56,11 +59,9 @@ public class IndexServiceImpl implements IndexService {
 		isStarted = true;
 		ForkJoinPool fjpPool = new ForkJoinPool();
 		ExecutorService executor = Executors.newSingleThreadExecutor();
-		logger.warn("--- Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started---");
 		pageRepository.deleteAll();
 		siteRepository.deleteAll();
 		siteRepository.resetIdOnSite();
-		logger.warn("--- Initialization of `site` table ---");
 		siteRepository.saveAll(fillEntity.initSiteTable());
 
 		singleTask.set(new Thread(() -> {
@@ -68,27 +69,19 @@ public class IndexServiceImpl implements IndexService {
 				if (allowed) {
 					SiteEntity siteEntity = siteRepository.findByUrl(site.getUrl());
 					try {
-//						Запускаем парсинг ссылок
 						long time = System.currentTimeMillis();
 						future = executor.submit(() -> forkSiteTask(fjpPool, site, siteEntity));
-						logger.warn("--- Site " + site.getUrl() + " was parsed with " + future.get() + " links. ---");
-						logger.warn("--- Site " + site.getUrl() + " contains " + links.size() + " links with codes");
-						logger.warn("--- Site " + site.getUrl() + " contains " + pages.size() + " pages");
+						future.get();
 						logger.warn("--- " + site.getUrl() + " parsed in " + (System.currentTimeMillis() - time) + " ms");
-					} catch (InterruptedException | RuntimeException | ExecutionException e) {
-						logger.error("Error in adding a task to the pool");
-						logger.error("Error in future.get()");
-						e.printStackTrace();
+						logger.warn("--- Site " + site.getUrl() + " contains " + pages.size() + " pages");
+					} catch (RuntimeException | ExecutionException | InterruptedException e) {
+						logger.error("Error while getting Future " + Thread.currentThread().getStackTrace()[1].getMethodName());
 					}
-//					Запускаем индексацию страниц
-
-
-//					Записываем в таблицу site статусы и время
 					updateSiteAfterParse(site);
-					logger.warn("--- Start add pages to DB from " + site.getUrl() + " ---");
 					long time = System.currentTimeMillis();
 					pageRepository.saveAll(pages);
 					logger.warn("--- site " + site.getUrl() + " DB filled in " + (System.currentTimeMillis() - time) + " ms");
+					pages.clear();
 				} else {
 					fjpPool.shutdownNow();
 					executor.shutdownNow();
@@ -103,16 +96,31 @@ public class IndexServiceImpl implements IndexService {
 	}
 
 	@Override
-	public ResponseEntity<?> singleIndexingStart(String url) throws MalformedURLException {
-//		добавить проверку ссылки
-		String path = new URL(url).getPath();
-		PageEntity pageEntity = new PageEntity();
-		pageEntity = pageRepository.findByPath(path);
+	public ResponseEntity<?> singleIndexingStart(String url, Site site) throws Exception {
+		ForkJoinPool fjpPool = new ForkJoinPool();
+		ExecutorService executor = Executors.newSingleThreadExecutor();
+		PageEntity pageEntity = pageRepository.findByPath(new URL(url).getPath());
+		SiteEntity siteEntity = siteRepository.findByUrl(site.getUrl());
 		if (pageEntity == null) return indexResponse.indexPageFailed();
+
 		pageRepository.delete(pageEntity);
 		logger.warn("Удалили запись");
-		logger.warn("Запускаем индекс этой странцы");
 
+		SitesList singleSiteList = new SitesList();
+		List<Site> setOfSite = Collections.singletonList(site);
+		singleSiteList.setSites(setOfSite);
+		long time1 = System.currentTimeMillis();
+		logger.warn("Запускаем индекс этой страницы");
+		future = executor.submit(() -> forkSiteTask(fjpPool, site, siteEntity));
+		future.get();
+		logger.warn("--- " + site.getUrl() + " parsed in " + (System.currentTimeMillis() - time1) + " ms");
+		logger.warn("--- Site " + site.getUrl() + " contains " + pages.size() + " pages");
+		updateSiteAfterParse(site);
+		long time = System.currentTimeMillis();
+		pageRepository.saveAll(pages);
+		logger.warn("--- site " + site.getUrl() + " DB filled in " + (System.currentTimeMillis() - time) + " ms");
+		pages.clear();
+		singleTask.get().start();
 		return indexResponse.successfully();
 	}
 
@@ -136,7 +144,6 @@ public class IndexServiceImpl implements IndexService {
 	}
 
 	private void updateSiteAfterParse(Site site) {
-		logger.warn("--- Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started---");
 		//надо опдумать записывать ли коллекицю если прервали стопом
 		if (future.isDone() && allowed) {
 			siteRepository.updateSiteStatus("INDEXED", site.getName());

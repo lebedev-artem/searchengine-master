@@ -25,8 +25,8 @@ spring:
 jsoup-setting:
   jsoup:
     userAgent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:25.0) Gecko/20100101 Firefox/25.0
-    referrer: http://www:google:com"
-    timeout: 5000
+    referrer: http://www:google.com
+    timeout: 10000
     ignoreHttpErrors: true
     followRedirects: false
 
@@ -54,5 +54,7 @@ indexing-settings:
       name: Дом_Булгакова
     - url: https://www.svetlovka.ru/
       name: Светловка
+    - url: http://artlebedev.ru
+      name: ArtLebedev
 
 
