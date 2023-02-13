@@ -1,10 +1,13 @@
 package searchengine.repositories;
 
+import org.springframework.data.domain.Example;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import searchengine.config.Site;
 import searchengine.model.PageEntity;
+import searchengine.model.SiteEntity;
 
 import java.util.List;
 
@@ -16,6 +19,12 @@ public interface PageRepository extends BaseRepository<PageEntity, Long> {
 	PageEntity findByPath(String path);
 	List<PageEntity> findAllByPath(String path);
 	void deleteAllByPath(String path);
+	boolean existsByPath(String path);
+	boolean existsBySiteEntity(SiteEntity siteEntity);
+	void deleteAllBySiteEntity(SiteEntity siteEntity);
+
+	@Override
+	<S extends PageEntity> boolean exists(Example<S> example);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "DELETE FROM `page` WHERE `path` LIKE %:path%", nativeQuery = true)
@@ -23,5 +32,7 @@ public interface PageRepository extends BaseRepository<PageEntity, Long> {
 
 	@Query(value = "SELECT * FROM `page` WHERE `site_id` = :siteId", nativeQuery = true)
 	List<PageEntity> findAllBySiteId(Integer siteId);
+
+
 
 }

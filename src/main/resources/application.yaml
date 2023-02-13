@@ -32,18 +32,18 @@ jsoup-setting:
 
 indexing-settings:
   sites:
-    - url: http://lenta.ru/
-      name: Lenta
+#    - url: http://lenta.ru/
+#      name: Lenta
 #    - url: http://radiomv.ru/
 #      name: Радио_MV
 #    - url: https://ipfran.ru/
 #      name: IP_fran
 #    - url: https://dimonvideo.ru/
 #      name: Димон_Видео
-#    - url: http://www.bbc.com
-#      name: BBC.com
-#    - url: https://nikoartgallery.com/
-#      name: Niko_Art_Gallery
+    - url: http://www.bbc.com
+      name: BBC.com
+    - url: https://nikoartgallery.com/
+      name: Niko_Art_Gallery
 #    - url: https://et-cetera.ru/mobile/
 #      name: Et_Cetera_4_mobile
 #    - url: https://www.lutherancathedral.ru/

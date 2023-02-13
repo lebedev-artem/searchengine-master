@@ -27,7 +27,7 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.RecursiveTask;
+import java.util.concurrent.*;
 
 @Getter
 @Setter
@@ -41,6 +41,8 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 	public volatile Map<String, Integer> links = new TreeMap<>();
 	public HashMap<String, Integer> linksCodes = new HashMap<>();
 	private final IndexServiceImpl indexService;
+	private static ExecutorService executor = Executors.newSingleThreadExecutor();
+	private static Future<?> future;
 
 	String urlIsFile = "http[s]?:/(?:/[^/]+){1,}/[А-Яа-яёЁ\\w ]+\\.[a-z]{3,5}(?![/]|[\\wА-Яа-яёЁ])";
 	String validUrl = "^(ht|f)tp(s?)://[0-9a-zA-Z]([-.\\w]*[0-9a-zA-Z])*(:(0-9)*)*(/?)([a-zA-Z0-9\\-.?,'/\\\\+&%_]*)?$";
@@ -90,11 +92,19 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 			logger.debug("Error in subLinks = getChildLinksFromElements(urlTask)");
 		} catch (IOException ex) {
 			logger.debug("IOException in subLinks = getChildLinksFromElements(URLOfTask)");
-		} catch (RuntimeException ex) {
+		} catch (RuntimeException | ExecutionException ex) {
 			ex.printStackTrace();
 			logger.debug("java.io.IOException: Underlying input stream returned zero byte");
 		}
 
+		future = executor.submit(this::ifHeapIsExceeded);
+		try {
+			future.get();
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		} catch (ExecutionException e) {
+			throw new RuntimeException(e);
+		}
 		forkTasksFromSubtasks(subTasks, subTaskLinks);
 		joinTasksFromSubtasks(links, subTasks);
 
@@ -103,7 +113,7 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 		return rootParseTask.getLinksOfTask();
 	}
 
-	public Map<String, Integer> getSubLinks(String url) throws InterruptedException, IOException {
+	public Map<String, Integer> getSubLinks(String url) throws InterruptedException, IOException, ExecutionException {
 		Map<String, Integer> subLinks = new HashMap<>();
 		String content;
 		String path;
@@ -156,18 +166,23 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 		} catch (NullPointerException ex) {
 			logger.error(" Error in " + Thread.currentThread().getStackTrace()[1].getMethodName() + " Elements from URL is empty\n");
 		}
-//		if (subLinks.size() != 0) logger.warn(subLinks.size() + " links was returned");
-		if (indexService.getPagesNeverDelete().size() % 200 == 0){
-//			1048576000 1GB
-//			2097152000 2Gb
-			System.out.println("heap size: " + heapSize);
-			System.out.println("heap max size: " + heapMaxSize);
-			System.out.println("heap free size: " + heapFreeSize);
-			System.out.println("heap size: " + CheckHeapSize.formatSize(heapSize));
-			System.out.println("heap max size: " + CheckHeapSize.formatSize(heapMaxSize));
-			System.out.println("heap free size: " + CheckHeapSize.formatSize(heapFreeSize));
-		}
 		return subLinks;
+	}
+
+	private void ifHeapIsExceeded() {
+//		2097152000
+		if (indexService.getPages().size() > 200){
+			try {
+				Thread.sleep(5000);
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+			logger.warn("heap size: " + CheckHeapSize.formatSize(heapSize));
+			logger.warn("~ Saving pages to DB");
+			indexService.getPageRepository().saveAll(indexService.getPages());
+			indexService.getPages().clear();
+			logger.warn("heap size: " + CheckHeapSize.formatSize(heapSize));
+		}
 	}
 
 
@@ -185,7 +200,7 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 		}
 
 		if (!acceptableContentTypes.contains(response.contentType())) {
-			indexService.setLastError(url + "contains not acceptable content type");
+			indexService.setLastError(url + " contains unacceptable content type");
 			logger.error("connectionResponse = Jsoup.connect(url).execute(). Not acceptable content type");
 			logger.warn(response.url() + response.contentType() + response.statusCode() + response.statusMessage());
 			return null;

@@ -8,7 +8,7 @@ import java.util.List;
 
 @RequiredArgsConstructor
 public class SingleSiteListCreator {
-private SitesList sitesList;
+private final SitesList sitesList;
 
 	public SitesList getSiteList(String url, String hostName) {
 		Site site = sitesList.getSites().stream()

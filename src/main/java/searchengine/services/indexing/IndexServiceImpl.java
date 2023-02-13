@@ -57,7 +57,7 @@ public class IndexServiceImpl implements IndexService {
 
 	@Override
 	@Transactional
-	public synchronized ResponseEntity<?> indexingStart(@NotNull SitesList sitesList){
+	public synchronized ResponseEntity<?> indexingStart(@NotNull SitesList sitesList) throws MalformedURLException {
 		long timeMain = System.currentTimeMillis();
 		if (isStarted) return indexResponse.startFailed();
 
@@ -103,7 +103,7 @@ public class IndexServiceImpl implements IndexService {
 
 	@Override
 	public ResponseEntity<?> indexingPageStart(@NotNull HttpServletRequest request) throws MalformedURLException {
-		SingleSiteListCreator singleSiteListCreator = new SingleSiteListCreator();
+		SingleSiteListCreator singleSiteListCreator = new SingleSiteListCreator(sitesList);
 		String url = request.getParameter("url");
 		String path = new URL(url).getPath();
 		String hostName = url.substring(0, url.indexOf(new URL(url).getPath())+1);
@@ -144,21 +144,14 @@ public class IndexServiceImpl implements IndexService {
 		return rootParseTask.getLinksOfTask().size();
 	}
 
-	private void updateSiteAfterParse(Integer siteId, Site site) {
-		boolean countPagesEnough = false;
-//				pageRepository.findAllBySiteId(siteId).size() > 35;
-		int count = 0;
-		for (PageEntity p : pagesNeverDelete.stream().toList()) {
-			if (p.getSiteEntity().getId() == siteId) count++;
-			if (count == 35) {
-				countPagesEnough = true;
-				break;
-			}
-		}
+	private void updateSiteAfterParse(Integer siteId, @NotNull Site site) {
+		String status = pageRepository.existsBySiteEntity(siteRepository.findByName(site.getName())) ? "INDEXED" : "FAILED";
+
 		if (future.isDone() && allowed) {
-			siteRepository.updateStatusStatusTimeError(countPagesEnough ? "INDEXED" : "FAILED", LocalDateTime.now(), lastError, site.getName());
-			logger.warn("~ Status of site " + site.getName() + " set to INDEXED");
+			siteRepository.updateStatusStatusTimeError(status, LocalDateTime.now(), lastError, site.getName());
+			logger.warn("~ Status of site " + site.getName() + " set to " + status);
 		}
+
 	}
 
 	private String getLastErrorMsg(String url) {
@@ -172,38 +165,35 @@ public class IndexServiceImpl implements IndexService {
 		return error;
 	}
 
-	private void initSchema(SitesList sitesList) {
-
-//		добавить проверку есть ли сайт в базе
-		if (sitesList.getSites().size() == 1){
-			if (!siteRepository.existsByName(sitesList.getSites().get(0).getName())) siteRepository.save(initSiteRow(sitesList.getSites().get(0)));
-			pageRepository.deletePagesContainingPath(sitesList.getSites().get(0).getUrl());
-
-//			siteRepository.updateStatusStatusTimeError("INDEXING", LocalDateTime.now(), getLastErrorMsg(sitesList.getSites().get(0).getUrl()), site.getName());
-
+	private void initSchema(SitesList sl) throws MalformedURLException {
+		Site siteToUpdate = sl.getSites().get(0);
+		String path = new URL(siteToUpdate.getUrl()).getPath();
+		if ((sitesList.getSites().size() > 1) && (sl.getSites().size() == 1)) {
+			pageRepository.deletePagesContainingPath(path);
+			siteRepository.updateStatusStatusTime("INDEXING", LocalDateTime.now(), siteToUpdate.getName());
 		} else {
 			pageRepository.deleteAllInBatch();
+			pageRepository.resetIdOnPageTable();
 			siteRepository.deleteAllInBatch();
 			siteRepository.resetIdOnSiteTable();
-			pageRepository.resetIdOnPageTable();
 			siteRepository.saveAllAndFlush(initSiteTable(sitesList));
 		}
 
 	}
 
-	private List<SiteEntity> initSiteTable(@NotNull SitesList sitesList) {
+	private List<SiteEntity> initSiteTable(@NotNull SitesList sl) {
 		List<SiteEntity> siteEntities = new ArrayList<>();
-		for (Site site : sitesList.getSites()) siteEntities.add(initSiteRow(site));
+		for (Site site : sl.getSites()) siteEntities.add(initSiteRow(site));
 		return siteEntities;
 	}
 
-	private SiteEntity initSiteRow(@NotNull Site site) {
+	private SiteEntity initSiteRow(@NotNull Site s) {
 		SiteEntity siteEntity = new SiteEntity();
 		siteEntity.setStatus("INDEXING");
 		siteEntity.setStatusTime(LocalDateTime.now());
 		siteEntity.setLastError("");
-		siteEntity.setUrl(site.getUrl());
-		siteEntity.setName(site.getName());
+		siteEntity.setUrl(s.getUrl());
+		siteEntity.setName(s.getName());
 		return siteEntity;
 	}
 
