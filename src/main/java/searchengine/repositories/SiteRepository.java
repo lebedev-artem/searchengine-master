@@ -37,10 +37,12 @@ public interface SiteRepository extends BaseRepository<SiteEntity, Long> {
 	List<SiteEntity> findAllSites();
 
 //	@Query("SELECT s FROM SiteEntity s WHERE s.url = :url")
-	SiteEntity findByUrl(String url);
+
 	Integer findIdByName(String name);
-	SiteEntity findEntityByName(String name);
-	SiteEntity findEntityById(Integer id);
+	SiteEntity findByName(String name);
+	SiteEntity findById(Integer id);
+	SiteEntity findByUrl(String url);
+	boolean existsByName(String name);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("DELETE FROM SiteEntity s WHERE s.url = :url")
@@ -52,7 +54,7 @@ public interface SiteRepository extends BaseRepository<SiteEntity, Long> {
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "UPDATE `site` SET `status` = :status WHERE `name`=:name", nativeQuery = true)
-	void updateSiteStatus(String status, String name);
+	void updateStatus(String status, String name);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "INSERT INTO `site` (status, status_time, last_error, url, name) VALUES (:status, :statusTime, :lastError, :url, :name)", nativeQuery = true)
@@ -64,11 +66,17 @@ public interface SiteRepository extends BaseRepository<SiteEntity, Long> {
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime, `last_error` = :error WHERE `status` = \"INDEXING\"", nativeQuery = true)
-	void updateAllSitesStatusTimeError(String status, LocalDateTime statusTime, String error);
+	void updateAllStatusStatusTimeError(String status, LocalDateTime statusTime, String error);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime, `last_error` = :error WHERE `name` = :name", nativeQuery = true)
-	void updateSiteStatusTimeError(String status, LocalDateTime statusTime, String error, String name);
+	void updateStatusStatusTimeError(String status, LocalDateTime statusTime, String error, String name);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime, WHERE `name` = :name", nativeQuery = true)
+	void updateStatusStatusTime(String status, LocalDateTime statusTime, String name);
+
+
 
 }
 

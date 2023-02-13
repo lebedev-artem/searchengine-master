@@ -1,14 +1,8 @@
 package searchengine.services.utilities;
-
-import org.apache.commons.lang3.StringUtils;
 import org.jsoup.nodes.Element;
 
 public class UrlFormatter {
 	String regexProtocol = "^(http|https)://(www.)?";
-
-	public Integer getLevel(String url) {
-		return StringUtils.countMatches(url, "/");
-	}
 
 	public String cleanHref(String str) {
 		str = str.replaceAll(regexProtocol, "");

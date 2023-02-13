@@ -19,6 +19,7 @@ import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.SiteRepository;
 import searchengine.services.indexing.IndexServiceImpl;
+import searchengine.services.utilities.CheckHeapSize;
 import searchengine.services.utilities.UrlFormatter;
 
 import java.io.IOException;
@@ -36,12 +37,9 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 	SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss");
 	private final ParseTask rootParseTask;
 	UrlFormatter urlFormatter = new UrlFormatter();
-	@Autowired
-	private SiteRepository siteRepository;
 	public static volatile boolean allowed = true;
 	public volatile Map<String, Integer> links = new TreeMap<>();
 	public HashMap<String, Integer> linksCodes = new HashMap<>();
-	@Autowired
 	private final IndexServiceImpl indexService;
 
 	String urlIsFile = "http[s]?:/(?:/[^/]+){1,}/[А-Яа-яёЁ\\w ]+\\.[a-z]{3,5}(?![/]|[\\wА-Яа-яёЁ])";
@@ -55,6 +53,9 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 	int id;
 	Integer siteId;
 	SiteEntity siteEntity;
+	long heapSize = Runtime.getRuntime().totalMemory();
+	long heapMaxSize = Runtime.getRuntime().maxMemory();
+	long heapFreeSize = Runtime.getRuntime().freeMemory();
 
 
 	public ParseSiteService(ParseTask parseTask, IndexServiceImpl indexService, Site site, Integer siteId, SiteEntity siteEntity) {
@@ -111,8 +112,8 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 
 		Document document = response.parse();
 		Elements elements = document.select("a[href]");
-		content = getCleanedBody(document);
-//		content = document.html();
+//		content = getCleanedBody(document);
+		content = document.html();
 		path = new URL(url).getPath();
 
 		PageEntity pageEntity = new PageEntity(siteEntity, path, statusCode, content);
@@ -156,6 +157,16 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 			logger.error(" Error in " + Thread.currentThread().getStackTrace()[1].getMethodName() + " Elements from URL is empty\n");
 		}
 //		if (subLinks.size() != 0) logger.warn(subLinks.size() + " links was returned");
+		if (indexService.getPagesNeverDelete().size() % 200 == 0){
+//			1048576000 1GB
+//			2097152000 2Gb
+			System.out.println("heap size: " + heapSize);
+			System.out.println("heap max size: " + heapMaxSize);
+			System.out.println("heap free size: " + heapFreeSize);
+			System.out.println("heap size: " + CheckHeapSize.formatSize(heapSize));
+			System.out.println("heap max size: " + CheckHeapSize.formatSize(heapMaxSize));
+			System.out.println("heap free size: " + CheckHeapSize.formatSize(heapFreeSize));
+		}
 		return subLinks;
 	}
 
@@ -168,11 +179,13 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 			statusMessage = response.statusMessage();
 		} catch (IOException exception) {
 			logger.error("IOException in " + Thread.currentThread().getStackTrace()[1].getMethodName() + ". " + exception);
-			indexService.getSiteRepository().updateSiteStatusTimeError("FAILED", LocalDateTime.now(), exception.getMessage(), site.getName());
+			indexService.setLastError(exception.getMessage());
+//			indexService.getSiteRepository().updateStatusStatusTimeError("FAILED", LocalDateTime.now(), exception.getMessage(), site.getName());
 			return null;
 		}
 
 		if (!acceptableContentTypes.contains(response.contentType())) {
+			indexService.setLastError(url + "contains not acceptable content type");
 			logger.error("connectionResponse = Jsoup.connect(url).execute(). Not acceptable content type");
 			logger.warn(response.url() + response.contentType() + response.statusCode() + response.statusMessage());
 			return null;

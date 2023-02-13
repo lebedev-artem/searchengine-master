@@ -13,7 +13,13 @@ public interface BaseRepository<T extends BaseEntity, ID extends Serializable> e
 
 //		void delete(T entity);
 
-	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Modifying(clearAutomatically = true, flushAutomatically = false)
 	@Query(value = "ALTER TABLE `site` AUTO_INCREMENT = 0", nativeQuery = true)
 	void resetIdOnSiteTable();
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query(value = "ALTER TABLE `page` AUTO_INCREMENT = 0", nativeQuery = true)
+	void resetIdOnPageTable();
+
+
 }

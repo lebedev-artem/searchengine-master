@@ -1,7 +1,6 @@
 package searchengine.services.interfaces;
 
 import org.springframework.http.ResponseEntity;
-import searchengine.config.Site;
 import searchengine.config.SitesList;
 
 import javax.servlet.http.HttpServletRequest;
@@ -12,7 +11,7 @@ public interface IndexService{
 
 	ResponseEntity<?> indexingStart(SitesList site) throws Exception;
 
-	ResponseEntity<?> singleIndexingStart(HttpServletRequest request) throws Exception;
+	ResponseEntity<?> indexingPageStart(HttpServletRequest request) throws Exception;
 
 	ResponseEntity<?> indexingStop() throws ExecutionException, InterruptedException;
 

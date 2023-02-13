@@ -3,6 +3,7 @@ package searchengine.repositories;
 import org.springframework.data.jpa.repository.support.JpaEntityInformation;
 import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 import searchengine.model.BaseEntity;
+
 import javax.persistence.EntityManager;
 import java.io.Serializable;
 
@@ -17,6 +18,11 @@ public class BaseRepositoryImpl<T extends BaseEntity, ID extends Serializable> e
 
 	@Override
 	public void resetIdOnSiteTable() {
+	}
+
+	@Override
+	public void resetIdOnPageTable() {
+
 	}
 
 }

@@ -13,17 +13,15 @@ import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.model.PageEntity;
+import searchengine.model.SiteEntity;
 import searchengine.repositories.*;
-import searchengine.services.interfaces.EntityService;
 import searchengine.services.interfaces.IndexService;
 import searchengine.services.parsing.ParseSiteService;
 import searchengine.services.parsing.ParseTask;
 import searchengine.services.utilities.SingleSiteListCreator;
 
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
@@ -36,26 +34,23 @@ import java.util.concurrent.*;
 @RequiredArgsConstructor
 public class IndexServiceImpl implements IndexService {
 
-	private final EntityService entityService;
 	private static final Logger logger = LogManager.getLogger(IndexService.class);
-	private final IndexResponse indexResponse = new IndexResponse();
+	private final IndexResponse indexResponse;
 	private static final ThreadLocal<Thread> singleTask = new ThreadLocal<>();
 	private static Future<Integer> future;
 	public volatile boolean allowed = true;
 	public volatile boolean isStarted = false;
 	private static ParseSiteService parseSiteService;
-	private static SingleSiteListCreator singleSiteListCreator;
 	private HashMap<String, Integer> links = new HashMap<>();
 	private Set<PageEntity> pages = new HashSet<>();
+	private String lastError;
+	private Integer siteId;
 
 	private HashMap<String, Integer> linksNeverDelete = new HashMap<>();
-	private Set<PageEntity> pagesNeverDelete = new HashSet<>();
-
-	private static Site site;
-	private static SitesList sitesList;
-	@Autowired
+	private ArrayList<PageEntity> pagesNeverDelete = new ArrayList<>();
+	private final Site site;
+	private final SitesList sitesList;
 	private final SiteRepository siteRepository;
-	@Autowired
 	private final PageRepository pageRepository;
 	private final LemmaRepository lemmaRepository;
 	private final SearchIndexRepository searchIndexRepository;
@@ -71,17 +66,12 @@ public class IndexServiceImpl implements IndexService {
 		ForkJoinPool fjpPool = new ForkJoinPool();
 		ExecutorService executor = Executors.newSingleThreadExecutor();
 
-		if (sitesList.getSites().size() > 1){
-			pageRepository.deleteAll();
-			siteRepository.deleteAll();
-			siteRepository.resetIdOnSiteTable();
-			siteRepository.saveAllAndFlush(entityService.initSiteTable(sitesList));
-		}
+		initSchema(sitesList);
 
 		singleTask.set(new Thread(() -> {
 			for (Site site : sitesList.getSites()) {
 				if (allowed) {
-					int siteId = siteRepository.findEntityByName(site.getName()).getId();
+					siteId = siteRepository.findByName(site.getName()).getId();
 					try {
 						long time = System.currentTimeMillis();
 						future = executor.submit(() -> forkSiteTask(fjpPool, site, siteId));
@@ -97,7 +87,7 @@ public class IndexServiceImpl implements IndexService {
 					logger.warn("~ Site " + site.getUrl() + " DB filled in " + (System.currentTimeMillis() - time) + " ms");
 					pages.clear();
 					links.clear();
-					updateSiteAfterParse(site);
+					updateSiteAfterParse(siteId, site);
 				} else {
 					fjpPool.shutdownNow();
 					executor.shutdownNow();
@@ -112,24 +102,21 @@ public class IndexServiceImpl implements IndexService {
 	}
 
 	@Override
-	public ResponseEntity<?> singleIndexingStart(@NotNull HttpServletRequest request) throws MalformedURLException {
-		setStarted(true);
+	public ResponseEntity<?> indexingPageStart(@NotNull HttpServletRequest request) throws MalformedURLException {
+		SingleSiteListCreator singleSiteListCreator = new SingleSiteListCreator();
 		String url = request.getParameter("url");
-		String hostName = url.substring(0, url.indexOf(new URL(url).getPath())+1);
 		String path = new URL(url).getPath();
+		String hostName = url.substring(0, url.indexOf(new URL(url).getPath())+1);
 
-		Site site = sitesList.getSites().stream()
-				.filter(s -> hostName.equals(s.getUrl()))
-				.findAny()
-				.orElse(null);
 		PageEntity pageEntity = pageRepository.findByPath(path);
+		SitesList singleSiteList = singleSiteListCreator.getSiteList(url, hostName);;
 
-		if ((site == null) || (pageEntity == null)) return indexResponse.indexPageFailed();
+		if ((singleSiteList == null) || (pageEntity == null)) return indexResponse.indexPageFailed();
 
-		siteRepository.updateAllSitesStatusTimeError("INDEXING", LocalDateTime.now(), getLastErrorMsg(url));
-		entityService.deleteAllPagesByPath(path);
-
-		SitesList singleSiteList = singleSiteListCreator.getSiteList(url, site);
+		if (linksNeverDelete.size() > 0 & pagesNeverDelete.size() > 0){
+			linksNeverDelete.forEach((key, value) -> {if (key.equals(url)) linksNeverDelete.remove(key);});
+			pagesNeverDelete.removeIf(p -> p.getPath().contains(path));
+		}
 
 		indexingStart(singleSiteList);
 
@@ -143,30 +130,37 @@ public class IndexServiceImpl implements IndexService {
 		logger.warn("~ Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started");
 		setStarted(false);
 		setAllowed(false);
-		siteRepository.updateAllSitesStatusTimeError("FAILED", LocalDateTime.now(), "Индексация остановлена пользователем");
+		siteRepository.updateAllStatusStatusTimeError("FAILED", LocalDateTime.now(), "Индексация остановлена пользователем");
 		return indexResponse.successfully();
 	}
 
 	private int forkSiteTask(ForkJoinPool fjpPool, Site site, int siteId) {
 		logger.warn("~ Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started");
 		ParseTask rootParseTask = new ParseTask(site.getUrl());
-		parseSiteService = new ParseSiteService(rootParseTask,this, site, siteId, siteRepository.findEntityById(siteId));
+		parseSiteService = new ParseSiteService(rootParseTask,this, site, siteId, siteRepository.findById(siteId));
 		parseSiteService.setAllowed(true);
 		logger.warn("~ Invoke " + site.getName() + " " + site.getUrl());
 		fjpPool.invoke(parseSiteService);
 		return rootParseTask.getLinksOfTask().size();
 	}
 
-	private void updateSiteAfterParse(Site site) {
-		//надо опдумать записывать ли коллекицю если прервали стопом
-//		Если прервалось эксепщеном то FAILED
-		// Если failed посчитать колва страниц и если меньше к примеру 10 то файлуд
+	private void updateSiteAfterParse(Integer siteId, Site site) {
+		boolean countPagesEnough = false;
+//				pageRepository.findAllBySiteId(siteId).size() > 35;
+		int count = 0;
+		for (PageEntity p : pagesNeverDelete.stream().toList()) {
+			if (p.getSiteEntity().getId() == siteId) count++;
+			if (count == 35) {
+				countPagesEnough = true;
+				break;
+			}
+		}
 		if (future.isDone() && allowed) {
-			siteRepository.updateSiteStatus("INDEXED", site.getName());
-			siteRepository.updateStatusTime(site.getName(), LocalDateTime.now());
+			siteRepository.updateStatusStatusTimeError(countPagesEnough ? "INDEXED" : "FAILED", LocalDateTime.now(), lastError, site.getName());
 			logger.warn("~ Status of site " + site.getName() + " set to INDEXED");
 		}
 	}
+
 	private String getLastErrorMsg(String url) {
 		Connection.Response response;
 		String error = "";
@@ -178,6 +172,53 @@ public class IndexServiceImpl implements IndexService {
 		return error;
 	}
 
+	private void initSchema(SitesList sitesList) {
+
+//		добавить проверку есть ли сайт в базе
+		if (sitesList.getSites().size() == 1){
+			if (!siteRepository.existsByName(sitesList.getSites().get(0).getName())) siteRepository.save(initSiteRow(sitesList.getSites().get(0)));
+			pageRepository.deletePagesContainingPath(sitesList.getSites().get(0).getUrl());
+
+//			siteRepository.updateStatusStatusTimeError("INDEXING", LocalDateTime.now(), getLastErrorMsg(sitesList.getSites().get(0).getUrl()), site.getName());
+
+		} else {
+			pageRepository.deleteAllInBatch();
+			siteRepository.deleteAllInBatch();
+			siteRepository.resetIdOnSiteTable();
+			pageRepository.resetIdOnPageTable();
+			siteRepository.saveAllAndFlush(initSiteTable(sitesList));
+		}
+
+	}
+
+	private List<SiteEntity> initSiteTable(@NotNull SitesList sitesList) {
+		List<SiteEntity> siteEntities = new ArrayList<>();
+		for (Site site : sitesList.getSites()) siteEntities.add(initSiteRow(site));
+		return siteEntities;
+	}
+
+	private SiteEntity initSiteRow(@NotNull Site site) {
+		SiteEntity siteEntity = new SiteEntity();
+		siteEntity.setStatus("INDEXING");
+		siteEntity.setStatusTime(LocalDateTime.now());
+		siteEntity.setLastError("");
+		siteEntity.setUrl(site.getUrl());
+		siteEntity.setName(site.getName());
+		return siteEntity;
+	}
+
+	private void deleteAllPagesByPath(String path) {
+		List<PageEntity> pagesToDel = pageRepository.findAll();
+		int count = 0;
+		for (PageEntity page : pagesToDel) {
+			if (page.getPath().contains(path)) {
+				pageRepository.delete(page);
+				logger.warn("~ " + page.getId() + " " + page.getPath() + " deleted");
+				count++;
+			}
+		}
+		logger.warn(count + " pages deleted from search_engine.page");
+	}
 
 	@Override
 	public Boolean getStarted() {

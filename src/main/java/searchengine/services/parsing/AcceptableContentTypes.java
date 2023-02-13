@@ -15,8 +15,4 @@ public class AcceptableContentTypes {
 		for (String type : acceptableContentTypes) if (contentType.contains(type)) return true;
 		return false;
 	}
-
-	private String trim(String input){
-		return input.contains(";") ? input.substring(0, input.indexOf(";")) : input;
-	}
 }
