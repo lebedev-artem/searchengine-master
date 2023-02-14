@@ -128,18 +128,21 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 
 		PageEntity pageEntity = new PageEntity(siteEntity, path, statusCode, content);
 
-//		эти две строки надо вынести отдельно, когда получили ссылку, и сразу отправили
-		if (!indexService.getLinksNeverDelete().containsKey(url)) {
+		synchronized (this){
+			//		эти две строки надо вынести отдельно, когда получили ссылку, и сразу отправили
+			if (!indexService.getLinksNeverDelete().containsKey(url)) {
 //			logger.warn("indexService.getLinks().put(" + url + ")");
-			indexService.getLinks().put(url, statusCode); //добавляем ссылку с кодом в мап
-			indexService.getLinksNeverDelete().put(url, statusCode);
-		}
-		if (!indexService.getPagesNeverDelete().contains(pageEntity)) {
+				indexService.getLinks().put(url, statusCode); //добавляем ссылку с кодом в мап
+				indexService.getLinksNeverDelete().put(url, statusCode);
+			}
+			if (!indexService.getPagesNeverDelete().contains(pageEntity)) {
 //			logger.warn("indexService.getPages().add(" + pageEntity.getPath() + ")");
-			indexService.getPages().add(pageEntity); //добавляем пэдж в сет
-			indexService.getPagesNeverDelete().add(new PageEntity(siteEntity, path, statusCode, ""));
+				indexService.getPages().add(pageEntity); //добавляем пэдж в сет
+				indexService.getPagesNeverDelete().add(new PageEntity(siteEntity, path, statusCode, ""));
 //			indexService.getPageRepository().save(pageEntity);
+			}
 		}
+
 
 		if (elements.isEmpty()) return subLinks;
 
@@ -169,11 +172,11 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 		return subLinks;
 	}
 
-	private void ifHeapIsExceeded() {
+	private synchronized void ifHeapIsExceeded() {
 //		2097152000
-		if (indexService.getPages().size() > 200){
+		if (indexService.getPages().size() > 300){
 			try {
-				Thread.sleep(5000);
+				Thread.sleep(1000);
 			} catch (InterruptedException e) {
 				throw new RuntimeException(e);
 			}
@@ -181,7 +184,6 @@ public class ParseSiteService extends RecursiveTask<Map<String, Integer>> {
 			logger.warn("~ Saving pages to DB");
 			indexService.getPageRepository().saveAll(indexService.getPages());
 			indexService.getPages().clear();
-			logger.warn("heap size: " + CheckHeapSize.formatSize(heapSize));
 		}
 	}
 

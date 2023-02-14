@@ -73,7 +73,7 @@ public interface SiteRepository extends BaseRepository<SiteEntity, Long> {
 	void updateStatusStatusTimeError(String status, LocalDateTime statusTime, String error, String name);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
-	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime, WHERE `name` = :name", nativeQuery = true)
+	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime WHERE `name` = :name", nativeQuery = true)
 	void updateStatusStatusTime(String status, LocalDateTime statusTime, String name);
 
 

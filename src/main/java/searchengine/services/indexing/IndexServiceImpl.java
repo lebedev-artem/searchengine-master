@@ -113,10 +113,10 @@ public class IndexServiceImpl implements IndexService {
 
 		if ((singleSiteList == null) || (pageEntity == null)) return indexResponse.indexPageFailed();
 
-		if (linksNeverDelete.size() > 0 & pagesNeverDelete.size() > 0){
-			linksNeverDelete.forEach((key, value) -> {if (key.equals(url)) linksNeverDelete.remove(key);});
-			pagesNeverDelete.removeIf(p -> p.getPath().contains(path));
-		}
+//		if (linksNeverDelete.size() > 0 & pagesNeverDelete.size() > 0){
+//			linksNeverDelete.forEach((key, value) -> {if (key.equals(url)) linksNeverDelete.remove(key);});
+//			pagesNeverDelete.removeIf(p -> p.getPath().contains(path));
+//		}
 
 		indexingStart(singleSiteList);
 
