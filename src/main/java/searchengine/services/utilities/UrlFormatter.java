@@ -4,7 +4,7 @@ import org.jsoup.nodes.Element;
 public class UrlFormatter {
 	String regexProtocol = "^(http|https)://(www.)?";
 
-	public String cleanHref(String str) {
+	public String cleanedHref(String str) {
 		str = str.replaceAll(regexProtocol, "");
 		if (str.lastIndexOf("/") == str.length() - 1) str = str.substring(str.indexOf(str), str.length() - 1);
 		return str;

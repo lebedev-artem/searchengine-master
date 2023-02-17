@@ -15,7 +15,7 @@ public class PageEntity implements BaseEntity {
 	public PageEntity() {
 	}
 
-	public PageEntity(SiteEntity siteEntity, String path, int code, String content) {
+	public PageEntity(SiteEntity siteEntity, int code, String content, String path) {
 		this.siteEntity = siteEntity;
 		this.path = path;
 		this.code = code;

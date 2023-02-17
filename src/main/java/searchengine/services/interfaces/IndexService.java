@@ -15,8 +15,8 @@ public interface IndexService{
 
 	ResponseEntity<?> indexingStop() throws ExecutionException, InterruptedException;
 
-	Boolean getStarted();
+	Boolean isStarted();
 
-	Boolean getAllowed();
+	Boolean isAllowed();
 
 }

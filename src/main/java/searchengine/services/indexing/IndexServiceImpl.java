@@ -6,7 +6,6 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,8 +15,9 @@ import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.*;
 import searchengine.services.interfaces.IndexService;
-import searchengine.services.parsing.ParseSiteService;
-import searchengine.services.parsing.ParseTask;
+import searchengine.services.parsing.TempStorage;
+import searchengine.services.parsing.ScrapingService;
+import searchengine.services.parsing.ScrapTask;
 import searchengine.services.utilities.SingleSiteListCreator;
 
 import javax.servlet.http.HttpServletRequest;
@@ -40,14 +40,9 @@ public class IndexServiceImpl implements IndexService {
 	private static Future<Integer> future;
 	public volatile boolean allowed = true;
 	public volatile boolean isStarted = false;
-	private static ParseSiteService parseSiteService;
-	private HashMap<String, Integer> links = new HashMap<>();
-	private Set<PageEntity> pages = new HashSet<>();
-	private String lastError;
+	private static ScrapingService scrapingService;
 	private Integer siteId;
 
-	private HashMap<String, Integer> linksNeverDelete = new HashMap<>();
-	private ArrayList<PageEntity> pagesNeverDelete = new ArrayList<>();
 	private final Site site;
 	private final SitesList sitesList;
 	private final SiteRepository siteRepository;
@@ -71,23 +66,26 @@ public class IndexServiceImpl implements IndexService {
 		singleTask.set(new Thread(() -> {
 			for (Site site : sitesList.getSites()) {
 				if (allowed) {
+					ScrapTask rootScrapTask = new ScrapTask(site.getUrl());
 					siteId = siteRepository.findByName(site.getName()).getId();
 					try {
 						long time = System.currentTimeMillis();
-						future = executor.submit(() -> forkSiteTask(fjpPool, site, siteId));
+						future = executor.submit(() -> invokeScrapingSite(rootScrapTask, fjpPool, site, siteId));
 						future.get();
 						logger.warn("~ " + site.getUrl() + " parsed in " + (System.currentTimeMillis() - time) + " ms");
-						logger.warn("~ Site " + site.getUrl() + " contains " + pages.size() + " pages");
 					} catch (RuntimeException | ExecutionException | InterruptedException e) {
 						logger.error("Error while getting Future " + Thread.currentThread().getStackTrace()[1].getMethodName());
 						e.printStackTrace();
 					}
 					long time = System.currentTimeMillis();
-					pageRepository.saveAll(pages);
-					logger.warn("~ Site " + site.getUrl() + " DB filled in " + (System.currentTimeMillis() - time) + " ms");
-					pages.clear();
-					links.clear();
-					updateSiteAfterParse(siteId, site);
+//					pageRepository.saveAll(TempStorage.pages);
+//					logger.warn("~ Site " + site.getUrl() + " DB filled in " + (System.currentTimeMillis() - time) + " ms");
+					logger.warn("~ Site " + site.getUrl() + " contains " + pageRepository.findAllBySiteId(siteId).size() + " pages");
+					TempStorage.paths.clear();
+					TempStorage.pages.clear();
+					TempStorage.urls.clear();
+					ScrapingService.countPages = 0;
+					doAfterScraping(siteId, site, rootScrapTask);
 				} else {
 					fjpPool.shutdownNow();
 					executor.shutdownNow();
@@ -109,7 +107,7 @@ public class IndexServiceImpl implements IndexService {
 		String hostName = url.substring(0, url.indexOf(new URL(url).getPath())+1);
 
 		PageEntity pageEntity = pageRepository.findByPath(path);
-		SitesList singleSiteList = singleSiteListCreator.getSiteList(url, hostName);;
+		SitesList singleSiteList = singleSiteListCreator.getSiteList(url, hostName);
 
 		if ((singleSiteList == null) || (pageEntity == null)) return indexResponse.indexPageFailed();
 
@@ -134,24 +132,27 @@ public class IndexServiceImpl implements IndexService {
 		return indexResponse.successfully();
 	}
 
-	private int forkSiteTask(ForkJoinPool fjpPool, Site site, int siteId) {
+	private int invokeScrapingSite(ScrapTask rootScrapTask, @NotNull ForkJoinPool fjpPool, @NotNull Site site, int siteId) {
 		logger.warn("~ Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started");
-		ParseTask rootParseTask = new ParseTask(site.getUrl());
-		parseSiteService = new ParseSiteService(rootParseTask,this, site, siteId, siteRepository.findById(siteId));
-		parseSiteService.setAllowed(true);
+//		ParseTask rootParseTask = new ParseTask(site.getUrl());
+		scrapingService = new ScrapingService(rootScrapTask,this, site, siteId, siteRepository.findById(siteId));
+		scrapingService.setAllowed(true);
 		logger.warn("~ Invoke " + site.getName() + " " + site.getUrl());
-		fjpPool.invoke(parseSiteService);
-		return rootParseTask.getLinksOfTask().size();
+		fjpPool.invoke(scrapingService);
+		return rootScrapTask.getLinks().size();
 	}
 
-	private void updateSiteAfterParse(Integer siteId, @NotNull Site site) {
+	private void doAfterScraping(Integer siteId, @NotNull Site site, ScrapTask scrapTask) {
 		String status = pageRepository.existsBySiteEntity(siteRepository.findByName(site.getName())) ? "INDEXED" : "FAILED";
 
 		if (future.isDone() && allowed) {
-			siteRepository.updateStatusStatusTimeError(status, LocalDateTime.now(), lastError, site.getName());
+			siteRepository.updateStatusStatusTimeError(status, LocalDateTime.now(), scrapTask.getLastError(), site.getName());
 			logger.warn("~ Status of site " + site.getName() + " set to " + status);
 		}
+	}
 
+	public void storeInDatabase(Set<PageEntity> pageEntities){
+		pageRepository.saveAllAndFlush(pageEntities);
 	}
 
 	private String getLastErrorMsg(String url) {
@@ -211,12 +212,12 @@ public class IndexServiceImpl implements IndexService {
 	}
 
 	@Override
-	public Boolean getStarted() {
+	public Boolean isStarted() {
 		return isStarted;
 	}
 
 	@Override
-	public Boolean getAllowed() {
+	public Boolean isAllowed() {
 		return allowed;
 	}
 
