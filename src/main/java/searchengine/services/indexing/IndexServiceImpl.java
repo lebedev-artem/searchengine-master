@@ -80,6 +80,7 @@ public class IndexServiceImpl implements IndexService {
 					long time = System.currentTimeMillis();
 //					pageRepository.saveAll(TempStorage.pages);
 //					logger.warn("~ Site " + site.getUrl() + " DB filled in " + (System.currentTimeMillis() - time) + " ms");
+					pageRepository.saveAll(TempStorage.pages);
 					logger.warn("~ Site " + site.getUrl() + " contains " + pageRepository.findAllBySiteId(siteId).size() + " pages");
 					TempStorage.paths.clear();
 					TempStorage.pages.clear();
@@ -87,8 +88,14 @@ public class IndexServiceImpl implements IndexService {
 					ScrapingService.countPages = 0;
 					doAfterScraping(siteId, site, rootScrapTask);
 				} else {
-					fjpPool.shutdownNow();
-					executor.shutdownNow();
+					try {
+						Thread.sleep(2222);
+					} catch (InterruptedException e) {
+						logger.warn("I don't want to sleep -> " + Thread.currentThread().getStackTrace()[1].getMethodName());
+					} finally {
+						fjpPool.shutdownNow();
+						executor.shutdownNow();
+					}
 					break;
 				}
 			}

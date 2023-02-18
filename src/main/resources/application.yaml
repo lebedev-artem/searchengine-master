@@ -32,14 +32,16 @@ jsoup-setting:
 
 indexing-settings:
   sites:
-    - url: http://lenta.ru/
-      name: Lenta
-    - url: http://radiomv.ru/
-      name: Радио_MV
-    - url: https://ipfran.ru/
-      name: IP_fran
-    - url: https://dimonvideo.ru/
-      name: Димон_Видео
+    - url: http://www.artlefbgedhehv.by
+      name: test
+#    - url: https://lenta.ru/
+#      name: Lenta
+#    - url: http://radiomv.ru/
+#      name: Радио_MV
+#    - url: https://ipfran.ru/
+#      name: IP_fran
+#    - url: https://dimonvideo.ru/
+#      name: Димон_Видео
 #    - url: http://www.bbc.com
 #      name: BBC.com
     - url: https://nikoartgallery.com/
@@ -50,14 +52,12 @@ indexing-settings:
       name: Lutheran_cathedral
     - url: https://www.playback.ru
       name: PlayBack.Ru
-#    - url: https://volochek.life/
-#      name: Volochek
+    - url: https://volochek.life/
+      name: Volochek
     - url: https://dombulgakova.ru/
       name: Дом_Булгакова
-#    - url: http://artlebedev.ru/
-#      name: ArtLebedev
-#    - url: http://www.artlefbgedhehv.by
-#      name: test
+    - url: http://artlebedev.ru/
+      name: ArtLebedev
     - url: https://www.svetlovka.ru/
       name: Светловка
 
