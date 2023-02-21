@@ -33,6 +33,11 @@ public interface PageRepository extends BaseRepository<PageEntity, Long> {
 	@Query(value = "SELECT * FROM `page` WHERE `site_id` = :siteId", nativeQuery = true)
 	List<PageEntity> findAllBySiteId(Integer siteId);
 
+	@Query(value = "SELECT count(*) FROM `page` WHERE `site_id` = :siteId", nativeQuery = true)
+	Integer countBySiteId(Integer siteId);
+
+	@Query(value = "SELECT count(*) FROM `page`", nativeQuery = true)
+	Integer countAllPages();
 
 
 }

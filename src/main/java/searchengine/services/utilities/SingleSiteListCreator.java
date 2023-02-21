@@ -12,7 +12,7 @@ private final SitesList sitesList;
 
 	public SitesList getSiteList(String url, String hostName) {
 		Site site = sitesList.getSites().stream()
-				.filter(s -> hostName.equals(s.getUrl()))
+				.filter(s -> s.getUrl().contains(hostName))
 				.findAny()
 				.orElse(null);
 		if (site == null) return null;

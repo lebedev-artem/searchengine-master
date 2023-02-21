@@ -26,23 +26,25 @@ jsoup-setting:
   jsoup:
     userAgent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:25.0) Gecko/20100101 Firefox/25.0
     referrer: http://www:google.com
-    timeout: 10000
+    timeout: 500
     ignoreHttpErrors: true
     followRedirects: false
 
 indexing-settings:
   sites:
-    - url: http://www.artlefbgedhehv.by
-      name: test
-#    - url: https://lenta.ru/
-#      name: Lenta
-#    - url: http://radiomv.ru/
-#      name: Радио_MV
-#    - url: https://ipfran.ru/
-#      name: IP_fran
-#    - url: https://dimonvideo.ru/
-#      name: Димон_Видео
-#    - url: http://www.bbc.com
+    - url: https://www.playback.ru
+      name: PlayBack.Ru
+    - url: https://www.twitter.com
+      name: Switter
+    - url: https://volochek.life/
+      name: Volochek
+    - url: http://radiomv.ru/
+      name: Радио_MV
+    - url: https://ipfran.ru/
+      name: IP_fran
+    - url: https://dimonvideo.ru/
+      name: Димон_Видео
+#    - url: www.bbc.com
 #      name: BBC.com
     - url: https://nikoartgallery.com/
       name: Niko_Art_Gallery
@@ -50,15 +52,18 @@ indexing-settings:
       name: Et_Cetera_4_mobile
     - url: https://www.lutherancathedral.ru/
       name: Lutheran_cathedral
-    - url: https://www.playback.ru
-      name: PlayBack.Ru
-    - url: https://volochek.life/
-      name: Volochek
-    - url: https://dombulgakova.ru/
-      name: Дом_Булгакова
-    - url: http://artlebedev.ru/
-      name: ArtLebedev
-    - url: https://www.svetlovka.ru/
-      name: Светловка
+#    - url: https://dombulgakova.ru/
+#      name: Дом_Булгакова
+#    - url: http://artlebedev.ru/
+#      name: ArtLebedev
+#    - url: https://www.svetlovka.ru/
+#      name: Светловка
+#    - url: https://lenta.ru/
+#      name: Lenta
+#    - url: http://cimus.biz/
+#      name: cimus.biz
+#    - url: https://exotic-zoo.ru
+#      name: EXOTIC Zoo
+
 
 

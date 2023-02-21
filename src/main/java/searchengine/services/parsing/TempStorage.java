@@ -14,13 +14,16 @@ import java.util.concurrent.ConcurrentHashMap;
 @Setter
 @RequiredArgsConstructor
 public class TempStorage {
-//	public volatile static Set<String> threadSafeUniqueUrls = ConcurrentHashMap.newKeySet();
-//	public volatile static Set<String> threadSafeUniquePaths = ConcurrentHashMap.newKeySet();
+//	public volatile static Set<String> urls = ConcurrentHashMap.newKeySet();
+//	public volatile static Set<String> paths = ConcurrentHashMap.newKeySet();
 //	public volatile static Set<PageEntity> threadSafeUniquePages = ConcurrentHashMap.newKeySet();
 
-	public static volatile Set<String> urls = new HashSet<>();
-	public static volatile Set<PageEntity> pages = new HashSet<>();
-	public static volatile Set<String> paths = new HashSet<>();
+	public static  volatile Integer count = 0;
+//	public static volatile Set<String> urls = new HashSet<>();
+	public static volatile Set<PageEntity> pages = ConcurrentHashMap.newKeySet(200);
+
+
+	//	public static volatile Set<String> paths = new HashSet<>();
 
 //	public static volatile HashMap<PageEntity, Integer> pageEntityHashMap = new HashMap<>();
 }

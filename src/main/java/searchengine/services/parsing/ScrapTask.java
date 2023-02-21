@@ -2,8 +2,6 @@ package searchengine.services.parsing;
 
 import lombok.Getter;
 import lombok.Setter;
-import searchengine.model.PageEntity;
-import searchengine.model.SiteEntity;
 
 import java.util.*;
 
@@ -13,10 +11,11 @@ import java.util.*;
 public class ScrapTask {
 	private final String url;
 	private String lastError;
+	private volatile Integer pagesCountOfTask = 0;
 //	private PageEntity pageOfTask;
 //	private SiteEntity siteOfTask;
 	private Map<String, Integer> links = new HashMap<>();
-	private ArrayList<PageEntity> childPagesOfTask = new ArrayList<>();
+//	private ArrayList<PageEntity> childPagesOfTask = new ArrayList<>();
 	private ArrayList<ScrapTask> childTasks = new ArrayList<>();
 
 	public ScrapTask(String url) {
@@ -29,6 +28,10 @@ public class ScrapTask {
 
 	public void addChildTask(ScrapTask scrapTask) {
 		childTasks.add(scrapTask);
+	}
+
+	public void addCountOfPages(Integer newCount){
+		pagesCountOfTask = pagesCountOfTask + newCount;
 	}
 }
 
