@@ -1,6 +1,4 @@
-package searchengine.services.parsing;
-
-import java.util.Arrays;
+package searchengine.services.scraping;
 
 public class AcceptableContentTypes {
 	public final String[] acceptableContentTypes = new String[]{

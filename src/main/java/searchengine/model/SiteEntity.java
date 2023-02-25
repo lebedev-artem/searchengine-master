@@ -40,10 +40,10 @@ public class SiteEntity implements BaseEntity{
 	@Column(columnDefinition = "VARCHAR(255)", nullable = false)
 	private String url;
 
-	@Column(columnDefinition = "VARCHAR(255)", nullable = true)
+	@Column(columnDefinition = "VARCHAR(255)", nullable = false)
 	private String name;
 
-	@OneToMany(mappedBy = "siteEntity", cascade = CascadeType.MERGE)
+	@OneToMany(mappedBy = "siteEntity", cascade = CascadeType.REMOVE)
 	private Set<PageEntity> pageEntities;
 
 	@ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.DETACH, CascadeType.MERGE, CascadeType.REFRESH})

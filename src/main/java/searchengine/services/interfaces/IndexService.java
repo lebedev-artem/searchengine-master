@@ -15,6 +15,8 @@ public interface IndexService{
 
 	ResponseEntity<?> indexingStop() throws ExecutionException, InterruptedException;
 
+	ResponseEntity<?> testDeleteSiteWithPages(String name) throws ExecutionException, InterruptedException;
+
 	Boolean isStarted();
 
 	Boolean isAllowed();

@@ -1,5 +1,4 @@
-package searchengine.services.parsing;
-
+package searchengine.services.scraping;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.stereotype.Component;
@@ -16,7 +15,7 @@ public class OwnStringPool  {
 
 	public OwnStringPool() {
 		paths = new ConcurrentHashMap<>(5000, 1);
-		links = new ConcurrentHashMap<>(5000, 1);
+		links = new ConcurrentHashMap<>(1, 1);
 	}
 
 	public String interLink(String s){
@@ -29,11 +28,11 @@ public class OwnStringPool  {
 		return (exist == null) ? s : exist;
 	}
 
-	public int internSizeLinks() {
+	public int linksSize() {
 		return links.size();
 	}
 
-	public int internSizePaths() {
+	public int pathsSize() {
 		return paths.size();
 	}
 }

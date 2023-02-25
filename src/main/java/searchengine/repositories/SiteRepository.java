@@ -43,6 +43,7 @@ public interface SiteRepository extends BaseRepository<SiteEntity, Long> {
 	SiteEntity findById(Integer id);
 	SiteEntity findByUrl(String url);
 	boolean existsByName(String name);
+	void deleteByUrl(String url);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("DELETE FROM SiteEntity s WHERE s.url = :url")

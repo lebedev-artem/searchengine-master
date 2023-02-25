@@ -36,10 +36,8 @@ public class ApiController {
 //	@Autowired
 	private final SitesList sitesList;
 
-	private static final Logger logger = LogManager.getLogger(ApiController.class);
 	private final StatisticsService statisticsService;
 	TotalStatistics totalStatistics = new TotalStatistics();
-	private static final IndexResponse indexResponse = new IndexResponse();
 
 	@GetMapping("/statistics")
 	public ResponseEntity<StatisticsResponse> statistics() {
@@ -59,5 +57,10 @@ public class ApiController {
 	@PostMapping("/indexPage")
 	public ResponseEntity<?> indexPage(@NotNull HttpServletRequest request) throws Exception {
 		return indexService.indexingPageStart(request);
+	}
+
+	@PostMapping("/testDeleteSiteWithPages")
+	public ResponseEntity<?> testDeleteSiteWithPages(@NotNull @RequestParam String name) throws Exception {
+		return indexService.testDeleteSiteWithPages(name);
 	}
 }
