@@ -18,6 +18,8 @@ import searchengine.config.Site;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.services.indexing.IndexServiceImpl;
+import searchengine.services.stuff.AcceptableContentTypes;
+import searchengine.services.stuff.TempStorage;
 
 import java.io.IOException;
 import java.net.URL;
@@ -26,7 +28,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static searchengine.services.utilities.Regex.*;
+import static searchengine.services.stuff.Regex.*;
 
 @Getter
 @Setter
@@ -56,15 +58,17 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 
 	Future<Integer> future;
 	ExecutorService executor = Executors.newSingleThreadExecutor();
+	BlockingQueue<PageEntity> queue;
 
 
-	public ScrapingService(ScrapTask scrapTask, IndexServiceImpl indexService, @NotNull Site site, @NotNull SiteEntity siteEntity) {
+	public ScrapingService(ScrapTask scrapTask, IndexServiceImpl indexService, @NotNull Site site, @NotNull SiteEntity siteEntity, BlockingQueue<PageEntity> queue) {
 		this.parentTask = scrapTask;
 		this.indexService = indexService;
 		this.site = site;
 		parentUrl = site.getUrl();
 		this.siteEntity = siteEntity;
 		this.siteId = siteEntity.getId();
+		this.queue = queue;
 	}
 
 	@Override
@@ -101,20 +105,18 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 			String href = getHrefFromElement(element);
 
 			try {
-				if (url.matches(regexUrlIsValid) && href.startsWith(TempStorage.siteUrl) && !newChildLinks.containsKey(href) && !href.equals(url)) {
-					if (((htmlExt.stream().anyMatch(href.substring(href.length() - 4)::contains) || !href.matches(regexUrlIsFileLink)))) {
+				if (url.matches(URL_IS_VALID) && href.startsWith(TempStorage.siteUrl) && !newChildLinks.containsKey(href) && !href.equals(url)) {
+					if (((HTML_EXT.stream().anyMatch(href.substring(href.length() - 4)::contains) || !href.matches(URL_IS_FILE_LINK)))) {
 						String elementPath = href.substring(url.length() - 1);
 						synchronized (indexService.getPageRepository()) {
 							if (!indexService.getStringPool().getPaths().containsKey(elementPath)) {
 								indexService.getStringPool().interPath(elementPath);
 								newChildLinks.put(href, parentStatusCode);
 							}
-
 //							if (indexService.getPageRepository().existsByPath(elementPath)) {
 //								continue;
 //							}
 						}
-
 					}
 				}
 			} catch (StringIndexOutOfBoundsException ignored) {
@@ -161,6 +163,14 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 				if (!indexService.getPageRepository().existsByPathAndSiteEntity(parentPath, siteEntity)) {
 					TempStorage.pages.add(pageEntity);
 					TempStorage.nowOnMapPages++;
+
+					try {
+						queue.put(pageEntity);
+						Thread.sleep(10);
+					} catch (InterruptedException e) {
+						throw new RuntimeException(e);
+					}
+
 					pageEntity = null;
 				}
 		}
@@ -198,7 +208,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 		for (String subLink : subLinks.keySet()) {
 			if (childIsValidToFork(subLink)) {
 				ScrapTask childScrapTask = new ScrapTask(subLink);
-				ScrapingService task = new ScrapingService(childScrapTask, indexService, site, siteEntity);
+				ScrapingService task = new ScrapingService(childScrapTask, indexService, site, siteEntity, queue);
 				task.fork();
 				subTasks.add(task);
 				parentTask.addChildTask(childScrapTask);
@@ -211,8 +221,8 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 	}
 
 	private static boolean childIsValidToFork(@NotNull String subLink) {
-		return (htmlExt.stream().anyMatch(subLink.substring(subLink.length() - 4)::contains))
-				| ((!subLink.matches(regexUrlIsFileLink))
+		return (HTML_EXT.stream().anyMatch(subLink.substring(subLink.length() - 4)::contains))
+				| ((!subLink.matches(URL_IS_FILE_LINK))
 				&& (!subLink.contains("#")));
 	}
 

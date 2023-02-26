@@ -1,4 +1,4 @@
-package searchengine.services.scraping;
+package searchengine.services.stuff;
 
 public class AcceptableContentTypes {
 	public final String[] acceptableContentTypes = new String[]{
@@ -6,7 +6,6 @@ public class AcceptableContentTypes {
 			"text/html",
 			"application/xhtml+xml",
 			"application/xml",
-			"application/vnd.oasis.opendocument.text",
 			"application/rtf"};
 
 	public boolean contains(String contentType){

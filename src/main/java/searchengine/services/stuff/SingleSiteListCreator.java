@@ -1,4 +1,4 @@
-package searchengine.services.utilities;
+package searchengine.services.stuff;
 
 import lombok.RequiredArgsConstructor;
 import searchengine.config.Site;

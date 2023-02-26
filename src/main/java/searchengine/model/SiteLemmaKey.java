@@ -7,8 +7,7 @@ import javax.persistence.*;
 @Setter
 @Entity
 @Table(name = "sites_lemmas")
-public class SitesLemmasEntity implements BaseEntity{
-//	private Boolean deleted;
+public class SiteLemmaKey implements BaseEntity{
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

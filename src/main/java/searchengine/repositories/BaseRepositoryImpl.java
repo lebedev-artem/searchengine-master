@@ -1,5 +1,4 @@
 package searchengine.repositories;
-
 import org.springframework.data.jpa.repository.support.JpaEntityInformation;
 import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 import searchengine.model.BaseEntity;
@@ -22,7 +21,10 @@ public class BaseRepositoryImpl<T extends BaseEntity, ID extends Serializable> e
 
 	@Override
 	public void resetIdOnPageTable() {
+	}
 
+	@Override
+	public void resetIdOnLemmaTable() {
 	}
 
 }

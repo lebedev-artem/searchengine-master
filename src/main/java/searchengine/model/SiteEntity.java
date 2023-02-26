@@ -46,7 +46,6 @@ public class SiteEntity implements BaseEntity{
 	@OneToMany(mappedBy = "siteEntity", cascade = CascadeType.REMOVE)
 	private Set<PageEntity> pageEntities;
 
-	@ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.DETACH, CascadeType.MERGE, CascadeType.REFRESH})
-	@JoinTable(name = "sites_lemmas", joinColumns = @JoinColumn(name = "site_id"), inverseJoinColumns = @JoinColumn(name = "lemma_id"))
+	@OneToMany(mappedBy = "siteEntity", cascade = CascadeType.REMOVE)
 	private Set<LemmaEntity> lemmaEntity;
 }

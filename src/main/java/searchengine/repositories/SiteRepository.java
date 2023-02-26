@@ -44,6 +44,7 @@ public interface SiteRepository extends BaseRepository<SiteEntity, Long> {
 	SiteEntity findByUrl(String url);
 	boolean existsByName(String name);
 	void deleteByUrl(String url);
+//	void deleteById(Integer id);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("DELETE FROM SiteEntity s WHERE s.url = :url")
@@ -52,6 +53,10 @@ public interface SiteRepository extends BaseRepository<SiteEntity, Long> {
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "DELETE from `site` WHERE `name` = :name", nativeQuery = true)
 	void deleteByName(String name);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query(value = "DELETE from `site` WHERE `id` = :id", nativeQuery = true)
+	void deleteById(Integer id);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "UPDATE `site` SET `status` = :status WHERE `name`=:name", nativeQuery = true)

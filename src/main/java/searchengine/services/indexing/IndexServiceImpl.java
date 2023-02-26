@@ -9,16 +9,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
+import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.*;
 import searchengine.services.interfaces.IndexService;
-import searchengine.services.scraping.OwnStringPool;
-import searchengine.services.scraping.TempStorage;
+import searchengine.services.lemmatization.LemmaFinder;
+import searchengine.services.stuff.OwnStringPool;
+import searchengine.services.stuff.TempStorage;
 import searchengine.services.scraping.ScrapingService;
 import searchengine.services.scraping.ScrapTask;
-import searchengine.services.utilities.SingleSiteListCreator;
+import searchengine.services.stuff.SingleSiteListCreator;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
@@ -48,6 +51,8 @@ public class IndexServiceImpl implements IndexService {
 	private final LemmaRepository lemmaRepository;
 	private final SearchIndexRepository searchIndexRepository;
 
+	private BlockingQueue<PageEntity> queueOfPages = new LinkedBlockingQueue<>(10000);
+
 	@Override
 	@Transactional
 	public synchronized ResponseEntity<?> indexingStart(@NotNull SitesList sitesList) throws MalformedURLException {
@@ -67,12 +72,13 @@ public class IndexServiceImpl implements IndexService {
 					ScrapTask rootScrapTask = new ScrapTask(site.getUrl());
 					siteId = siteRepository.findByName(site.getName()).getId();
 					try {
-						long time = System.currentTimeMillis();
 						future = executor.submit(() -> invokeScrapingOfSite(rootScrapTask, fjpPool, site, siteId));
+						Future<?> futureForLemmaFinder;
+						futureForLemmaFinder = executor.submit(new Thread(new LemmaFinder(queueOfPages, lemmaRepository, searchIndexRepository, future, siteRepository.findByName(site.getName()))));
 						future.get();
+						futureForLemmaFinder.get();
 						System.gc();
-						logger.warn("~ " + site.getUrl() + " parsed in " + (System.currentTimeMillis() - time) + " ms");
-					} catch (RuntimeException | ExecutionException | InterruptedException e) {
+					} catch (RuntimeException | ExecutionException | InterruptedException | IOException e) {
 						logger.error("Error while getting Future " + Thread.currentThread().getStackTrace()[1].getMethodName());
 						e.printStackTrace();
 					}
@@ -129,11 +135,7 @@ public class IndexServiceImpl implements IndexService {
 
 	private void invokeScrapingOfSite(ScrapTask rootScrapTask, @NotNull ForkJoinPool fjpPool, @NotNull Site site, int siteId) {
 		logger.warn("~ Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started");
-//		ParseTask rootParseTask = new ParseTask(site.getUrl());
-//		TempStorage.paths.clear();
-//		TempStorage.pages.clear();
-//		stringPool.interLink(site.getUrl());
-		scrapingService = new ScrapingService(rootScrapTask, this, site, siteRepository.findById(siteId));
+		scrapingService = new ScrapingService(rootScrapTask, this, site, siteRepository.findById(siteId), queueOfPages);
 		scrapingService.setAllowed(true);
 		logger.warn("~ Invoke " + site.getName() + " " + site.getUrl());
 		fjpPool.invoke(scrapingService);
@@ -141,10 +143,8 @@ public class IndexServiceImpl implements IndexService {
 
 	private void doAfterScraping(@NotNull Site site, ScrapTask scrapTask) {
 		String status = pageRepository.existsBySiteEntity(siteRepository.findByName(site.getName())) ? "INDEXED" : "FAILED";
-//		stringPool.getLinks().clear();
-//		stringPool.getPaths().clear();
-		TempStorage.pages.clear();
 		stringPool.getPaths().clear();
+		TempStorage.pages.clear();
 		TempStorage.siteUrl = "";
 		TempStorage.nowOnMapPages = 0;
 		if (future.isDone() && allowed) {
@@ -162,12 +162,12 @@ public class IndexServiceImpl implements IndexService {
 			if (s.getUrl().lastIndexOf("/") != (s.getUrl().length() - 1)) {
 				s.setUrl(s.getUrl().concat("/"));
 			}
-
 		}
-		String path = new URL(siteListToInit.getSites().get(0).getUrl()).getPath();
+
 		if ((sitesList.getSites().size() > 1) && (siteListToInit.getSites().size() == 1)) {
 			SiteEntity siteEntity = siteRepository.findByName(siteListToInit.getSites().get(0).getName());
 			if (siteEntity != null) {
+				String path = new URL(siteListToInit.getSites().get(0).getUrl()).getPath();
 				pageRepository.deletePagesBySiteIdContainingPath(path, siteEntity.getId());
 				siteRepository.updateStatusStatusTime("INDEXING", LocalDateTime.now(), siteListToInit.getSites().get(0).getName());
 			} else {
@@ -175,10 +175,12 @@ public class IndexServiceImpl implements IndexService {
 			}
 
 		} else {
-			pageRepository.deleteAllInBatch();
-			pageRepository.resetIdOnPageTable();
+//			pageRepository.deleteAllInBatch();
+//			pageRepository.resetIdOnPageTable();
 			siteRepository.deleteAllInBatch();
 			siteRepository.resetIdOnSiteTable();
+			pageRepository.resetIdOnPageTable();
+			lemmaRepository.resetIdOnLemmaTable();
 			siteRepository.saveAllAndFlush(initSiteTable(sitesList));
 		}
 	}
@@ -200,11 +202,6 @@ public class IndexServiceImpl implements IndexService {
 	}
 
 	@Override
-	public Boolean isStarted() {
-		return isStarted;
-	}
-
-	@Override
 	public Boolean isAllowed() {
 		return allowed;
 	}
@@ -213,7 +210,9 @@ public class IndexServiceImpl implements IndexService {
 	public ResponseEntity<?> testDeleteSiteWithPages(@NotNull String name) {
 		logger.info("~ Table page contains " + pageRepository.countAllPages() + " pages");
 		logger.info("~ Now will be exec query siteRepository.deleteByName(name)");
-		siteRepository.deleteByName(name);
+//		siteRepository.deleteByName(name);
+		int id = siteRepository.findByName(name).getId();
+		siteRepository.deleteById(id);
 		logger.info("~ Table page contains " + pageRepository.countAllPages() + " pages");
 		logger.info("------------------------------------------------------------------------------------------");
 		return indexResponse.successfully();

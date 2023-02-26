@@ -38,7 +38,7 @@ public class PageEntity implements BaseEntity {
 
 	@ManyToOne(fetch = FetchType.LAZY, targetEntity = SiteEntity.class, cascade = CascadeType.REMOVE, optional = false)
 	@OnDelete(action = OnDeleteAction.CASCADE)
-	@JoinColumn(foreignKey = @ForeignKey(name = "site_id_key_page"), columnDefinition = "Integer",
+	@JoinColumn(foreignKey = @ForeignKey(name = "site_page_FK"), columnDefinition = "Integer",
 			referencedColumnName = "id", name = "site_id", nullable = false, updatable = false)
 	private SiteEntity siteEntity;
 

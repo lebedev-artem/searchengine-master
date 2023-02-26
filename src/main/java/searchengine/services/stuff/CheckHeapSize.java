@@ -1,4 +1,4 @@
-package searchengine.services.utilities;
+package searchengine.services.stuff;
 
 public class CheckHeapSize {
 	public static void main(String[] args) {

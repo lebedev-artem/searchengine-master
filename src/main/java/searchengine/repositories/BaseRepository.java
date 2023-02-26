@@ -21,5 +21,9 @@ public interface BaseRepository<T extends BaseEntity, ID extends Serializable> e
 	@Query(value = "ALTER TABLE `page` AUTO_INCREMENT = 0", nativeQuery = true)
 	void resetIdOnPageTable();
 
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query(value = "ALTER TABLE `lemma` AUTO_INCREMENT = 0", nativeQuery = true)
+	void resetIdOnLemmaTable();
+
 
 }
