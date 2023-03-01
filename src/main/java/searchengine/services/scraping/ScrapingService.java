@@ -1,8 +1,6 @@
 package searchengine.services.scraping;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -13,11 +11,14 @@ import org.jsoup.UncheckedIOException;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import searchengine.config.Site;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
+import searchengine.repositories.PageRepository;
 import searchengine.services.indexing.IndexServiceImpl;
+import searchengine.services.interfaces.IndexService;
 import searchengine.services.stuff.AcceptableContentTypes;
 import searchengine.services.stuff.TempStorage;
 
@@ -32,9 +33,9 @@ import static searchengine.services.stuff.Regex.*;
 
 @Getter
 @Setter
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class ScrapingService extends RecursiveTask<Boolean> {
-	private static final Integer COUNT_PAGES_TO_DROP = 20;
+	private static final Integer COUNT_PAGES_TO_DROP = 50;
 	private static final Logger logger = LogManager.getLogger(ScrapingService.class);
 	public static volatile boolean allowed = true;
 	private final IndexServiceImpl indexService;
@@ -56,9 +57,10 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 	private final SiteEntity siteEntity;
 	private PageEntity pageEntity;
 
-	Future<Integer> future;
-	ExecutorService executor = Executors.newSingleThreadExecutor();
-	BlockingQueue<PageEntity> queue;
+
+	private Future<Integer> future;
+	private ExecutorService executor = Executors.newSingleThreadExecutor();
+	private final BlockingQueue<PageEntity> queue;
 
 
 	public ScrapingService(ScrapTask scrapTask, IndexServiceImpl indexService, @NotNull Site site, @NotNull SiteEntity siteEntity, BlockingQueue<PageEntity> queue) {
@@ -110,7 +112,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 						String elementPath = href.substring(url.length() - 1);
 						synchronized (indexService.getPageRepository()) {
 							if (!indexService.getStringPool().getPaths().containsKey(elementPath)) {
-								indexService.getStringPool().interPath(elementPath);
+								indexService.getStringPool().internPath(elementPath);
 								newChildLinks.put(href, parentStatusCode);
 							}
 //							if (indexService.getPageRepository().existsByPath(elementPath)) {
@@ -164,12 +166,12 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 					TempStorage.pages.add(pageEntity);
 					TempStorage.nowOnMapPages++;
 
-					try {
-						queue.put(pageEntity);
-						Thread.sleep(10);
-					} catch (InterruptedException e) {
-						throw new RuntimeException(e);
-					}
+//					try {
+//						queue.put(pageEntity);
+//						Thread.sleep(10);
+//					} catch (InterruptedException e) {
+//						throw new RuntimeException(e);
+//					}
 
 					pageEntity = null;
 				}
@@ -179,7 +181,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 			synchronized (TempStorage.class) {
 				try {
 					future = executor.submit(this::dropMapToDB);
-					logger.warn(future.get() + " more pages have been saved to DB");
+					logger.info(future.get() + " more pages have been saved to DB");
 				} catch (InterruptedException | ExecutionException e) {
 					logger.error("Exception in " + Thread.currentThread().getStackTrace()[1].getMethodName());
 				} finally {

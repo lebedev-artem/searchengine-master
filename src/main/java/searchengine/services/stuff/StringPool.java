@@ -8,22 +8,22 @@ import java.util.concurrent.ConcurrentHashMap;
 @Getter
 @Setter
 @Component
-public class OwnStringPool  {
+public class StringPool {
 	private final Map<String, String> links;
 	private final Map<String, String> paths;
 
 
-	public OwnStringPool() {
+	public StringPool() {
 		paths = new ConcurrentHashMap<>(5000, 1);
 		links = new ConcurrentHashMap<>(1, 1);
 	}
 
-	public String interLink(String s){
+	public String internLink(String s){
 		String exist = links.putIfAbsent(s, s);
 		return (exist == null) ? s : exist;
 	}
 
-	public String interPath(String s){
+	public String internPath(String s){
 		String exist = paths.putIfAbsent(s, s);
 		return (exist == null) ? s : exist;
 	}

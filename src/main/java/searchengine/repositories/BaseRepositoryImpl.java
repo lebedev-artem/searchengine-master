@@ -5,6 +5,7 @@ import searchengine.model.BaseEntity;
 
 import javax.persistence.EntityManager;
 import java.io.Serializable;
+import java.util.List;
 
 public class BaseRepositoryImpl<T extends BaseEntity, ID extends Serializable> extends SimpleJpaRepository<T, ID> implements BaseRepository<T, ID> {
 

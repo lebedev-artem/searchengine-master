@@ -29,4 +29,10 @@ public class SearchIndexEntity implements BaseEntity{
 
 	@Column(name = "lemma_rank", nullable = false)
 	private float lemmaRank;
+
+	public SearchIndexEntity(PageEntity pageEntity, LemmaEntity lemmaEntity, float lemmaRank) {
+		this.pageEntity = pageEntity;
+		this.lemmaEntity = lemmaEntity;
+		this.lemmaRank = lemmaRank;
+	}
 }

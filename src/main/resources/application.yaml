@@ -2,6 +2,14 @@
 server:
   port: 8080
 
+#
+#logging:
+#  level:
+#    root: "warn"
+#    org.springframework.web: "debug"
+#    org.hibernate: "error"
+
+
 spring:
   datasource:
     username: root
@@ -48,12 +56,12 @@ indexing-settings:
 ##      name: BBC.com
 #    - url: https://lenta.ru/
 #      name: Lenta
-    - url: https://nikoartgallery.com/
-      name: Niko_Art_Gallery
+#    - url: https://nikoartgallery.com/
+#      name: Niko_Art_Gallery
     - url: https://et-cetera.ru/mobile/
       name: Et_Cetera_4_mobile
-#    - url: https://www.lutherancathedral.ru/
-#      name: Lutheran_cathedral
+    - url: https://www.lutherancathedral.ru/
+      name: Lutheran_cathedral
 #    - url: https://dombulgakova.ru/
 #      name: Дом_Булгакова
 #    - url: http://www.artlebedev.ru/

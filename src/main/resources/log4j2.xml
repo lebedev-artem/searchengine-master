@@ -1,13 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration statusIndexing="WARN" debug="true">
+<Configuration debug="true">
+    <!-- Setting up log path and log file name -->
+    <Properties>
+        <property name="LOG_PATH" value="./logs" />
+        <property name="LOG_FILE_NAME" value="search_engine-log4j2" />
+    </Properties>
+
     <Appenders>
         <Console name="Console" target="SYSTEM_OUT" follow="true">
-           <PatternLayout disableAnsi="false" pattern="%clr{%d{yyyy-MM-dd HH:mm:ss.SSS}}{faint} %clr{%5p} %clr{${sys:PID}}{magenta} %clr{---}{faint} %clr{[%15.15t]}{faint} %clr{%-40.40c{1.}}{cyan} %clr{:}{faint} %clr{%m%n%xwEx}"/>
+            <PatternLayout disableAnsi="false"
+                           pattern="%clr{%d{yyyy-MM-dd HH:mm:ss.SSS}}{faint} %clr{%5p} %clr{${sys:PID}}{magenta} %clr{---}{faint} %clr{[%15.15t]}{faint} %clr{%-40.40c{1.}}{cyan} %clr{:}{faint} %clr{%m%n%xwEx}"/>
         </Console>
+
+        <RollingFile name="LogFile"
+                     fileName="${LOG_PATH}/${LOG_FILE_NAME}.log"
+                     filePattern="${LOG_PATH}/$${date:yyyy-MM}/application-log4j2-%d{dd-MMMM-yyyy}-%i.log.gz">
+            <PatternLayout>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level : %msg%n
+                </pattern>
+            </PatternLayout>
+            <Policies>
+                <OnStartupTriggeringPolicy />
+                <SizeBasedTriggeringPolicy size="10 MB" />
+                <TimeBasedTriggeringPolicy />
+            </Policies>
+        </RollingFile>
     </Appenders>
+
     <Loggers>
         <Root level="info">
             <AppenderRef ref="Console"/>
+            <AppenderRef ref="LogFile" />
         </Root>
+
+        <!-- Logging at TRACE level -->
+        <logger name="searchengine" level="trace" additivity="false">
+            <appender-ref ref="LogFile" />
+        </logger>
     </Loggers>
 </Configuration>

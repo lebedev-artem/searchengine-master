@@ -11,4 +11,6 @@ public interface LemmaRepository extends BaseRepository<LemmaEntity, Long>{
 	boolean existsByLemmaAndSiteEntity(String lemma, SiteEntity siteEntity);
 	LemmaEntity findByLemmaAndSiteEntity(String lemma, SiteEntity siteEntity);
 	Integer getFrequencyByLemma(String lemma);
+	LemmaEntity getByLemma(String lemma);
+	Integer getIdByLemma(String lemma);
 }

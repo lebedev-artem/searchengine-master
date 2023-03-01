@@ -7,6 +7,7 @@ import org.springframework.data.repository.NoRepositoryBean;
 import searchengine.model.BaseEntity;
 
 import java.io.Serializable;
+import java.util.List;
 
 @NoRepositoryBean
 public interface BaseRepository<T extends BaseEntity, ID extends Serializable> extends JpaRepository<T, ID> {
@@ -24,6 +25,5 @@ public interface BaseRepository<T extends BaseEntity, ID extends Serializable> e
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "ALTER TABLE `lemma` AUTO_INCREMENT = 0", nativeQuery = true)
 	void resetIdOnLemmaTable();
-
 
 }

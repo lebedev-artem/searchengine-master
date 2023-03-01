@@ -1,27 +1,25 @@
 package searchengine.services.lemmatization;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
-import org.jetbrains.annotations.NotNull;
-import org.jsoup.Jsoup;
-import org.jsoup.safety.Safelist;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import searchengine.model.LemmaEntity;
 import searchengine.model.PageEntity;
-import searchengine.model.SearchIndexEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SearchIndexRepository;
-import searchengine.services.indexing.IndexServiceImpl;
-import searchengine.services.scraping.ScrapingService;
+import searchengine.repositories.SiteRepository;
 
-import javax.persistence.criteria.CriteriaBuilder;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -31,35 +29,31 @@ import static java.lang.Thread.sleep;
 
 @Getter
 @Setter
-@RequiredArgsConstructor
-public class LemmaFinder implements Runnable {
-	private static final Integer INIT_FREQ = 1;
-	private static final Logger logger = LogManager.getLogger(LemmaFinder.class);
-	private BlockingQueue<PageEntity> queue;
+public class LemmaFinderPageable implements Runnable {
 	private final LemmaRepository lemmaRepository;
 	private final SearchIndexRepository searchIndexRepository;
-	private final LuceneMorphology luceneMorphology;
 	private final PageRepository pageRepository;
+	private final SiteRepository siteRepository;
+	private static final Integer INIT_FREQ = 1;
+	private static final Logger logger = LogManager.getLogger(LemmaFinder.class);
 	private static final String WORD_TYPE_REGEX = "\\W\\w&&[^а-яА-Я\\s]";
 	private static final String[] PARTICLES_NAMES = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
-	private final Future<?> future;
-	private Integer siteId;
-	private SiteEntity siteEntity;
+	private BlockingQueue<PageEntity> queue;
+	private LuceneMorphology luceneMorphology;
+	private final SiteEntity siteEntity;
+	private final Integer siteId;
 
-//	public static LemmaFinder getInstance() throws IOException {
-//		LuceneMorphology morphology= new RussianLuceneMorphology();
-//		return new LemmaFinder(morphology, getInstance().queue);
-//	}
 
-	public LemmaFinder(BlockingQueue<PageEntity> queue, LemmaRepository lemmaRepository, PageRepository pageRepository, SearchIndexRepository searchIndexRepository, Future<?> future, SiteEntity siteEntity) throws IOException {
-		this.luceneMorphology = new RussianLuceneMorphology();
+	public LemmaFinderPageable(LemmaRepository lemmaRepository, SearchIndexRepository searchIndexRepository,
+	                           PageRepository pageRepository, SiteRepository siteRepository,
+	                           SiteEntity siteEntity, Integer siteId) throws IOException {
 		this.lemmaRepository = lemmaRepository;
-		this.pageRepository = pageRepository;
 		this.searchIndexRepository = searchIndexRepository;
-		this.queue = queue;
-		this.future = future;
+		this.pageRepository = pageRepository;
+		this.siteRepository = siteRepository;
 		this.siteEntity = siteEntity;
-		siteId = siteEntity.getId();
+		this.siteId = siteId;
+		this.luceneMorphology = new RussianLuceneMorphology();
 	}
 
 	@Override
@@ -68,30 +62,47 @@ public class LemmaFinder implements Runnable {
 //			sleep(5_000);
 			while (true) {
 				sleep(1_000);
-//				List<Integer> ids = pageRepository.findAllIds();
 				Set<PageEntity> pagesCOfCurrentSite = new HashSet<>();
 				long time = System.currentTimeMillis();
-//				pagesCOfCurrentSite = pageRepository.findAllBySiteEntity(siteEntity);
+
+				int pageNumber = 0; // номер первой страницы
+				int pageSize = 5; // количество записей на странице
+				Sort sort = Sort.by(Sort.Direction.ASC, "id"); // сортировка по полю "id" в порядке возрастания
+				Pageable pageable = PageRequest.of(pageNumber, pageSize, sort); // первая страница, содержащая 10 записей, отсортированных по полю "id"
+				Page<PageEntity> page = pageRepository.findAll(pageable); // получение первой страницы записей
+
+				List<PageEntity> entitiesList = page.getContent();
+				while (!entitiesList.isEmpty()) { // пока есть записи
+					for (PageEntity entity : entitiesList) {
+						// обработка записи
+						Map<String, Integer> collectedLemmas = collectLemmas(entity.getContent());
+
+						Map<String, LemmaEntity> lemmasOnPage = new HashMap<>();
+						for (String lemma : collectedLemmas.keySet()) {
+							lemmasOnPage.put(lemma, new LemmaEntity(siteEntity, lemma, INIT_FREQ));
+						}
+						for (String lemma : collectedLemmas.keySet()) {
+							LemmaEntity l = new LemmaEntity(siteEntity, lemma, INIT_FREQ);
+							if (!lemmaRepository.existsByLemmaAndSiteEntity(lemma, siteEntity)) {
+								lemmaRepository.save(l);
+							} else {
+								LemmaEntity lExist = lemmaRepository.findByLemmaAndSiteEntity(lemma, siteEntity);
+								lExist.setFrequency(lExist.getFrequency() + 1);
+								lemmaRepository.save(lExist);
+							}
+						}
+
+					}
+					pageable = page.nextPageable(); // получение следующей страницы записей
+					page = pageRepository.findAll(pageable); // получение следующей страницы записей
+					entitiesList = page.getContent();
+				}
+
+
 				logger.warn("Finding all pages takes - " + (System.currentTimeMillis() - time) + " ms");
 				logger.warn(pagesCOfCurrentSite.size() + " pages");
-//				PageEntity pageShouldLemmatize = queue.take();
-				PageEntity pageShouldLemmatize = new PageEntity();
-				Map<String, Integer> collectedLemmas = collectLemmas(pageShouldLemmatize.getContent());
-				Map<String, LemmaEntity> lemmasOnPage = new HashMap<>();
-//				Создадим хэшмап со всеми леммами с конкретной страницы
-				for (String lemma : collectedLemmas.keySet()) {
-					lemmasOnPage.put(lemma, new LemmaEntity(siteEntity, lemma, INIT_FREQ));
-				}
+				break;
 
-				for (String lemma : collectedLemmas.keySet()) {
-					if (!lemmaRepository.existsByLemmaAndSiteEntity(lemma, siteEntity))
-//						записали лемму
-						lemmaRepository.save(new LemmaEntity(siteEntity, lemma, INIT_FREQ));
-//                      создаем ентити Index
-				}
-
-				if (future.isDone() && !queue.iterator().hasNext())
-					return;
 			}
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
@@ -197,4 +208,3 @@ public BankAccount updateRate(Long id, BigDecimal rate) {
 
 
  */
-
