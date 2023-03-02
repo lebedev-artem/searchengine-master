@@ -1,11 +1,13 @@
 package searchengine.services.lemmatization;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,35 +31,58 @@ import static java.lang.Thread.sleep;
 
 @Getter
 @Setter
-public class LemmaFinderPageable implements Runnable {
-	private final LemmaRepository lemmaRepository;
-	private final SearchIndexRepository searchIndexRepository;
-	private final PageRepository pageRepository;
-	private final SiteRepository siteRepository;
+@Service
+public class LemmaFinderPageable{
+	@Autowired
+	LemmaRepository lemmaRepository;
+	@Autowired
+	SearchIndexRepository searchIndexRepository;
+	@Autowired
+	PageRepository pageRepository;
+	@Autowired
+	SiteRepository siteRepository;
 	private static final Integer INIT_FREQ = 1;
 	private static final Logger logger = LogManager.getLogger(LemmaFinder.class);
 	private static final String WORD_TYPE_REGEX = "\\W\\w&&[^а-яА-Я\\s]";
 	private static final String[] PARTICLES_NAMES = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
 	private BlockingQueue<PageEntity> queue;
 	private LuceneMorphology luceneMorphology;
-	private final SiteEntity siteEntity;
-	private final Integer siteId;
+//	private SiteEntity siteEntity;
+//	private Integer siteId;
 
 
-	public LemmaFinderPageable(LemmaRepository lemmaRepository, SearchIndexRepository searchIndexRepository,
-	                           PageRepository pageRepository, SiteRepository siteRepository,
-	                           SiteEntity siteEntity, Integer siteId) throws IOException {
-		this.lemmaRepository = lemmaRepository;
-		this.searchIndexRepository = searchIndexRepository;
-		this.pageRepository = pageRepository;
-		this.siteRepository = siteRepository;
-		this.siteEntity = siteEntity;
-		this.siteId = siteId;
-		this.luceneMorphology = new RussianLuceneMorphology();
+//	public LemmaFinderPageable(LemmaRepository lemmaRepository, SearchIndexRepository searchIndexRepository,
+//	                           PageRepository pageRepository, SiteRepository siteRepository,
+//	                           SiteEntity siteEntity, Integer siteId) throws IOException {
+//		this.lemmaRepository = lemmaRepository;
+//		this.searchIndexRepository = searchIndexRepository;
+//		this.pageRepository = pageRepository;
+//		this.siteRepository = siteRepository;
+//		this.siteEntity = siteEntity;
+//		this.siteId = siteId;
+//		this.luceneMorphology = new RussianLuceneMorphology();
+//	}
+//
+	@Autowired
+	public void setLuceneMorphology() {
+		try {
+			this.luceneMorphology = new RussianLuceneMorphology();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
+//	@Autowired
+//	public void setSiteEntity(SiteEntity siteEntity) {
+//		this.siteEntity = siteEntity;
+//	}
 
-	@Override
-	public void run() {
+//	@Autowired
+//	public void setSiteId(Integer siteId) {
+//		this.siteId = siteId;
+//	}
+
+
+	public void runn(Integer siteId, SiteEntity siteEntity) {
 		try {
 //			sleep(5_000);
 			while (true) {
@@ -184,6 +209,7 @@ public class LemmaFinderPageable implements Runnable {
 	}
 }
 
+
 /*
  else {
 						LemmaEntity lemmaForFreqInc = lemmaRepository.findByLemmaAndSiteEntity(lemma, siteEntity);
@@ -204,7 +230,4 @@ public BankAccount updateRate(Long id, BigDecimal rate) {
   account.setRate(rate);
   return account;
 }
-
-
-
  */

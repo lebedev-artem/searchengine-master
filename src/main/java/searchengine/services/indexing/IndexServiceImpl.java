@@ -4,6 +4,8 @@ import lombok.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,7 +15,6 @@ import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.*;
 import searchengine.services.interfaces.IndexService;
-import searchengine.services.lemmatization.LemmaFinder;
 import searchengine.services.lemmatization.LemmaFinderPageable;
 import searchengine.services.stuff.StringPool;
 import searchengine.services.stuff.TempStorage;
@@ -52,8 +53,10 @@ public class IndexServiceImpl implements IndexService {
 	private final PageRepository pageRepository;
 	private final LemmaRepository lemmaRepository;
 	private final SearchIndexRepository searchIndexRepository;
-
 	private BlockingQueue<PageEntity> queueOfPages = new LinkedBlockingQueue<>(10000);
+
+	@Autowired
+	LemmaFinderPageable lemmaFinderPageable;
 
 	@Override
 	@Transactional
@@ -80,15 +83,14 @@ public class IndexServiceImpl implements IndexService {
 						futureForScrapingSite.get();
 
 						futureForLemmaFinder = executor.submit(
-								new Thread(new LemmaFinderPageable(lemmaRepository, searchIndexRepository, pageRepository, siteRepository, siteRepository.findById(siteId), siteId)));
+								Objects.requireNonNull(
+										startLemmaFinder(siteRepository.findById(siteId), siteId)));
 						futureForLemmaFinder.get();
 
 						System.gc();
 					} catch (RuntimeException | ExecutionException | InterruptedException e) {
 						logger.error("Error while getting Future " + Thread.currentThread().getStackTrace()[1].getMethodName());
 						e.printStackTrace();
-					} catch (IOException e) {
-						throw new RuntimeException(e);
 					}
 					pageRepository.saveAllAndFlush(TempStorage.pages);
 					rootLogger.info("~ Site " + site.getUrl() + " contains " + pageRepository.countBySiteId(siteId) + " pages");
@@ -224,5 +226,13 @@ public class IndexServiceImpl implements IndexService {
 		logger.info("~ Table page contains " + pageRepository.countAllPages() + " pages");
 		logger.info("------------------------------------------------------------------------------------------");
 		return indexResponse.successfully();
+	}
+
+	private @Nullable Runnable startLemmaFinder(SiteEntity siteEntity, Integer siteId){
+//	lemmaFinderPageable.setLuceneMorphology();
+//	lemmaFinderPageable.setSiteId(siteId);
+//	lemmaFinderPageable.setSiteEntity(siteEntity);
+		lemmaFinderPageable.runn(siteId, siteEntity);
+		return null;
 	}
 }
