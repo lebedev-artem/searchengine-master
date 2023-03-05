@@ -58,9 +58,9 @@ public class ApiController {
 	public ResponseEntity<?> indexPage(@NotNull HttpServletRequest request) throws Exception {
 		return indexService.indexingPageStart(request);
 	}
-
-	@PostMapping("/testDeleteSiteWithPages")
-	public ResponseEntity<?> testDeleteSiteWithPages(@NotNull @RequestParam String name) throws Exception {
-		return indexService.testDeleteSiteWithPages(name);
-	}
+//
+//	@PostMapping("/testDeleteSiteWithPages")
+//	public ResponseEntity<?> testDeleteSiteWithPages(@NotNull @RequestParam String name) throws Exception {
+//		return indexService.testDeleteSiteWithPages(name);
+//	}
 }

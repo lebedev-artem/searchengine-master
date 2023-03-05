@@ -13,22 +13,12 @@ import java.util.Set;
 @Table(name = "page")
 public class PageEntity implements BaseEntity {
 
-	public PageEntity() {
-	}
-
-	public PageEntity(SiteEntity siteEntity, int code, String content, String path) {
-		this.siteEntity = siteEntity;
-		this.path = path;
-		this.code = code;
-		this.content = content;
-	}
-
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(nullable = false)
 	private int id;
 
-	@ManyToOne(fetch = FetchType.EAGER, targetEntity = SiteEntity.class, cascade = CascadeType.REMOVE, optional = false)
+	@ManyToOne(fetch = FetchType.LAZY, targetEntity = SiteEntity.class, cascade = CascadeType.REMOVE, optional = false)
 	@OnDelete(action = OnDeleteAction.CASCADE)
 	@JoinColumn(foreignKey = @ForeignKey(name = "site_page_FK"), columnDefinition = "Integer",
 			referencedColumnName = "id", name = "site_id", nullable = false, updatable = false)
@@ -45,4 +35,15 @@ public class PageEntity implements BaseEntity {
 
 	@ManyToMany(mappedBy = "pageEntities")
 	private Set<LemmaEntity> lemmaEntities = new HashSet<>();
+
+
+	public PageEntity() {
+	}
+
+	public PageEntity(SiteEntity siteEntity, int code, String content, String path) {
+		this.siteEntity = siteEntity;
+		this.path = path;
+		this.code = code;
+		this.content = content;
+	}
 }

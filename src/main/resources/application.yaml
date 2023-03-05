@@ -2,14 +2,6 @@
 server:
   port: 8080
 
-#
-#logging:
-#  level:
-#    root: "warn"
-#    org.springframework.web: "debug"
-#    org.hibernate: "error"
-
-
 spring:
   datasource:
     username: root
@@ -40,6 +32,8 @@ jsoup-setting:
 
 indexing-settings:
   sites:
+#    -  url: http://www.twitter.com
+#       name: twitter
 #    - url: https://volochek.life/
 #      name: Volochek
 #    - url: https://www.playback.ru/
@@ -62,14 +56,14 @@ indexing-settings:
       name: Et_Cetera_4_mobile
     - url: https://www.lutherancathedral.ru/
       name: Lutheran_cathedral
-#    - url: https://dombulgakova.ru/
-#      name: Дом_Булгакова
+    - url: https://dombulgakova.ru/
+      name: Дом_Булгакова
 #    - url: http://www.artlebedev.ru/
 #      name: ArtLebedev
 #    - url: https://www.svetlovka.ru/
 #      name: Светловка
-    - url: http://cimus.biz/
-      name: cimus.biz
+#    - url: http://cimus.biz/
+#      name: cimus.biz
 #    - url: https://exotic-zoo.ru
 #      name: EXOTIC Zoo
 

@@ -9,7 +9,7 @@ public interface IndexService{
 	ResponseEntity<?> indexingStart(SitesList site) throws Exception;
 	ResponseEntity<?> indexingStop() throws ExecutionException, InterruptedException;
 	ResponseEntity<?> indexingPageStart(HttpServletRequest request) throws Exception;
-	ResponseEntity<?> testDeleteSiteWithPages(String name) throws ExecutionException, InterruptedException;
+//	ResponseEntity<?> testDeleteSiteWithPages(String name) throws ExecutionException, InterruptedException;
 
 	Boolean isAllowed();
 

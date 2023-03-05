@@ -1,6 +1,5 @@
 package searchengine.model;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import javax.persistence.Column;
 import javax.persistence.ManyToOne;
@@ -10,16 +9,20 @@ import java.io.Serializable;
 
 @Getter
 @Setter
+@Data
 public class SearchIndexId implements Serializable {
 
 	@Column(name = "page_id")
-	private Integer pageId;
+	private Integer page_id;
 
 	@Column(name = "lemma_id")
-	private Integer lemmaId;
+	private Integer lemma_id;
 
-	public SearchIndexId(Integer pageId, Integer lemmaId) {
-		this.pageId = pageId;
-		this.lemmaId = lemmaId;
+	public SearchIndexId(Integer page_id, Integer lemma_id) {
+		this.page_id = page_id;
+		this.lemma_id = lemma_id;
+	}
+
+	public SearchIndexId() {
 	}
 }

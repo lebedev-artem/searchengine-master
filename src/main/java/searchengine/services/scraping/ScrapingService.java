@@ -60,17 +60,20 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 
 	private Future<Integer> future;
 	private ExecutorService executor = Executors.newSingleThreadExecutor();
-	private final BlockingQueue<PageEntity> queue;
+	private final BlockingQueue<PageEntity> queueOfPagesForSaving;
+	private final BlockingQueue<PageEntity> queueOfPagesForIndexing;
 
 
-	public ScrapingService(ScrapTask scrapTask, IndexServiceImpl indexService, @NotNull Site site, @NotNull SiteEntity siteEntity, BlockingQueue<PageEntity> queue) {
+	public ScrapingService(ScrapTask scrapTask, IndexServiceImpl indexService,
+	                       @NotNull Site site, @NotNull SiteEntity siteEntity, BlockingQueue<PageEntity> queueOfPagesForSaving, BlockingQueue<PageEntity> queueOfPagesForIndexing) {
 		this.parentTask = scrapTask;
 		this.indexService = indexService;
 		this.site = site;
 		parentUrl = site.getUrl();
 		this.siteEntity = siteEntity;
 		this.siteId = siteEntity.getId();
-		this.queue = queue;
+		this.queueOfPagesForSaving = queueOfPagesForSaving;
+		this.queueOfPagesForIndexing = queueOfPagesForIndexing;
 	}
 
 	@Override
@@ -163,35 +166,34 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 		synchronized (TempStorage.class) {
 			if (TempStorage.pages.stream().noneMatch(x -> x.getPath().equals(parentPath)))
 				if (!indexService.getPageRepository().existsByPathAndSiteEntity(parentPath, siteEntity)) {
-					TempStorage.pages.add(pageEntity);
-					TempStorage.nowOnMapPages++;
-
+//					TempStorage.pages.add(pageEntity);
+//					TempStorage.nowOnMapPages++;
 					try {
-						queue.put(pageEntity);
+						queueOfPagesForSaving.put(pageEntity);
+						queueOfPagesForIndexing.put(pageEntity);
 						Thread.sleep(10);
 					} catch (InterruptedException e) {
 						throw new RuntimeException(e);
 					}
-
 					pageEntity = null;
 				}
 		}
 
-		if (Objects.equals(TempStorage.pages.size(), COUNT_PAGES_TO_DROP)) {
-			synchronized (TempStorage.class) {
-				try {
-					future = executor.submit(this::dropMapToDB);
-					logger.info(future.get() + " more pages have been saved to DB");
-				} catch (InterruptedException | ExecutionException e) {
-					logger.error("Exception in " + Thread.currentThread().getStackTrace()[1].getMethodName());
-				} finally {
-					TempStorage.pages.clear();
-					TempStorage.nowOnMapPages = 0;
-					System.gc();
-				}
-			}
-		}
-		executor.shutdownNow();
+//		if (Objects.equals(TempStorage.pages.size(), COUNT_PAGES_TO_DROP)) {
+//			synchronized (TempStorage.class) {
+//				try {
+//					future = executor.submit(this::dropMapToDB);
+//					logger.info(future.get() + " more pages have been saved to DB");
+//				} catch (InterruptedException | ExecutionException e) {
+//					logger.error("Exception in " + Thread.currentThread().getStackTrace()[1].getMethodName());
+//				} finally {
+//					TempStorage.pages.clear();
+//					TempStorage.nowOnMapPages = 0;
+//					System.gc();
+//				}
+//			}
+//		}
+//		executor.shutdownNow();
 	}
 
 	private synchronized Integer dropMapToDB() {
@@ -210,7 +212,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 		for (String subLink : subLinks.keySet()) {
 			if (childIsValidToFork(subLink)) {
 				ScrapTask childScrapTask = new ScrapTask(subLink);
-				ScrapingService task = new ScrapingService(childScrapTask, indexService, site, siteEntity, queue);
+				ScrapingService task = new ScrapingService(childScrapTask, indexService, site, siteEntity, queueOfPagesForSaving, queueOfPagesForIndexing);
 				task.fork();
 				subTasks.add(task);
 				parentTask.addChildTask(childScrapTask);

@@ -15,18 +15,12 @@ import java.util.Set;
 @Table(name = "lemma")
 public class LemmaEntity implements BaseEntity {
 
-	public LemmaEntity(SiteEntity siteEntity, String lemma, int frequency) {
-		this.siteEntity = siteEntity;
-		this.lemma = lemma;
-		this.frequency = frequency;
-	}
-
 	@Id
 	@Column(nullable = false)
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private int id;
 
-	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
+	@ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
 	@OnDelete(action = OnDeleteAction.CASCADE)
 	@JoinColumn(foreignKey = @ForeignKey(name = "lemma_site_FK"), columnDefinition = "Integer",
 			referencedColumnName = "id", name = "site_id", nullable = false, updatable = false)
@@ -45,5 +39,15 @@ public class LemmaEntity implements BaseEntity {
 			inverseJoinColumns = { @JoinColumn(name = "page_id") }
 	)
 	private Set<PageEntity> pageEntities = new HashSet<>();
+
+
+	public LemmaEntity(SiteEntity siteEntity, String lemma, int frequency) {
+		this.siteEntity = siteEntity;
+		this.lemma = lemma;
+		this.frequency = frequency;
+	}
+
+	public LemmaEntity() {
+	}
 
 }

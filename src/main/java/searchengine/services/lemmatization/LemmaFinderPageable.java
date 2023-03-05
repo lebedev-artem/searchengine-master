@@ -9,14 +9,12 @@ import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import searchengine.model.LemmaEntity;
-import searchengine.model.PageEntity;
-import searchengine.model.SearchIndexEntity;
-import searchengine.model.SiteEntity;
+import searchengine.model.*;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SearchIndexRepository;
@@ -47,10 +45,7 @@ public class LemmaFinderPageable{
 	private static final Logger rootLogger = LogManager.getRootLogger();
 	private static final String WORD_TYPE_REGEX = "\\W\\w&&[^а-яА-Я\\s]";
 	private static final String[] PARTICLES_NAMES = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
-//	private BlockingQueue<PageEntity> queue;
 	private LuceneMorphology luceneMorphology;
-//	private SiteEntity siteEntity;
-	private Integer siteId;
 
 
 //	public LemmaFinderPageable(LemmaRepository lemmaRepository, SearchIndexRepository searchIndexRepository,
@@ -85,7 +80,6 @@ public class LemmaFinderPageable{
 
 
 	public void runThroughQueue(@NotNull BlockingQueue<PageEntity> queueOfPages, Future<?> futureForScrapingSite){
-		Map<String, LemmaEntity> lemmas = new HashMap<>();
 		Set<SearchIndexEntity> searchIndexEntityMap = new HashSet<>();
 
 		try {
@@ -95,32 +89,18 @@ public class LemmaFinderPageable{
 				SiteEntity siteEntity = siteRepository.findById(pageEntity.getSiteEntity().getId());
 				Map<String, Integer> lemmasOnPage = collectLemmas(pageEntity.getContent());
 				for (String lemma : lemmasOnPage.keySet()) {
-					int freq;
+					LemmaEntity lemmaEntity;
+					if (!lemmaRepository.existsByLemmaAndSiteEntity(lemma, siteEntity)){
+						lemmaEntity = new LemmaEntity(siteEntity, lemma, INIT_FREQ);
+					} else lemmaEntity = updateFreqOfLemma(siteEntity, lemma);
 
-					if (!lemmaRepository.existsByLemmaAndSiteEntity(lemma, siteEntity) && !lemmas.containsKey(lemma)){
-						freq = 1;
-					} else {
-						if (lemmaRepository.existsByLemmaAndSiteEntity(lemma, siteEntity)){
-							freq = lemmaRepository.findByLemmaAndSiteEntity(lemma, siteEntity).getFrequency() + 1;
-						} else {
-							freq = lemmas.get(lemma).getFrequency() + 1;
-						}
-					}
+					lemmaRepository.save(lemmaEntity);
 
-					LemmaEntity lemmaEntity = new LemmaEntity(siteEntity, lemma, freq);
-					lemmas.put(lemma, lemmaEntity);
-					searchIndexEntityMap.add(new SearchIndexEntity(pageEntity, lemmaEntity, lemmasOnPage.get(lemma)));
-				}
-				if (lemmas.size() > 100){
-					lemmaRepository.saveAll(lemmas.values());
-					for (SearchIndexEntity see : searchIndexEntityMap) {
-						searchIndexRepository.save(see);
-					}
-
-					lemmas.clear();
-					searchIndexEntityMap.clear();
+					SearchIndexEntity searchIndexEntity = new SearchIndexEntity(pageEntity, lemmaEntity, lemmasOnPage.get(lemma), new SearchIndexId(pageEntity.getId(), lemmaEntity.getId()));
+					searchIndexRepository.save(searchIndexEntity);
 
 				}
+
 				if (futureForScrapingSite.isDone() && !queueOfPages.iterator().hasNext())
 					return;
 			}
@@ -181,10 +161,20 @@ public class LemmaFinderPageable{
 		}
 	}
 
-	private void updateFreqOfLemma(SiteEntity siteEntity, String lemma) {
-		LemmaEntity lemmaNeedsUpdateFreq = lemmaRepository.findByLemmaAndSiteEntity(lemma, siteEntity);
+	private LemmaEntity updateFreqOfLemma(SiteEntity siteEntity, String lemma) {
+		LemmaEntity lemmaNeedsUpdateFreq;
+		try {
+			lemmaNeedsUpdateFreq = lemmaRepository.findByLemmaAndSiteEntity(lemma, siteEntity);
+		} catch (IncorrectResultSizeDataAccessException e){
+			e.printStackTrace();
+		} finally {
+			lemmaNeedsUpdateFreq = lemmaRepository.findFirstByLemmaAndSiteEntity(lemma, siteEntity);
+
+		}
+
 		lemmaNeedsUpdateFreq.setFrequency(lemmaNeedsUpdateFreq.getFrequency() + 1);
 		lemmaRepository.save(lemmaNeedsUpdateFreq);
+		return lemmaNeedsUpdateFreq;
 	}
 
 	public Map<String, Integer> collectLemmas(String text) {
