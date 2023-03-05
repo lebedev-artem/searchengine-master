@@ -10,7 +10,6 @@ import java.util.Set;
 @Entity(name = "SiteEntity")
 @Table(name = "site")
 public class SiteEntity implements BaseEntity{
-//	private Boolean deleted;
 
 	public SiteEntity(String status, LocalDateTime statusTime, String lastError, String url, String name) {
 		this.status = status;

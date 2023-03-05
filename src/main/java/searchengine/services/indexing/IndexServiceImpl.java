@@ -23,7 +23,6 @@ import searchengine.services.scraping.ScrapTask;
 import searchengine.services.stuff.SingleSiteListCreator;
 
 import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
@@ -53,7 +52,7 @@ public class IndexServiceImpl implements IndexService {
 	private final PageRepository pageRepository;
 	private final LemmaRepository lemmaRepository;
 	private final SearchIndexRepository searchIndexRepository;
-	private BlockingQueue<PageEntity> queueOfPages = new LinkedBlockingQueue<>(10000);
+	private BlockingQueue<PageEntity> queueOfPages = new LinkedBlockingQueue<>(100);
 
 	@Autowired
 	LemmaFinderPageable lemmaFinderPageable;
@@ -80,22 +79,30 @@ public class IndexServiceImpl implements IndexService {
 					try {
 						futureForScrapingSite = executor.submit(
 								() -> invokeScrapingOfSite(rootScrapTask, fjpPool, site, siteId));
+						startLemmaFinder(siteRepository.findById(siteId), siteId);
 						futureForScrapingSite.get();
-
-						futureForLemmaFinder = executor.submit(
-								Objects.requireNonNull(
-										startLemmaFinder(siteRepository.findById(siteId), siteId)));
-						futureForLemmaFinder.get();
-
-						System.gc();
 					} catch (RuntimeException | ExecutionException | InterruptedException e) {
 						logger.error("Error while getting Future " + Thread.currentThread().getStackTrace()[1].getMethodName());
 						e.printStackTrace();
 					}
 					pageRepository.saveAllAndFlush(TempStorage.pages);
 					rootLogger.info("~ Site " + site.getUrl() + " contains " + pageRepository.countBySiteId(siteId) + " pages");
-					System.gc();
 					doAfterScraping(site, rootScrapTask);
+					rootLogger.info("Parsing of " + site.getName() + " finished in " + (System.currentTimeMillis() - timeMain) + " ms");
+					rootLogger.warn("------------------------------------------------------------------------------------------");
+
+//					try {
+//						rootLogger.info("Lemmas finding started");
+//						long timeLemmas = System.currentTimeMillis();
+						futureForLemmaFinder = executor.submit(() -> startLemmaFinder(siteRepository.findById(siteId), siteId));
+//						futureForLemmaFinder.get();
+//						rootLogger.info("Lemmas finding finished in " + (System.currentTimeMillis() - timeLemmas) + " ms");
+//						rootLogger.info(lemmaRepository.countAllLemmas() + " lemmas in DB");
+//						rootLogger.warn("--------------------------------------------------------------------------------------");
+//					} catch (InterruptedException | ExecutionException e) {
+//						e.printStackTrace();
+//					}
+
 				} else {
 					try {
 						Thread.sleep(3133);
@@ -109,7 +116,7 @@ public class IndexServiceImpl implements IndexService {
 				}
 			}
 			isStarted = false;
-			rootLogger.warn("~ Parsing finished in " + (System.currentTimeMillis() - timeMain) + " ms, isStarted - " + isStarted + " isAllowed - " + allowed);
+			rootLogger.warn("Parsing finished in " + (System.currentTimeMillis() - timeMain) + " ms, isStarted - " + isStarted + " isAllowed - " + allowed);
 		}));
 		singleTask.get().start();
 		return indexResponse.successfully();
@@ -135,8 +142,6 @@ public class IndexServiceImpl implements IndexService {
 	@Override
 	public ResponseEntity<?> indexingStop() {
 		if (!isStarted) return indexResponse.stopFailed();
-
-		rootLogger.info("~ Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started");
 		setStarted(false);
 		setAllowed(false);
 		siteRepository.updateAllStatusStatusTimeError("FAILED", LocalDateTime.now(), "Индексация остановлена пользователем");
@@ -144,7 +149,6 @@ public class IndexServiceImpl implements IndexService {
 	}
 
 	private void invokeScrapingOfSite(ScrapTask rootScrapTask, @NotNull ForkJoinPool fjpPool, @NotNull Site site, int siteId) {
-		rootLogger.info("~ Method <" + Thread.currentThread().getStackTrace()[1].getMethodName() + "> started");
 		scrapingService = new ScrapingService(rootScrapTask, this, site, siteRepository.findById(siteId), queueOfPages);
 		scrapingService.setAllowed(true);
 		rootLogger.info("~ Invoke " + site.getName() + " " + site.getUrl());
@@ -161,8 +165,8 @@ public class IndexServiceImpl implements IndexService {
 			siteRepository.updateStatusStatusTimeError(status, LocalDateTime.now(), scrapTask.getLastError(), site.getName());
 			rootLogger.info("~ Status of site " + site.getName() + " set to " + status);
 			rootLogger.info("~ Table page contains " + pageRepository.countAllPages() + " pages");
-			rootLogger.info("------------------------------------------------------------------------------------------");
 		}
+		System.gc();
 	}
 
 	private void initSchema(@NotNull SitesList siteListToInit) throws MalformedURLException {
@@ -228,11 +232,13 @@ public class IndexServiceImpl implements IndexService {
 		return indexResponse.successfully();
 	}
 
-	private @Nullable Runnable startLemmaFinder(SiteEntity siteEntity, Integer siteId){
-//	lemmaFinderPageable.setLuceneMorphology();
-//	lemmaFinderPageable.setSiteId(siteId);
-//	lemmaFinderPageable.setSiteEntity(siteEntity);
-		lemmaFinderPageable.runn(siteId, siteEntity);
-		return null;
+	private @Nullable void startLemmaFinder(SiteEntity siteEntity, Integer siteId) {
+		rootLogger.info("Lemmas finding started");
+		long timeLemmas = System.currentTimeMillis();
+		lemmaFinderPageable.runThroughQueue(queueOfPages, futureForScrapingSite);
+//		lemmaFinderPageable.runThroughPageable(siteId, siteEntity);
+		rootLogger.info("Lemmas finding finished in " + (System.currentTimeMillis() - timeLemmas) + " ms");
+		rootLogger.info(lemmaRepository.countAllLemmas() + " lemmas in DB");
+		rootLogger.warn("--------------------------------------------------------------------------------------");
 	}
 }

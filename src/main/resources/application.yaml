@@ -56,8 +56,8 @@ indexing-settings:
 ##      name: BBC.com
 #    - url: https://lenta.ru/
 #      name: Lenta
-#    - url: https://nikoartgallery.com/
-#      name: Niko_Art_Gallery
+    - url: https://nikoartgallery.com/
+      name: Niko_Art_Gallery
     - url: https://et-cetera.ru/mobile/
       name: Et_Cetera_4_mobile
     - url: https://www.lutherancathedral.ru/

@@ -1,5 +1,6 @@
 package searchengine.repositories;
 
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.model.LemmaEntity;
@@ -13,4 +14,7 @@ public interface LemmaRepository extends BaseRepository<LemmaEntity, Long>{
 	Integer getFrequencyByLemma(String lemma);
 	LemmaEntity getByLemma(String lemma);
 	Integer getIdByLemma(String lemma);
+
+	@Query(value = "SELECT count(*) FROM `lemma`", nativeQuery = true)
+	Integer countAllLemmas();
 }

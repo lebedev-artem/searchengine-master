@@ -1,20 +1,17 @@
 package searchengine.model;
-
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
-
 import javax.persistence.*;
+import java.util.HashSet;
+import java.util.Set;
 
 @Setter
 @Getter
 @Entity
-
-//@Table(name = "page", indexes = @Index(columnList = "site_id", unique = true))
 @Table(name = "page")
 public class PageEntity implements BaseEntity {
-//	private Boolean deleted;
 
 	public PageEntity() {
 	}
@@ -31,11 +28,6 @@ public class PageEntity implements BaseEntity {
 	@Column(nullable = false)
 	private int id;
 
-
-	//	@ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
-//	@JoinColumn(name = "site_id")
-//	@OnDelete(action = OnDeleteAction.CASCADE)
-
 	@ManyToOne(fetch = FetchType.EAGER, targetEntity = SiteEntity.class, cascade = CascadeType.REMOVE, optional = false)
 	@OnDelete(action = OnDeleteAction.CASCADE)
 	@JoinColumn(foreignKey = @ForeignKey(name = "site_page_FK"), columnDefinition = "Integer",
@@ -43,7 +35,6 @@ public class PageEntity implements BaseEntity {
 	private SiteEntity siteEntity;
 
 	@Column(name = "path", columnDefinition = "TEXT NOT NULL, KEY path_index (path(255))")
-//	@Column(name = "path", columnDefinition = "TEXT (255) NOT NULL")
 	private String path;
 
 	@Column(nullable = false)
@@ -52,9 +43,6 @@ public class PageEntity implements BaseEntity {
 	@Column(length = 16777215, columnDefinition = "mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", nullable = false)
 	private String content;
 
-//	@OneToMany(mappedBy = "pageEntity")
-//	private Set<SearchIndexEntity> searchIndexEntities;
-
-	@OneToOne(mappedBy = "pageEntity")
-	private SearchIndexEntity searchIndexEntity;
+	@ManyToMany(mappedBy = "pageEntities")
+	private Set<LemmaEntity> lemmaEntities = new HashSet<>();
 }

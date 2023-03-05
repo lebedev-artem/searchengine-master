@@ -7,15 +7,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import searchengine.model.LemmaEntity;
 import searchengine.model.PageEntity;
+import searchengine.model.SearchIndexEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
@@ -32,6 +32,7 @@ import static java.lang.Thread.sleep;
 @Getter
 @Setter
 @Service
+@RequiredArgsConstructor
 public class LemmaFinderPageable{
 	@Autowired
 	LemmaRepository lemmaRepository;
@@ -43,12 +44,13 @@ public class LemmaFinderPageable{
 	SiteRepository siteRepository;
 	private static final Integer INIT_FREQ = 1;
 	private static final Logger logger = LogManager.getLogger(LemmaFinder.class);
+	private static final Logger rootLogger = LogManager.getRootLogger();
 	private static final String WORD_TYPE_REGEX = "\\W\\w&&[^а-яА-Я\\s]";
 	private static final String[] PARTICLES_NAMES = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
-	private BlockingQueue<PageEntity> queue;
+//	private BlockingQueue<PageEntity> queue;
 	private LuceneMorphology luceneMorphology;
 //	private SiteEntity siteEntity;
-//	private Integer siteId;
+	private Integer siteId;
 
 
 //	public LemmaFinderPageable(LemmaRepository lemmaRepository, SearchIndexRepository searchIndexRepository,
@@ -75,63 +77,114 @@ public class LemmaFinderPageable{
 //	public void setSiteEntity(SiteEntity siteEntity) {
 //		this.siteEntity = siteEntity;
 //	}
-
+//
 //	@Autowired
 //	public void setSiteId(Integer siteId) {
 //		this.siteId = siteId;
 //	}
 
 
-	public void runn(Integer siteId, SiteEntity siteEntity) {
+	public void runThroughQueue(@NotNull BlockingQueue<PageEntity> queueOfPages, Future<?> futureForScrapingSite){
+		Map<String, LemmaEntity> lemmas = new HashMap<>();
+		Set<SearchIndexEntity> searchIndexEntityMap = new HashSet<>();
+
+		try {
+//			sleep(5_000);
+			while (true) {
+				PageEntity pageEntity = queueOfPages.take();
+				SiteEntity siteEntity = siteRepository.findById(pageEntity.getSiteEntity().getId());
+				Map<String, Integer> lemmasOnPage = collectLemmas(pageEntity.getContent());
+				for (String lemma : lemmasOnPage.keySet()) {
+					int freq;
+
+					if (!lemmaRepository.existsByLemmaAndSiteEntity(lemma, siteEntity) && !lemmas.containsKey(lemma)){
+						freq = 1;
+					} else {
+						if (lemmaRepository.existsByLemmaAndSiteEntity(lemma, siteEntity)){
+							freq = lemmaRepository.findByLemmaAndSiteEntity(lemma, siteEntity).getFrequency() + 1;
+						} else {
+							freq = lemmas.get(lemma).getFrequency() + 1;
+						}
+					}
+
+					LemmaEntity lemmaEntity = new LemmaEntity(siteEntity, lemma, freq);
+					lemmas.put(lemma, lemmaEntity);
+					searchIndexEntityMap.add(new SearchIndexEntity(pageEntity, lemmaEntity, lemmasOnPage.get(lemma)));
+				}
+				if (lemmas.size() > 100){
+					lemmaRepository.saveAll(lemmas.values());
+					for (SearchIndexEntity see : searchIndexEntityMap) {
+						searchIndexRepository.save(see);
+					}
+
+					lemmas.clear();
+					searchIndexEntityMap.clear();
+
+				}
+				if (futureForScrapingSite.isDone() && !queueOfPages.iterator().hasNext())
+					return;
+			}
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+	}
+
+	public void runThroughPageable(Integer siteId, SiteEntity siteEntity) {
 		try {
 //			sleep(5_000);
 			while (true) {
 				sleep(1_000);
+
 				Set<PageEntity> pagesCOfCurrentSite = new HashSet<>();
 				long time = System.currentTimeMillis();
 
 				int pageNumber = 0; // номер первой страницы
-				int pageSize = 5; // количество записей на странице
-				Sort sort = Sort.by(Sort.Direction.ASC, "id"); // сортировка по полю "id" в порядке возрастания
-				Pageable pageable = PageRequest.of(pageNumber, pageSize, sort); // первая страница, содержащая 10 записей, отсортированных по полю "id"
+				int pageSize = 50; // количество записей на странице
+//				Sort sort = Sort.by(Sort.Direction.ASC, "id"); // сортировка по полю "id" в порядке возрастания
+//				Pageable pageable = PageRequest.of(pageNumber, pageSize, sort); // первая страница, содержащая 10 записей, отсортированных по полю "id"
+				Pageable pageable = PageRequest.of(pageNumber, pageSize);
 				Page<PageEntity> page = pageRepository.findAll(pageable); // получение первой страницы записей
 
 				List<PageEntity> entitiesList = page.getContent();
 				while (!entitiesList.isEmpty()) { // пока есть записи
 					for (PageEntity entity : entitiesList) {
-						// обработка записи
+						Map<String, LemmaEntity> lemmasOnPage = new HashMap<>();
 						Map<String, Integer> collectedLemmas = collectLemmas(entity.getContent());
 
-						Map<String, LemmaEntity> lemmasOnPage = new HashMap<>();
 						for (String lemma : collectedLemmas.keySet()) {
-							lemmasOnPage.put(lemma, new LemmaEntity(siteEntity, lemma, INIT_FREQ));
-						}
-						for (String lemma : collectedLemmas.keySet()) {
-							LemmaEntity l = new LemmaEntity(siteEntity, lemma, INIT_FREQ);
 							if (!lemmaRepository.existsByLemmaAndSiteEntity(lemma, siteEntity)) {
-								lemmaRepository.save(l);
+								lemmasOnPage.put(lemma, new LemmaEntity(siteEntity, lemma, INIT_FREQ));
 							} else {
-								LemmaEntity lExist = lemmaRepository.findByLemmaAndSiteEntity(lemma, siteEntity);
-								lExist.setFrequency(lExist.getFrequency() + 1);
-								lemmaRepository.save(lExist);
+								updateFreqOfLemma(siteEntity, lemma);
 							}
 						}
-
+						rootLogger.info("Now will save " + lemmasOnPage.size() + " lemmas to DB");
+						lemmaRepository.saveAll(lemmasOnPage.values());
+						lemmasOnPage.clear();
 					}
-					pageable = page.nextPageable(); // получение следующей страницы записей
-					page = pageRepository.findAll(pageable); // получение следующей страницы записей
+					if (!page.hasNext()) {
+						break;
+					}
+
+					pageable = page.nextPageable();
+					page = pageRepository.findAll(pageable);
 					entitiesList = page.getContent();
 				}
 
 
 				logger.warn("Finding all pages takes - " + (System.currentTimeMillis() - time) + " ms");
-				logger.warn(pagesCOfCurrentSite.size() + " pages");
 				break;
 
 			}
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
 		}
+	}
+
+	private void updateFreqOfLemma(SiteEntity siteEntity, String lemma) {
+		LemmaEntity lemmaNeedsUpdateFreq = lemmaRepository.findByLemmaAndSiteEntity(lemma, siteEntity);
+		lemmaNeedsUpdateFreq.setFrequency(lemmaNeedsUpdateFreq.getFrequency() + 1);
+		lemmaRepository.save(lemmaNeedsUpdateFreq);
 	}
 
 	public Map<String, Integer> collectLemmas(String text) {

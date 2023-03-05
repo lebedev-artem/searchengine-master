@@ -6,6 +6,7 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 import javax.persistence.*;
+import java.util.HashSet;
 import java.util.Set;
 
 @Setter
@@ -20,15 +21,11 @@ public class LemmaEntity implements BaseEntity {
 		this.frequency = frequency;
 	}
 
-	public LemmaEntity() {
-	}
-
 	@Id
 	@Column(nullable = false)
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private int id;
 
-//	@ManyToOne(mappedBy = "lemmaEntity")
 	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
 	@OnDelete(action = OnDeleteAction.CASCADE)
 	@JoinColumn(foreignKey = @ForeignKey(name = "lemma_site_FK"), columnDefinition = "Integer",
@@ -41,7 +38,12 @@ public class LemmaEntity implements BaseEntity {
 	@Column(nullable = false)
 	private int frequency;
 
-	@OneToOne(mappedBy = "lemmaEntity")
-	private SearchIndexEntity searchIndexEntity;
+	@ManyToMany(cascade = { CascadeType.ALL })
+	@JoinTable(
+			name = "search_index",
+			joinColumns = { @JoinColumn(name = "lemma_id") },
+			inverseJoinColumns = { @JoinColumn(name = "page_id") }
+	)
+	private Set<PageEntity> pageEntities = new HashSet<>();
 
 }
