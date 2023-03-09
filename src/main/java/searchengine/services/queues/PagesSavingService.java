@@ -11,10 +11,10 @@ import searchengine.config.Site;
 import searchengine.model.PageEntity;
 import searchengine.repositories.PageRepository;
 
+import javax.persistence.criteria.CriteriaBuilder;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Future;
 
 import static java.lang.Thread.sleep;
 
@@ -23,11 +23,12 @@ import static java.lang.Thread.sleep;
 @Component
 @NoArgsConstructor
 public class PagesSavingService {
-	private BlockingQueue<PageEntity> queue;
-	private boolean scrapingFutureIsDone = false;
-//	private Future<?> expectedFuture;
-	private Site site;
 	private static final Logger rootLogger = LogManager.getRootLogger();
+	private boolean scrapingFutureIsDone = false;
+	private boolean indexingStopped = false;
+	private final Integer COUNT_TO_SAVE = 30;
+	private BlockingQueue<PageEntity> queue;
+
 	@Autowired
 	PageRepository pageRepository;
 
@@ -37,12 +38,10 @@ public class PagesSavingService {
 		Set<PageEntity> entities = new HashSet<>();
 
 		while (true) {
-			PageEntity pageEntity;
-			pageEntity = queue.poll();
+			PageEntity pageEntity = queue.poll();
 			if (pageEntity != null) {
 				if (!pageRepository.existsById(pageEntity.getId()))
 					entities.add(pageEntity);
-//						pageRepository.save(pageEntity);
 			} else {
 				try {
 					sleep(100);
@@ -50,12 +49,13 @@ public class PagesSavingService {
 					e.printStackTrace();
 				}
 			}
-			if (entities.size() == 30) {
+
+			if (entities.size() == COUNT_TO_SAVE) {
 				pageRepository.saveAll(entities);
 				entities.clear();
 			}
 
-			if (isNotAllowed()) {
+			if (notAllowed() || indexingStopped) {
 				pageRepository.saveAll(entities);
 				rootLogger.info("::: Pages saved finished in " + (System.currentTimeMillis() - time) + " ms");
 				rootLogger.warn(pageRepository.countAllPages() + " pages in DB");
@@ -64,8 +64,7 @@ public class PagesSavingService {
 		}
 	}
 
-	private boolean isNotAllowed() {
+	private boolean notAllowed() {
 		return scrapingFutureIsDone && !queue.iterator().hasNext();
 	}
-
 }

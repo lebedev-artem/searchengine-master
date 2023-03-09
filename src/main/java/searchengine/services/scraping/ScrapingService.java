@@ -170,7 +170,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 //					TempStorage.nowOnMapPages++;
 					try {
 						queueOfPagesForSaving.put(pageEntity);
-						queueOfPagesForIndexing.put(pageEntity);
+//						queueOfPagesForIndexing.put(pageEntity);
 						Thread.sleep(10);
 					} catch (InterruptedException e) {
 						throw new RuntimeException(e);
