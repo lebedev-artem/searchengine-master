@@ -4,7 +4,6 @@ import lombok.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -42,6 +41,7 @@ public class IndexServiceImpl implements IndexService {
 	private static final ThreadLocal<Thread> singleTask = new ThreadLocal<>();
 	private static final ThreadLocal<Thread> taskSavingPages = new ThreadLocal<>();
 	private static final ThreadLocal<Thread> taskLemmasFinding = new ThreadLocal<>();
+
 	private static Future<?> futureForScrapingSite;
 	public volatile boolean allowed = true;
 	public volatile boolean isStarted = false;
@@ -55,8 +55,8 @@ public class IndexServiceImpl implements IndexService {
 	private final PageRepository pageRepository;
 	private final LemmaRepository lemmaRepository;
 	private final SearchIndexRepository searchIndexRepository;
-	private BlockingQueue<PageEntity> queueOfPagesForIndexing = new LinkedBlockingQueue<>(1000);
-	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(1000);
+	private BlockingQueue<PageEntity> queueOfPagesForIndexing = new LinkedBlockingQueue<>(100);
+	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(100);
 
 	@Autowired
 	LemmaFinderPageable lemmaFinderPageable;
@@ -71,9 +71,9 @@ public class IndexServiceImpl implements IndexService {
 
 		isStarted = true;
 		allowed = true;
+		pagesSavingService.setScrapingFutureIsDone(false);
 		ForkJoinPool fjpPool = new ForkJoinPool();
 		ExecutorService executor = Executors.newSingleThreadExecutor();
-
 		initSchema(sitesList);
 
 		singleTask.set(new Thread(() -> {
@@ -83,12 +83,11 @@ public class IndexServiceImpl implements IndexService {
 					siteId = siteRepository.findByName(site.getName()).getId();
 					try {
 						futureForScrapingSite = executor.submit(() -> startScrapingOfSite(rootScrapTask, fjpPool, site, siteId));
+//						taskSavingPages.set(new Thread(() -> startSavingPages(site), "PagesSaving thread"));
+//						taskLemmasFinding.set(new Thread(() -> startLemmaFinder(site), "Lemmas-Finding"));
 
-						taskSavingPages.set(new Thread(() -> startSavingPages(site), "PagesSaving"));
-						taskLemmasFinding.set(new Thread(() -> startLemmaFinder(site), "LemmasFinding"));
-
-						taskSavingPages.get().start();
-						taskLemmasFinding.get().start();
+//						taskSavingPages.get().start();
+//						taskLemmasFinding.get().start();
 
 						futureForScrapingSite.get();
 					} catch (RuntimeException | ExecutionException | InterruptedException e) {
@@ -97,9 +96,8 @@ public class IndexServiceImpl implements IndexService {
 					}
 //					pageRepository.saveAllAndFlush(TempStorage.pages);
 //					rootLogger.info("~ Site " + site.getUrl() + " contains " + pageRepository.countBySiteId(siteId) + " pages");
-					doAfterScraping(site, rootScrapTask);
-					rootLogger.info("Parsing of " + site.getName() + " finished in " + (System.currentTimeMillis() - timeMain) + " ms");
-					rootLogger.warn("------------------------------------------------------------------------------------------");
+					startActionsAfterScraping(site, rootScrapTask);
+					rootLogger.info(":: Scraping of " + site.getName() + " finished in " + (System.currentTimeMillis() - timeMain) + " ms," + " future isDone - " + futureForScrapingSite.isDone());
 
 //					try {
 //						rootLogger.info("Lemmas finding started");
@@ -126,9 +124,17 @@ public class IndexServiceImpl implements IndexService {
 				}
 			}
 			isStarted = false;
-			rootLogger.warn("::: Parsing finished in " + (System.currentTimeMillis() - timeMain) + " ms, isStarted - " + isStarted + " isAllowed - " + allowed);
-		}, "MainThread"));
+			pagesSavingService.setScrapingFutureIsDone(true);
+			executor.shutdownNow();
+			fjpPool.shutdownNow();
+//			rootLogger.warn("::: Parsing finished in " + (System.currentTimeMillis() - timeMain) + " ms, isStarted - " + isStarted + " isAllowed - " + allowed);
+		}, "Main-thread"));
 		singleTask.get().start();
+
+
+//		taskSavingPages.set(new Thread(this::startSavingPages, "Pages-saving"));
+//		taskSavingPages.get().start();
+
 		return indexResponse.successfully();
 	}
 
@@ -161,11 +167,11 @@ public class IndexServiceImpl implements IndexService {
 	private void startScrapingOfSite(ScrapTask rootScrapTask, @NotNull ForkJoinPool fjpPool, @NotNull Site site, int siteId) {
 		scrapingService = new ScrapingService(rootScrapTask, this, site, siteRepository.findById(siteId), queueOfPagesForSaving, queueOfPagesForIndexing);
 		scrapingService.setAllowed(true);
-		rootLogger.info("-> Invoke " + site.getName() + " " + site.getUrl());
+		rootLogger.info(":: Invoke " + site.getName() + " " + site.getUrl());
 		fjpPool.invoke(scrapingService);
 	}
 
-	private void doAfterScraping(@NotNull Site site, ScrapTask scrapTask) {
+	private void startActionsAfterScraping(@NotNull Site site, ScrapTask scrapTask) {
 		String status = pageRepository.existsBySiteEntity(siteRepository.findByName(site.getName())) ? "INDEXED" : "FAILED";
 		stringPool.getPaths().clear();
 //		TempStorage.pages.clear();
@@ -173,9 +179,10 @@ public class IndexServiceImpl implements IndexService {
 //		TempStorage.nowOnMapPages = 0;
 		if (futureForScrapingSite.isDone() && allowed) {
 			siteRepository.updateStatusStatusTimeError(status, LocalDateTime.now(), scrapTask.getLastError(), site.getName());
-			rootLogger.info("::: Status of site " + site.getName() + " set to " + status);
+			rootLogger.info(":: Status of site " + site.getName() + " set to " + status);
 //			rootLogger.info("~ Table page contains " + pageRepository.countAllPages() + " pages");
 		}
+
 		System.gc();
 	}
 
@@ -228,29 +235,16 @@ public class IndexServiceImpl implements IndexService {
 		return allowed;
 	}
 
-//	@Override
-//	public ResponseEntity<?> testDeleteSiteWithPages(@NotNull String name) {
-//		logger.info("~ Table page contains " + pageRepository.countAllPages() + " pages");
-//		logger.info("~ Now will be exec query siteRepository.deleteByName(name)");
-////		siteRepository.deleteByName(name);
-//		int id = siteRepository.findByName(name).getId();
-//		siteRepository.deleteById(id);
-//		logger.info("~ Table page contains " + pageRepository.countAllPages() + " pages");
-//		logger.info("------------------------------------------------------------------------------------------");
-//		return indexResponse.successfully();
-//	}
-
-	private @Nullable void startLemmaFinder(Site site) {
-		long timeLemmas = System.currentTimeMillis();
-		lemmaFinderPageable.runThroughQueue(queueOfPagesForIndexing, futureForScrapingSite);
-		rootLogger.info("::: Lemmas of " + site.getName() +" finding finished in " + (System.currentTimeMillis() - timeLemmas) + " ms");
-		rootLogger.warn(lemmaRepository.countAllLemmas() + " lemmas in DB, site -> " + site.getName());
+	private void startLemmaFinder(Site site) {
+		lemmaFinderPageable.runThroughQueue(queueOfPagesForIndexing, futureForScrapingSite, site);
 	}
 
-	private @Nullable void startSavingPages(@NotNull Site site) {
-		long time = System.currentTimeMillis();
-		pagesSavingService.pagesSaving(queueOfPagesForSaving, futureForScrapingSite);
-		rootLogger.info("::: Pages of " + site.getName() + " saved finished in " + (System.currentTimeMillis() - time) + " ms");
-		rootLogger.warn(pageRepository.countAllPages() + " pages in DB, site -> " + site.getName());
+	private void startSavingPagesService() {
+		taskSavingPages.set(new Thread(() -> {
+			pagesSavingService.setQueue(queueOfPagesForSaving);
+			pagesSavingService.pagesSaving();
+		}, "saving-pages"));
+
+		taskSavingPages.get().start();
 	}
 }

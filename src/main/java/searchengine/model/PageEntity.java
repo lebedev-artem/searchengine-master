@@ -10,7 +10,7 @@ import java.util.Set;
 @Setter
 @Getter
 @Entity
-@Table(name = "page")
+@Table(name = "page", indexes = @Index(name = "path_index", columnList = "path, site_id", unique = true))
 public class PageEntity implements BaseEntity {
 
 	@Id
@@ -24,7 +24,7 @@ public class PageEntity implements BaseEntity {
 			referencedColumnName = "id", name = "site_id", nullable = false, updatable = false)
 	private SiteEntity siteEntity;
 
-	@Column(name = "path", columnDefinition = "TEXT NOT NULL, KEY path_index (path(255))")
+	@Column(name = "path", columnDefinition = "TEXT (255) NOT NULL")
 	private String path;
 
 	@Column(nullable = false)

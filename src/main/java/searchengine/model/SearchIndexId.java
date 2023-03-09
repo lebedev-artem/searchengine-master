@@ -1,10 +1,6 @@
 package searchengine.model;
 import lombok.*;
-
 import javax.persistence.Column;
-import javax.persistence.ManyToOne;
-import javax.persistence.MapsId;
-import javax.persistence.criteria.CriteriaBuilder;
 import java.io.Serializable;
 
 @Getter

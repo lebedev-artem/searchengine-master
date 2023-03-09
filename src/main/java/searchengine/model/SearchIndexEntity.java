@@ -11,11 +11,9 @@ import javax.persistence.*;
 @Getter
 @Entity
 @Table(name = "search_index")
-public class SearchIndexEntity implements BaseEntity{
+public class SearchIndexEntity implements BaseEntity {
 
 	@EmbeddedId
-//	@Column(nullable = false)
-//	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private SearchIndexId id;
 
 	@ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})

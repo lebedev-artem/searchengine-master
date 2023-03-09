@@ -32,11 +32,11 @@ public class LemmaEntity implements BaseEntity {
 	@Column(nullable = false)
 	private int frequency;
 
-	@ManyToMany(cascade = { CascadeType.ALL })
+	@ManyToMany(cascade = {CascadeType.ALL})
 	@JoinTable(
 			name = "search_index",
-			joinColumns = { @JoinColumn(name = "lemma_id") },
-			inverseJoinColumns = { @JoinColumn(name = "page_id") }
+			joinColumns = {@JoinColumn(name = "lemma_id")},
+			inverseJoinColumns = {@JoinColumn(name = "page_id")}
 	)
 	private Set<PageEntity> pageEntities = new HashSet<>();
 

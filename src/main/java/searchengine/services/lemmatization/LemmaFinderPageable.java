@@ -14,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import searchengine.config.Site;
 import searchengine.model.*;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
@@ -31,7 +32,7 @@ import static java.lang.Thread.sleep;
 @Setter
 @Service
 @RequiredArgsConstructor
-public class LemmaFinderPageable{
+public class LemmaFinderPageable {
 	@Autowired
 	LemmaRepository lemmaRepository;
 	@Autowired
@@ -47,19 +48,6 @@ public class LemmaFinderPageable{
 	private static final String[] PARTICLES_NAMES = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
 	private LuceneMorphology luceneMorphology;
 
-
-//	public LemmaFinderPageable(LemmaRepository lemmaRepository, SearchIndexRepository searchIndexRepository,
-//	                           PageRepository pageRepository, SiteRepository siteRepository,
-//	                           SiteEntity siteEntity, Integer siteId) throws IOException {
-//		this.lemmaRepository = lemmaRepository;
-//		this.searchIndexRepository = searchIndexRepository;
-//		this.pageRepository = pageRepository;
-//		this.siteRepository = siteRepository;
-//		this.siteEntity = siteEntity;
-//		this.siteId = siteId;
-//		this.luceneMorphology = new RussianLuceneMorphology();
-//	}
-//
 	@Autowired
 	public void setLuceneMorphology() {
 		try {
@@ -68,45 +56,40 @@ public class LemmaFinderPageable{
 			throw new RuntimeException(e);
 		}
 	}
-//	@Autowired
-//	public void setSiteEntity(SiteEntity siteEntity) {
-//		this.siteEntity = siteEntity;
-//	}
-//
-//	@Autowired
-//	public void setSiteId(Integer siteId) {
-//		this.siteId = siteId;
-//	}
 
-
-	public void runThroughQueue(@NotNull BlockingQueue<PageEntity> queueOfPages, Future<?> futureForScrapingSite){
+	public void runThroughQueue(@NotNull BlockingQueue<PageEntity> queueOfPages, Future<?> futureForScrapingSite, Site site) {
+		Map<LemmaEntity, String> lemmas = new HashMap<>();
+		Map<SearchIndexEntity, LemmaEntity> searchIndexEntityLemmaEntityMap = new HashMap<>();
 		Set<SearchIndexEntity> searchIndexEntityMap = new HashSet<>();
-
-		try {
-//			sleep(5_000);
+		long timeLemmas = System.currentTimeMillis();
 			while (true) {
-				PageEntity pageEntity = queueOfPages.take();
-				SiteEntity siteEntity = siteRepository.findById(pageEntity.getSiteEntity().getId());
-				Map<String, Integer> lemmasOnPage = collectLemmas(pageEntity.getContent());
-				for (String lemma : lemmasOnPage.keySet()) {
-					LemmaEntity lemmaEntity;
-					if (!lemmaRepository.existsByLemmaAndSiteEntity(lemma, siteEntity)){
-						lemmaEntity = new LemmaEntity(siteEntity, lemma, INIT_FREQ);
-					} else lemmaEntity = updateFreqOfLemma(siteEntity, lemma);
+				PageEntity pageEntity = queueOfPages.poll();
+				if (pageEntity != null){
+					SiteEntity siteEntity = siteRepository.findById(pageEntity.getSiteEntity().getId());
+					Map<String, Integer> lemmasOnPage = collectLemmas(pageEntity.getContent());
+					for (String lemma : lemmasOnPage.keySet()) {
+						LemmaEntity lemmaEntity;
+						if (!lemmaRepository.existsByLemmaAndSiteEntity(lemma, siteEntity)) {
+							lemmaEntity = new LemmaEntity(siteEntity, lemma, INIT_FREQ);
+						} else lemmaEntity = updateFreqOfLemma(siteEntity, lemma);
 
-					lemmaRepository.save(lemmaEntity);
+						lemmaRepository.save(lemmaEntity);
 
-					SearchIndexEntity searchIndexEntity = new SearchIndexEntity(pageEntity, lemmaEntity, lemmasOnPage.get(lemma), new SearchIndexId(pageEntity.getId(), lemmaEntity.getId()));
-					searchIndexRepository.save(searchIndexEntity);
-
+						SearchIndexEntity searchIndexEntity = new SearchIndexEntity(pageEntity, lemmaEntity, lemmasOnPage.get(lemma), new SearchIndexId(pageEntity.getId(), lemmaEntity.getId()));
+						searchIndexRepository.save(searchIndexEntity);
+					}
+				} try {
+					Thread.sleep(10);
+				} catch (InterruptedException e){
+					e.printStackTrace();
 				}
 
-				if (futureForScrapingSite.isDone() && !queueOfPages.iterator().hasNext())
+				if (futureForScrapingSite.isDone() && !queueOfPages.iterator().hasNext()) {
+					rootLogger.info("::: Lemmas of " + site.getName() + " finding finished in " + (System.currentTimeMillis() - timeLemmas) + " ms");
+					rootLogger.warn(lemmaRepository.countAllLemmas() + " lemmas in DB, site -> " + site.getName());
 					return;
+				}
 			}
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-		}
 	}
 
 	public void runThroughPageable(Integer siteId, SiteEntity siteEntity) {
@@ -165,7 +148,7 @@ public class LemmaFinderPageable{
 		LemmaEntity lemmaNeedsUpdateFreq;
 		try {
 			lemmaNeedsUpdateFreq = lemmaRepository.findByLemmaAndSiteEntity(lemma, siteEntity);
-		} catch (IncorrectResultSizeDataAccessException e){
+		} catch (IncorrectResultSizeDataAccessException e) {
 			e.printStackTrace();
 		} finally {
 			lemmaNeedsUpdateFreq = lemmaRepository.findFirstByLemmaAndSiteEntity(lemma, siteEntity);
@@ -221,7 +204,7 @@ public class LemmaFinderPageable{
 		return lemmaSet;
 	}
 
-	private boolean anyWordBaseBelongToParticle(List<String> wordBaseForms) {
+	private boolean anyWordBaseBelongToParticle(@NotNull List<String> wordBaseForms) {
 		return wordBaseForms.stream().anyMatch(this::hasParticleProperty);
 	}
 
@@ -234,7 +217,7 @@ public class LemmaFinderPageable{
 		return false;
 	}
 
-	private String[] arrayContainsRussianWords(String text) {
+	private String @NotNull [] arrayContainsRussianWords(@NotNull String text) {
 		return text.toLowerCase(Locale.ROOT)
 				.replaceAll("([^а-я\\s])", " ")
 				.trim()
@@ -251,26 +234,3 @@ public class LemmaFinderPageable{
 		return true;
 	}
 }
-
-
-/*
- else {
-						LemmaEntity lemmaForFreqInc = lemmaRepository.findByLemmaAndSiteEntity(lemma, siteEntity);
-						lemmaForFreqInc.setFrequency(lemmaForFreqInc.getFrequency() + 1);
-						lemmaRepository.save(lemmaForFreqInc);
-						logger.info("Lemma <" + lemmaForFreqInc.getLemma() + "> freq increase");
-					}
-@Transactional
-public BankAccount updateRate(Long id, BigDecimal rate) {
-  BankAccount account = repo.findById(id).orElseThrow(NPE::new);
-  account.setRate(rate);
-  return repo.save(account);
-}
---->
-@Transactional
-public BankAccount updateRate(Long id, BigDecimal rate) {
-  BankAccount account = repo.findById(id).orElseThrow(NPE::new);
-  account.setRate(rate);
-  return account;
-}
- */
