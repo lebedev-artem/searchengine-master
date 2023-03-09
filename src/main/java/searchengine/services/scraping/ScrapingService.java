@@ -11,15 +11,14 @@ import org.jsoup.UncheckedIOException;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Service;
 import searchengine.config.Site;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.PageRepository;
-import searchengine.services.indexing.IndexServiceImpl;
-import searchengine.services.interfaces.IndexService;
 import searchengine.services.stuff.AcceptableContentTypes;
+import searchengine.services.stuff.StringPool;
 import searchengine.services.stuff.TempStorage;
 
 import java.io.IOException;
@@ -33,16 +32,15 @@ import static searchengine.services.stuff.Regex.*;
 
 @Getter
 @Setter
-@RequiredArgsConstructor
+@Service
+@NoArgsConstructor
 public class ScrapingService extends RecursiveTask<Boolean> {
 	private static final Integer COUNT_PAGES_TO_DROP = 50;
+	private static final AcceptableContentTypes ACCEPTABLE_CONTENT_TYPES = new AcceptableContentTypes();
 	private static final Logger logger = LogManager.getLogger(ScrapingService.class);
 	public static volatile boolean allowed = true;
-	private final IndexServiceImpl indexService;
-	private final AcceptableContentTypes acceptableContentTypes = new AcceptableContentTypes();
-	private final ScrapTask parentTask;
+	private ScrapTask parentTask;
 	private final ReadWriteLock lock = new ReentrantReadWriteLock();
-
 
 	private Connection.Response jsoupResponse;
 	private Document document;
@@ -52,28 +50,35 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 	private String parentContent;
 	private String parentPath;
 	private String parentUrl;
-	private final Site site;
-	private final Integer siteId;
-	private final SiteEntity siteEntity;
+	private Site site;
+	private Integer siteId;
+	private SiteEntity siteEntity;
 	private PageEntity pageEntity;
-
 
 	private Future<Integer> future;
 	private ExecutorService executor = Executors.newSingleThreadExecutor();
-	private final BlockingQueue<PageEntity> queueOfPagesForSaving;
-	private final BlockingQueue<PageEntity> queueOfPagesForIndexing;
+	private BlockingQueue<PageEntity> queueOfPagesForSaving;
+	private BlockingQueue<PageEntity> queueOfPagesForIndexing;
 
+	private PageRepository pageRepository;
+	private StringPool stringPool;
 
-	public ScrapingService(ScrapTask scrapTask, IndexServiceImpl indexService,
-	                       @NotNull Site site, @NotNull SiteEntity siteEntity, BlockingQueue<PageEntity> queueOfPagesForSaving, BlockingQueue<PageEntity> queueOfPagesForIndexing) {
+	public ScrapingService(ScrapTask scrapTask,
+	                       @NotNull Site site,
+	                       @NotNull SiteEntity siteEntity,
+	                       BlockingQueue<PageEntity> queueOfPagesForSaving,
+	                       BlockingQueue<PageEntity> queueOfPagesForIndexing,
+	                       PageRepository pageRepository,
+	                       StringPool stringPool) {
 		this.parentTask = scrapTask;
-		this.indexService = indexService;
 		this.site = site;
 		parentUrl = site.getUrl();
 		this.siteEntity = siteEntity;
 		this.siteId = siteEntity.getId();
 		this.queueOfPagesForSaving = queueOfPagesForSaving;
 		this.queueOfPagesForIndexing = queueOfPagesForIndexing;
+		this.pageRepository = pageRepository;
+		this.stringPool = stringPool;
 	}
 
 	@Override
@@ -81,11 +86,11 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 		String urlOfTask = parentTask.getUrl();
 		List<ScrapingService> subTasks = new LinkedList<>();
 
-		if (!indexService.isAllowed()) return breakScraping(subTasks);
+		if (!allowed) return breakScraping(subTasks);
 
 		Connection.Response responseSinglePage = getResponseFromUrl(urlOfTask);
 		if (responseSinglePage != null) {
-			dropPageToMap();
+			dropPageToQueue();
 		} else return true;
 
 		if (jsoupResponse == null)
@@ -112,16 +117,15 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 			try {
 				if (url.matches(URL_IS_VALID) && href.startsWith(TempStorage.siteUrl) && !newChildLinks.containsKey(href) && !href.equals(url)) {
 					if (((HTML_EXT.stream().anyMatch(href.substring(href.length() - 4)::contains) || !href.matches(URL_IS_FILE_LINK)))) {
+
 						String elementPath = href.substring(url.length() - 1);
-						synchronized (indexService.getPageRepository()) {
-							if (!indexService.getStringPool().getPaths().containsKey(elementPath)) {
-								indexService.getStringPool().internPath(elementPath);
+						synchronized (StringPool.class) {
+							if (!stringPool.getPaths().containsKey(elementPath)) {
+								stringPool.internPath(elementPath);
 								newChildLinks.put(href, parentStatusCode);
 							}
-//							if (indexService.getPageRepository().existsByPath(elementPath)) {
-//								continue;
-//							}
 						}
+
 					}
 				}
 			} catch (StringIndexOutOfBoundsException ignored) {
@@ -144,7 +148,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 			return null;
 		}
 
-		if (!acceptableContentTypes.contains(jsoupResponse.contentType())) {
+		if (!ACCEPTABLE_CONTENT_TYPES.contains(jsoupResponse.contentType())) {
 			return null;
 		} else {
 			try {
@@ -155,22 +159,17 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 				return null;
 			}
 			pageEntity = new PageEntity(siteEntity, jsoupResponse.statusCode(), document.html(), parentPath);
-//			parentContent = document.html();
-//			parentStatusCode = jsoupResponse.statusCode();
-//			parentStatusMessage = jsoupResponse.statusMessage();
 		}
 		return jsoupResponse;
 	}
 
-	private void dropPageToMap() {
+	private void dropPageToQueue() {
 		synchronized (TempStorage.class) {
 			if (TempStorage.pages.stream().noneMatch(x -> x.getPath().equals(parentPath)))
-				if (!indexService.getPageRepository().existsByPathAndSiteEntity(parentPath, siteEntity)) {
-//					TempStorage.pages.add(pageEntity);
-//					TempStorage.nowOnMapPages++;
+				if (!pageRepository.existsByPathAndSiteEntity(parentPath, siteEntity)) {
 					try {
 						queueOfPagesForSaving.put(pageEntity);
-//						queueOfPagesForIndexing.put(pageEntity);
+						queueOfPagesForIndexing.put(pageEntity);
 						Thread.sleep(10);
 					} catch (InterruptedException e) {
 						throw new RuntimeException(e);
@@ -178,32 +177,6 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 					pageEntity = null;
 				}
 		}
-
-//		if (Objects.equals(TempStorage.pages.size(), COUNT_PAGES_TO_DROP)) {
-//			synchronized (TempStorage.class) {
-//				try {
-//					future = executor.submit(this::dropMapToDB);
-//					logger.info(future.get() + " more pages have been saved to DB");
-//				} catch (InterruptedException | ExecutionException e) {
-//					logger.error("Exception in " + Thread.currentThread().getStackTrace()[1].getMethodName());
-//				} finally {
-//					TempStorage.pages.clear();
-//					TempStorage.nowOnMapPages = 0;
-//					System.gc();
-//				}
-//			}
-//		}
-//		executor.shutdownNow();
-	}
-
-	private synchronized Integer dropMapToDB() {
-		try {
-			indexService.getPageRepository().saveAllAndFlush(TempStorage.pages);
-			Thread.sleep(10);
-		} catch (InterruptedException e) {
-			logger.error("Exception while saving TempStorage.pages to DB in method " + Thread.currentThread().getStackTrace()[1].getMethodName());
-		}
-		return indexService.getPageRepository().countBySiteId(siteId);
 	}
 
 	private void forkTasksFromSubtasks(List<ScrapingService> subTasks, Map<String, Integer> subLinks) {
@@ -212,7 +185,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 		for (String subLink : subLinks.keySet()) {
 			if (childIsValidToFork(subLink)) {
 				ScrapTask childScrapTask = new ScrapTask(subLink);
-				ScrapingService task = new ScrapingService(childScrapTask, indexService, site, siteEntity, queueOfPagesForSaving, queueOfPagesForIndexing);
+				ScrapingService task = new ScrapingService(childScrapTask, site, siteEntity, queueOfPagesForSaving, queueOfPagesForIndexing, pageRepository, stringPool);
 				task.fork();
 				subTasks.add(task);
 				parentTask.addChildTask(childScrapTask);

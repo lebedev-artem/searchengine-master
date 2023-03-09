@@ -12,7 +12,7 @@ public interface IndexService{
 	ResponseEntity<?> indexingPageStart(HttpServletRequest request) throws Exception;
 //	ResponseEntity<?> testDeleteSiteWithPages(String name) throws ExecutionException, InterruptedException;
 	void startSavingPagesService();
-	void startLemmaFinder(Site site);
+	void startLemmasIndexFinder(Site site);
 
 	Boolean isAllowed();
 

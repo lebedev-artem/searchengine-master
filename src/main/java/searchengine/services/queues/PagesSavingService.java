@@ -25,8 +25,8 @@ import static java.lang.Thread.sleep;
 public class PagesSavingService {
 	private static final Logger rootLogger = LogManager.getRootLogger();
 	private boolean scrapingFutureIsDone = false;
-	private boolean indexingStopped = false;
-	private final Integer COUNT_TO_SAVE = 30;
+	private volatile boolean indexingStopped = false;
+	private final Integer COUNT_TO_SAVE = 50;
 	private BlockingQueue<PageEntity> queue;
 
 	@Autowired
@@ -58,7 +58,7 @@ public class PagesSavingService {
 			if (notAllowed() || indexingStopped) {
 				pageRepository.saveAll(entities);
 				rootLogger.info("::: Pages saved finished in " + (System.currentTimeMillis() - time) + " ms");
-				rootLogger.warn(pageRepository.countAllPages() + " pages in DB");
+				rootLogger.warn("::: " + pageRepository.countAllPages() + " pages in DB");
 				return;
 			}
 		}

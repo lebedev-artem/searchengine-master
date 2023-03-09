@@ -1,7 +1,6 @@
 package searchengine.services.lemmatization;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -24,15 +23,11 @@ import searchengine.repositories.SiteRepository;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Future;
-
-import static java.lang.Thread.sleep;
 
 @Getter
 @Setter
 @Service
-@RequiredArgsConstructor
-public class LemmaFinderPageable {
+public class LemmasIndexService {
 	@Autowired
 	LemmaRepository lemmaRepository;
 	@Autowired
@@ -46,7 +41,14 @@ public class LemmaFinderPageable {
 	private static final Logger rootLogger = LogManager.getRootLogger();
 	private static final String WORD_TYPE_REGEX = "\\W\\w&&[^а-яА-Я\\s]";
 	private static final String[] PARTICLES_NAMES = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
+	private volatile boolean indexingStopped = false;
 	private LuceneMorphology luceneMorphology;
+	private BlockingQueue<PageEntity> queue;
+	private Site site;
+	private boolean scrapingFutureIsDone = false;
+
+	public LemmasIndexService() {
+	}
 
 	@Autowired
 	public void setLuceneMorphology() {
@@ -57,17 +59,21 @@ public class LemmaFinderPageable {
 		}
 	}
 
-	public void runThroughQueue(@NotNull BlockingQueue<PageEntity> queueOfPages, Future<?> futureForScrapingSite, Site site) {
+	public void lemmasIndexGeneration() {
 		Map<LemmaEntity, String> lemmas = new HashMap<>();
 		Map<SearchIndexEntity, LemmaEntity> searchIndexEntityLemmaEntityMap = new HashMap<>();
 		Set<SearchIndexEntity> searchIndexEntityMap = new HashSet<>();
 		long timeLemmas = System.currentTimeMillis();
+
+		waitUntilFirstPageWillBeSaved();
+
 			while (true) {
-				PageEntity pageEntity = queueOfPages.poll();
+				PageEntity pageEntity = queue.poll();
 				if (pageEntity != null){
 					SiteEntity siteEntity = siteRepository.findById(pageEntity.getSiteEntity().getId());
 					Map<String, Integer> lemmasOnPage = collectLemmas(pageEntity.getContent());
 					for (String lemma : lemmasOnPage.keySet()) {
+						if (indexingStopped) break;
 						LemmaEntity lemmaEntity;
 						if (!lemmaRepository.existsByLemmaAndSiteEntity(lemma, siteEntity)) {
 							lemmaEntity = new LemmaEntity(siteEntity, lemma, INIT_FREQ);
@@ -79,69 +85,35 @@ public class LemmaFinderPageable {
 						searchIndexRepository.save(searchIndexEntity);
 					}
 				} try {
-					Thread.sleep(10);
+					Thread.sleep(100);
 				} catch (InterruptedException e){
 					e.printStackTrace();
 				}
 
-				if (futureForScrapingSite.isDone() && !queueOfPages.iterator().hasNext()) {
-					rootLogger.info("::: Lemmas of " + site.getName() + " finding finished in " + (System.currentTimeMillis() - timeLemmas) + " ms");
-					rootLogger.warn(lemmaRepository.countAllLemmas() + " lemmas in DB, site -> " + site.getName());
+				if (notAllowed() || indexingStopped) {
+					rootLogger.info("::::: Lemmas of " + site.getName() + " finding finished in " + (System.currentTimeMillis() - timeLemmas) + " ms");
+					rootLogger.warn("::::: " + lemmaRepository.count() + " lemmas in DB, site -> " + site.getName());
+					rootLogger.warn("::::: " + searchIndexRepository.count() + " indexes in DB, site -> " + site.getName());
+
 					return;
 				}
 			}
 	}
 
-	public void runThroughPageable(Integer siteId, SiteEntity siteEntity) {
-		try {
-//			sleep(5_000);
-			while (true) {
-				sleep(1_000);
-
-				Set<PageEntity> pagesCOfCurrentSite = new HashSet<>();
-				long time = System.currentTimeMillis();
-
-				int pageNumber = 0; // номер первой страницы
-				int pageSize = 50; // количество записей на странице
-//				Sort sort = Sort.by(Sort.Direction.ASC, "id"); // сортировка по полю "id" в порядке возрастания
-//				Pageable pageable = PageRequest.of(pageNumber, pageSize, sort); // первая страница, содержащая 10 записей, отсортированных по полю "id"
-				Pageable pageable = PageRequest.of(pageNumber, pageSize);
-				Page<PageEntity> page = pageRepository.findAll(pageable); // получение первой страницы записей
-
-				List<PageEntity> entitiesList = page.getContent();
-				while (!entitiesList.isEmpty()) { // пока есть записи
-					for (PageEntity entity : entitiesList) {
-						Map<String, LemmaEntity> lemmasOnPage = new HashMap<>();
-						Map<String, Integer> collectedLemmas = collectLemmas(entity.getContent());
-
-						for (String lemma : collectedLemmas.keySet()) {
-							if (!lemmaRepository.existsByLemmaAndSiteEntity(lemma, siteEntity)) {
-								lemmasOnPage.put(lemma, new LemmaEntity(siteEntity, lemma, INIT_FREQ));
-							} else {
-								updateFreqOfLemma(siteEntity, lemma);
-							}
-						}
-						rootLogger.info("Now will save " + lemmasOnPage.size() + " lemmas to DB");
-						lemmaRepository.saveAll(lemmasOnPage.values());
-						lemmasOnPage.clear();
-					}
-					if (!page.hasNext()) {
-						break;
-					}
-
-					pageable = page.nextPageable();
-					page = pageRepository.findAll(pageable);
-					entitiesList = page.getContent();
-				}
-
-
-				logger.warn("Finding all pages takes - " + (System.currentTimeMillis() - time) + " ms");
-				break;
-
+	private void waitUntilFirstPageWillBeSaved(){
+		while (true){
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
 			}
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
+			if (pageRepository.count() > 0)
+				break;
 		}
+	}
+
+	private boolean notAllowed() {
+		return scrapingFutureIsDone && !queue.iterator().hasNext();
 	}
 
 	private LemmaEntity updateFreqOfLemma(SiteEntity siteEntity, String lemma) {

@@ -19,7 +19,4 @@ public interface LemmaRepository extends BaseRepository<LemmaEntity, Long>{
 	Integer getFrequencyByLemma(String lemma);
 	LemmaEntity getByLemma(String lemma);
 	Integer getIdByLemma(String lemma);
-
-	@Query(value = "SELECT count(*) FROM `lemma`", nativeQuery = true)
-	Integer countAllLemmas();
 }

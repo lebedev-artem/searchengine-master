@@ -33,6 +33,7 @@ public class LemmaEntity implements BaseEntity {
 	private int frequency;
 
 	@ManyToMany(cascade = {CascadeType.ALL})
+	@OnDelete(action = OnDeleteAction.CASCADE)
 	@JoinTable(
 			name = "search_index",
 			joinColumns = {@JoinColumn(name = "lemma_id")},
