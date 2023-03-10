@@ -9,9 +9,6 @@ import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import searchengine.config.Site;
 import searchengine.model.*;
@@ -45,7 +42,7 @@ public class LemmasIndexService {
 	private LuceneMorphology luceneMorphology;
 	private BlockingQueue<PageEntity> queue;
 	private Site site;
-	private boolean scrapingFutureIsDone = false;
+	private boolean scrapingIsDone = false;
 
 	public LemmasIndexService() {
 	}
@@ -61,11 +58,9 @@ public class LemmasIndexService {
 
 	public void lemmasIndexGeneration() {
 		Map<LemmaEntity, String> lemmas = new HashMap<>();
-		Map<SearchIndexEntity, LemmaEntity> searchIndexEntityLemmaEntityMap = new HashMap<>();
-		Set<SearchIndexEntity> searchIndexEntityMap = new HashSet<>();
 		long timeLemmas = System.currentTimeMillis();
 
-		waitUntilFirstPageWillBeSaved();
+//		waitUntilFirstPageWillBeSaved();
 
 			while (true) {
 				PageEntity pageEntity = queue.poll();
@@ -82,7 +77,14 @@ public class LemmasIndexService {
 						lemmaRepository.save(lemmaEntity);
 
 						SearchIndexEntity searchIndexEntity = new SearchIndexEntity(pageEntity, lemmaEntity, lemmasOnPage.get(lemma), new SearchIndexId(pageEntity.getId(), lemmaEntity.getId()));
-						searchIndexRepository.save(searchIndexEntity);
+
+						try {
+							searchIndexRepository.save(searchIndexEntity);
+						} catch (Exception e){
+							e.printStackTrace();
+							System.out.println("sss");
+						}
+
 					}
 				} try {
 					Thread.sleep(100);
@@ -91,9 +93,9 @@ public class LemmasIndexService {
 				}
 
 				if (notAllowed() || indexingStopped) {
-					rootLogger.info("::::: Lemmas of " + site.getName() + " finding finished in " + (System.currentTimeMillis() - timeLemmas) + " ms");
-					rootLogger.warn("::::: " + lemmaRepository.count() + " lemmas in DB, site -> " + site.getName());
-					rootLogger.warn("::::: " + searchIndexRepository.count() + " indexes in DB, site -> " + site.getName());
+					rootLogger.info(":: Lemmas of " + site.getName() + " finding finished in " + (System.currentTimeMillis() - timeLemmas) + " ms");
+					rootLogger.warn(":: " + lemmaRepository.countBySiteEntity(siteRepository.findByName(site.getName())) + " lemmas in DB, site -> " + site.getName());
+					rootLogger.warn(":: " + searchIndexRepository.count() + " total indexes in DB, site -> " + site.getName());
 
 					return;
 				}
@@ -103,17 +105,17 @@ public class LemmasIndexService {
 	private void waitUntilFirstPageWillBeSaved(){
 		while (true){
 			try {
-				Thread.sleep(1000);
+				Thread.sleep(20_000);
 			} catch (InterruptedException e) {
 				throw new RuntimeException(e);
 			}
-			if (pageRepository.count() > 0)
+			if (pageRepository.existsBySiteEntity(siteRepository.findByName(site.getName())))
 				break;
 		}
 	}
 
 	private boolean notAllowed() {
-		return scrapingFutureIsDone && !queue.iterator().hasNext();
+		return scrapingIsDone && !queue.iterator().hasNext();
 	}
 
 	private LemmaEntity updateFreqOfLemma(SiteEntity siteEntity, String lemma) {

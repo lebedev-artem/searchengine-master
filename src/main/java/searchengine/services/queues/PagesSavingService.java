@@ -9,9 +9,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import searchengine.config.Site;
 import searchengine.model.PageEntity;
+import searchengine.model.SiteEntity;
 import searchengine.repositories.PageRepository;
+import searchengine.repositories.SiteRepository;
 
-import javax.persistence.criteria.CriteriaBuilder;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
@@ -24,23 +25,27 @@ import static java.lang.Thread.sleep;
 @NoArgsConstructor
 public class PagesSavingService {
 	private static final Logger rootLogger = LogManager.getRootLogger();
-	private boolean scrapingFutureIsDone = false;
+	private boolean scrapingIsDone = false;
 	private volatile boolean indexingStopped = false;
 	private final Integer COUNT_TO_SAVE = 50;
 	private BlockingQueue<PageEntity> queue;
+	private BlockingQueue<PageEntity> queueForIndexing;
+	private Site site;
 
 	@Autowired
 	PageRepository pageRepository;
+	@Autowired
+	SiteRepository siteRepository;
 
 	public void pagesSaving() {
-
+		SiteEntity siteEntity = siteRepository.findByName(site.getName());
 		long time = System.currentTimeMillis();
 		Set<PageEntity> entities = new HashSet<>();
 
 		while (true) {
 			PageEntity pageEntity = queue.poll();
 			if (pageEntity != null) {
-				if (!pageRepository.existsById(pageEntity.getId()))
+				if (!pageRepository.existsByPathAndSiteEntity(pageEntity.getPath(), siteEntity))
 					entities.add(pageEntity);
 			} else {
 				try {
@@ -52,19 +57,26 @@ public class PagesSavingService {
 
 			if (entities.size() == COUNT_TO_SAVE) {
 				pageRepository.saveAll(entities);
+				for (PageEntity e : entities) {
+					try {
+						queueForIndexing.put(e);
+					} catch (InterruptedException ex) {
+						throw new RuntimeException(ex);
+					}
+				}
 				entities.clear();
 			}
 
 			if (notAllowed() || indexingStopped) {
 				pageRepository.saveAll(entities);
 				rootLogger.info("::: Pages saved finished in " + (System.currentTimeMillis() - time) + " ms");
-				rootLogger.warn("::: " + pageRepository.countAllPages() + " pages in DB");
+				rootLogger.warn("::: " + pageRepository.countBySiteEntity(siteEntity) + " pages in DB");
 				return;
 			}
 		}
 	}
 
 	private boolean notAllowed() {
-		return scrapingFutureIsDone && !queue.iterator().hasNext();
+		return scrapingIsDone && !queue.iterator().hasNext();
 	}
 }

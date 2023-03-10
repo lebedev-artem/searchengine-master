@@ -25,6 +25,7 @@ public interface PageRepository extends BaseRepository<PageEntity, Long> {
 	boolean existsById(Integer id);
 	PageEntity findByPathAndSiteEntity(String path, SiteEntity siteEntity);
 	Set<PageEntity> findAllBySiteEntity(SiteEntity siteEntity);
+	Integer countBySiteEntity(SiteEntity siteEntity);
 
 
 	@Override
@@ -42,6 +43,5 @@ public interface PageRepository extends BaseRepository<PageEntity, Long> {
 
 	@Query(value = "SELECT count(*) FROM `page`", nativeQuery = true)
 	Integer countAllPages();
-
 
 }

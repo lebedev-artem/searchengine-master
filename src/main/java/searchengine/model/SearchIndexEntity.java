@@ -16,7 +16,7 @@ public class SearchIndexEntity implements BaseEntity {
 	@EmbeddedId
 	private SearchIndexId id;
 
-	@ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
+	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
 	@OnDelete(action = OnDeleteAction.CASCADE)
 	@MapsId("pageId")
 	@JoinColumn(name = "page_id")

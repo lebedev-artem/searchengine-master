@@ -1,6 +1,8 @@
 package searchengine.services.indexing;
 
-import lombok.*;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -12,28 +14,96 @@ import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
-import searchengine.repositories.*;
+import searchengine.repositories.LemmaRepository;
+import searchengine.repositories.PageRepository;
+import searchengine.repositories.SearchIndexRepository;
+import searchengine.repositories.SiteRepository;
 import searchengine.services.interfaces.IndexService;
 import searchengine.services.lemmatization.LemmasIndexService;
 import searchengine.services.queues.PagesSavingService;
+import searchengine.services.scraping.ScrapTask;
+import searchengine.services.scraping.ScrapingService;
+import searchengine.services.stuff.SingleSiteListCreator;
 import searchengine.services.stuff.StringPool;
 import searchengine.services.stuff.TempStorage;
-import searchengine.services.scraping.ScrapingService;
-import searchengine.services.scraping.ScrapTask;
-import searchengine.services.stuff.SingleSiteListCreator;
 
 import javax.servlet.http.HttpServletRequest;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.*;
+
+public class qwf {
+	int iterations = 10;
+
+for (int i = 0; i < iterations; i++) {
+		CountDownLatch latch = new CountDownLatch(3);
+
+		Thread thread1 = new Thread(() -> {
+			// Код, который должен выполняться в первом потоке
+			latch.countDown();
+		});
+
+		Thread thread2 = new Thread(() -> {
+			// Код, который должен выполняться во втором потоке
+			latch.countDown();
+		});
+
+		Thread thread3 = new Thread(() -> {
+			// Код, который должен выполняться в третьем потоке
+			latch.countDown();
+		});
+
+		thread1.start();
+		thread2.start();
+		thread3.start();
+
+		try {
+			latch.await(); // Ждем, пока все три потока не завершатся
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+}
+
+package searchengine.services.indexing;
+
+		import lombok.*;
+		import org.apache.logging.log4j.LogManager;
+		import org.apache.logging.log4j.Logger;
+		import org.jetbrains.annotations.NotNull;
+		import org.springframework.beans.factory.annotation.Autowired;
+		import org.springframework.http.ResponseEntity;
+		import org.springframework.stereotype.Service;
+		import org.springframework.transaction.annotation.Transactional;
+		import searchengine.config.Site;
+		import searchengine.config.SitesList;
+		import searchengine.model.PageEntity;
+		import searchengine.model.SiteEntity;
+		import searchengine.repositories.*;
+		import searchengine.services.interfaces.IndexService;
+		import searchengine.services.lemmatization.LemmasIndexService;
+		import searchengine.services.queues.PagesSavingService;
+		import searchengine.services.stuff.StringPool;
+		import searchengine.services.stuff.TempStorage;
+		import searchengine.services.scraping.ScrapingService;
+		import searchengine.services.scraping.ScrapTask;
+		import searchengine.services.stuff.SingleSiteListCreator;
+
+		import javax.servlet.http.HttpServletRequest;
+		import java.net.MalformedURLException;
+		import java.net.URL;
+		import java.time.LocalDateTime;
+		import java.util.*;
+		import java.util.concurrent.*;
 
 @Setter
 @Getter
 @Service
 @RequiredArgsConstructor
-public class IndexServiceImpl implements IndexService {
+public class IndexServdiceImpl implements IndexService {
 
 	private static final Logger logger = LogManager.getLogger(IndexService.class);
 	private static final Logger rootLogger = LogManager.getRootLogger();
@@ -42,7 +112,7 @@ public class IndexServiceImpl implements IndexService {
 	private static final ThreadLocal<Thread> taskSavingPages = new ThreadLocal<>();
 	private static final ThreadLocal<Thread> taskLemmasFinding = new ThreadLocal<>();
 
-//	private static Future<?> futureForScrapingSite;
+	private static Future<?> futureForScrapingSite;
 	public volatile boolean allowed = true;
 	public volatile boolean isStarted = false;
 	//	private static ScrapingService scrapingService;
@@ -55,9 +125,8 @@ public class IndexServiceImpl implements IndexService {
 	private final PageRepository pageRepository;
 	private final LemmaRepository lemmaRepository;
 	private final SearchIndexRepository searchIndexRepository;
-	private BlockingQueue<PageEntity> queueOfPagesForIndexing = new LinkedBlockingQueue<>(500);
-	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(1000);
-
+	private BlockingQueue<PageEntity> queueOfPagesForIndexing = new LinkedBlockingQueue<>(100);
+	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(200);
 
 	@Autowired
 	LemmasIndexService lemmasIndexService;
@@ -75,66 +144,47 @@ public class IndexServiceImpl implements IndexService {
 		isStarted = true;
 		allowed = true;
 		scrapingService.setAllowed(true);
+		pagesSavingService.setScrapingFutureIsDone(false);
+		lemmasIndexService.setScrapingFutureIsDone(false);
 
 		ForkJoinPool fjpPool = new ForkJoinPool();
-//		ExecutorService executor = Executors.newSingleThreadExecutor();
+		ExecutorService executor = Executors.newSingleThreadExecutor();
 		initSchema(sitesList);
 
 		singleTask.set(new Thread(() -> {
 			for (Site site : sitesList.getSites()) {
-				pagesSavingService.setScrapingIsDone(false);
-				lemmasIndexService.setScrapingIsDone(false);
-				CountDownLatch latch = new CountDownLatch(3);
-				ScrapTask rootScrapTask = new ScrapTask(site.getUrl());
 				if (allowed) {
+					ScrapTask rootScrapTask = new ScrapTask(site.getUrl());
 					siteId = siteRepository.findByName(site.getName()).getId();
-
-					Thread scrapingThread = new Thread(() -> {
-						startScrapingOfSite(rootScrapTask, fjpPool, site, siteId);
-						latch.countDown();
-						pagesSavingService.setScrapingIsDone(true);
-						lemmasIndexService.setScrapingIsDone(true);
-						TempStorage.pages.clear();
-						rootLogger.info(": Scraping of " + site.getName() + " finished in " + (System.currentTimeMillis() - timeMain) + " ms");
-						rootLogger.warn(": " + stringPool.pathsSize() + " paths processed");
-					}, "scrap-thread");
-
-					Thread lemmasFindingThread = new Thread(() -> {
-						startLemmasIndexFinder(site);
-						latch.countDown();
-						rootLogger.info(":: lemmasFindingThread finished");
-					}, "lemmas-thread");
-
-					Thread savingPagesThread = new Thread(() -> {
-						startSavingPagesService(site);
-						latch.countDown();
-						rootLogger.info("::: savingPagesThread finished");
-					}, "saving-thread");
-
-					scrapingThread.start();
-					savingPagesThread.start();
-					lemmasFindingThread.start();
-
 					try {
-						latch.await();
-					} catch (InterruptedException e) {
+						Thread scrapingThread = new Thread(() ->{
+
+						});
+						futureForScrapingSite = executor.submit(() -> startScrapingOfSite(rootScrapTask, fjpPool, site, siteId));
+
+						startLemmasIndexFinder(site);
+						startSavingPagesService();
+						futureForScrapingSite.get();
+
+					} catch (RuntimeException | ExecutionException | InterruptedException e) {
+						logger.error("Error while getting Future " + Thread.currentThread().getStackTrace()[1].getMethodName());
 						e.printStackTrace();
 					}
 
 					startActionsAfterScraping(site, rootScrapTask);
+					rootLogger.info(":: Scraping of " + site.getName() + " finished in " + (System.currentTimeMillis() - timeMain) + " ms," + " future isDone - " + futureForScrapingSite.isDone());
 				} else {
 					try {
 						Thread.sleep(5_000);
 					} catch (InterruptedException e) {
 						logger.error("I don't want to sleep -> " + Thread.currentThread().getStackTrace()[1].getMethodName());
 					} finally {
-						shutDownService(fjpPool);
+						shutDownService(fjpPool, executor);
 					}
 					break;
 				}
 			}
-			shutDownService(fjpPool);
-			rootLogger.warn("- I'm ready to start again and again");
+			shutDownService(fjpPool, executor);
 		}, "start-thread"));
 
 		singleTask.get().start();
@@ -145,6 +195,7 @@ public class IndexServiceImpl implements IndexService {
 	public ResponseEntity<?> indexingPageStart(@NotNull HttpServletRequest request) throws MalformedURLException {
 		SingleSiteListCreator singleSiteListCreator = new SingleSiteListCreator(sitesList);
 		String url = request.getParameter("url");
+//		String path = new URL(url).getPath();
 		String hostName = new URL(url).getHost();
 
 		SitesList singleSiteList = singleSiteListCreator.getSiteList(url, hostName);
@@ -172,8 +223,7 @@ public class IndexServiceImpl implements IndexService {
 	private void startScrapingOfSite(ScrapTask rootScrapTask, @NotNull ForkJoinPool fjpPool, @NotNull Site site, int siteId) {
 		scrapingService.setAllowed(true);
 		scrapingService = new ScrapingService(rootScrapTask, site, siteRepository.findById(siteId), queueOfPagesForSaving, queueOfPagesForIndexing, pageRepository, stringPool);
-		rootLogger.error("---------------------------------------------------------");
-		rootLogger.info("- Start scraping " + site.getName() + " " + site.getUrl());
+		rootLogger.info(":: Start scraping " + site.getName() + " " + site.getUrl());
 		fjpPool.invoke(scrapingService);
 	}
 
@@ -181,10 +231,9 @@ public class IndexServiceImpl implements IndexService {
 		String status = pageRepository.existsBySiteEntity(siteRepository.findByName(site.getName())) ? "INDEXED" : "FAILED";
 		stringPool.getPaths().clear();
 		TempStorage.siteUrl = "";
-
-		if (allowed) {
+		if (futureForScrapingSite.isDone() && allowed) {
 			siteRepository.updateStatusStatusTimeError(status, LocalDateTime.now(), scrapTask.getLastError(), site.getName());
-			rootLogger.info("- Status of site " + site.getName() + " set to " + status);
+			rootLogger.info(":: Status of site " + site.getName() + " set to " + status);
 		}
 	}
 
@@ -213,7 +262,6 @@ public class IndexServiceImpl implements IndexService {
 			pageRepository.resetIdOnPageTable();
 			lemmaRepository.resetIdOnLemmaTable();
 			siteRepository.saveAllAndFlush(initSiteTable(sitesList));
-			System.out.println(siteRepository.count());
 		}
 	}
 
@@ -238,26 +286,53 @@ public class IndexServiceImpl implements IndexService {
 		return allowed;
 	}
 
-	private void shutDownService(ForkJoinPool fjpPool) {
+	private void shutDownService(ForkJoinPool fjpPool, ExecutorService executor) {
 		isStarted = false;
 		allowed = false;
+		pagesSavingService.setScrapingFutureIsDone(true);
+		lemmasIndexService.setScrapingFutureIsDone(true);
+		executor.shutdownNow();
 		fjpPool.shutdownNow();
+		rootLogger.warn(":: I'm ready to start again and again");
 	}
 
 	public void startLemmasIndexFinder(Site site) {
-		lemmasIndexService.setQueue(queueOfPagesForIndexing);
-		lemmasIndexService.setIndexingStopped(false);
-		lemmasIndexService.setSite(site);
-		lemmasIndexService.lemmasIndexGeneration();
+		taskLemmasFinding.set(new Thread(() -> {
+			lemmasIndexService.setQueue(queueOfPagesForIndexing);
+			lemmasIndexService.setIndexingStopped(false);
+			lemmasIndexService.setSite(site);
+			lemmasIndexService.lemmasIndexGeneration();
+		}, "lemmas-index"));
 
+		taskLemmasFinding.get().start();
 	}
 
-	public void startSavingPagesService(Site site) {
-		pagesSavingService.setIndexingStopped(false);
-		pagesSavingService.setQueue(queueOfPagesForSaving);
-		pagesSavingService.setQueueForIndexing(queueOfPagesForIndexing);
-		pagesSavingService.setSite(site);
-		pagesSavingService.pagesSaving();
+	public void startSavingPagesService() {
+		taskSavingPages.set(new Thread(() -> {
+			pagesSavingService.setIndexingStopped(false);
+			pagesSavingService.setQueue(queueOfPagesForSaving);
+			pagesSavingService.pagesSaving();
+		}, "saving-pages"));
 
+		taskSavingPages.get().start();
 	}
 }
+
+
+	private void dropPageToQueue() {
+		synchronized (StringPool.class) {
+			if (!stringPool.getPaths().containsKey(pageEntity.getPath()))
+			if (TempStorage.pages.stream().noneMatch(x -> x.getPath().equals(parentPath)))
+				if (TempStorage.pages.stream().noneMatch(x -> x.getPath().equals(pageEntity.getPath())))
+					try {
+						TempStorage.pages.add(pageEntity);
+						queueOfPagesForSaving.put(pageEntity);
+//							queueOfPagesForIndexing.put(pageEntity);
+						Thread.sleep(10);
+					} catch (InterruptedException e) {
+						throw new RuntimeException(e);
+					}
+			pageEntity = null;
+
+		}
+	}

@@ -132,7 +132,6 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 			}
 		}
 		elements.clear();
-		System.gc();
 		return newChildLinks;
 	}
 
@@ -164,18 +163,16 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 	}
 
 	private void dropPageToQueue() {
-		synchronized (TempStorage.class) {
-			if (TempStorage.pages.stream().noneMatch(x -> x.getPath().equals(parentPath)))
-				if (!pageRepository.existsByPathAndSiteEntity(parentPath, siteEntity)) {
-					try {
-						queueOfPagesForSaving.put(pageEntity);
-						queueOfPagesForIndexing.put(pageEntity);
-						Thread.sleep(10);
-					} catch (InterruptedException e) {
-						throw new RuntimeException(e);
-					}
-					pageEntity = null;
+		synchronized (stringPool.getAddedPaths()) {
+			if (!stringPool.getAddedPaths().containsKey(pageEntity.getPath())) {
+				try {
+					stringPool.internAddedPath(parentPath);
+					queueOfPagesForSaving.put(pageEntity);
+				} catch (InterruptedException e) {
+					throw new RuntimeException(e);
 				}
+			}
+			pageEntity = null;
 		}
 	}
 

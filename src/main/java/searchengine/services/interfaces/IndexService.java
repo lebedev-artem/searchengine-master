@@ -11,7 +11,7 @@ public interface IndexService{
 	ResponseEntity<?> indexingStop() throws ExecutionException, InterruptedException;
 	ResponseEntity<?> indexingPageStart(HttpServletRequest request) throws Exception;
 //	ResponseEntity<?> testDeleteSiteWithPages(String name) throws ExecutionException, InterruptedException;
-	void startSavingPagesService();
+	void startSavingPagesService(Site site);
 	void startLemmasIndexFinder(Site site);
 
 	Boolean isAllowed();

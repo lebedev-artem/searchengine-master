@@ -15,6 +15,6 @@ public class TempStorage {
 
 	public static String siteUrl = "";
 	public static volatile Integer nowOnMapPages = 0;
-	public static volatile Set<PageEntity> pages = ConcurrentHashMap.newKeySet(35);
+	public static volatile Set<PageEntity> pages = ConcurrentHashMap.newKeySet(100);
 
 }
