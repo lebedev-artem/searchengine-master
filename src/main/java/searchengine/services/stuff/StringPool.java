@@ -9,17 +9,17 @@ import java.util.concurrent.ConcurrentHashMap;
 @Setter
 @Component
 public class StringPool {
-	private final Map<String, String> addedPaths;
+	private final Map<String, String> addedPathsToQueue;
 	private final Map<String, String> paths;
 
 
 	public StringPool() {
 		paths = new ConcurrentHashMap<>(5000, 1);
-		addedPaths = new ConcurrentHashMap<>(1, 1);
+		addedPathsToQueue = new ConcurrentHashMap<>(5000, 1);
 	}
 
-	public String internAddedPath(String s){
-		String exist = addedPaths.putIfAbsent(s, s);
+	public String internAddedPathToQueue(String s){
+		String exist = addedPathsToQueue.putIfAbsent(s, s);
 		return (exist == null) ? s : exist;
 	}
 
@@ -28,8 +28,8 @@ public class StringPool {
 		return (exist == null) ? s : exist;
 	}
 
-	public int addedPathsSize() {
-		return addedPaths.size();
+	public int AddedPathToQueueSize() {
+		return addedPathsToQueue.size();
 	}
 
 	public int pathsSize() {

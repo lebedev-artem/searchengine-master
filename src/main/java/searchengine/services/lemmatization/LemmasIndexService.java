@@ -8,7 +8,6 @@ import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.stereotype.Service;
 import searchengine.config.Site;
 import searchengine.model.*;
@@ -16,8 +15,11 @@ import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SearchIndexRepository;
 import searchengine.repositories.SiteRepository;
+import searchengine.services.stuff.StaticVault;
 
+import javax.persistence.criteria.CriteriaBuilder;
 import java.io.IOException;
+import java.nio.channels.FileLock;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 
@@ -42,7 +44,20 @@ public class LemmasIndexService {
 	private LuceneMorphology luceneMorphology;
 	private BlockingQueue<PageEntity> queue;
 	private Site site;
-	private boolean scrapingIsDone = false;
+	private boolean savingPagesIsDone = false;
+	private LemmaEntity lemmaEntity;
+	private SiteEntity siteEntity;
+	private PageEntity pageEntity;
+	private Map<String, LemmaEntity> lemmaEntityMap = StaticVault.lemmaEntityMap;
+	private Map<String, Integer> lemmaFreqMap = StaticVault.lemmaFreqMap;
+	private Map<String, Integer> collectedLemmas = new HashMap<>();
+
+//	private Map<PageEntity, String> keyPageLemma = new HashMap<>();
+	private Map<Map<PageEntity, String>, Float> indexMap = new HashMap<>();
+
+
+	//	private Map<LemmaEntity, Float> lemmasMap = StaticVault.lemmasMap;
+	public static Set<SearchIndexEntity> indexSet = StaticVault.indexSet;
 
 	public LemmasIndexService() {
 	}
@@ -57,81 +72,88 @@ public class LemmasIndexService {
 	}
 
 	public void lemmasIndexGeneration() {
-		Map<LemmaEntity, String> lemmas = new HashMap<>();
-		long timeLemmas = System.currentTimeMillis();
+		siteEntity = siteRepository.findByName(site.getName());
+		Map<String, LemmaEntity> lemmasOnCurrentPage = new HashMap<>();
 
-//		waitUntilFirstPageWillBeSaved();
+		while (true) {
+			pageEntity = queue.poll();
+			if (pageEntity != null) {
+				collectedLemmas = collectLemmas(pageEntity.getContent());
 
-			while (true) {
-				PageEntity pageEntity = queue.poll();
-				if (pageEntity != null){
-					SiteEntity siteEntity = siteRepository.findById(pageEntity.getSiteEntity().getId());
-					Map<String, Integer> lemmasOnPage = collectLemmas(pageEntity.getContent());
-					for (String lemma : lemmasOnPage.keySet()) {
-						if (indexingStopped) break;
-						LemmaEntity lemmaEntity;
-						if (!lemmaRepository.existsByLemmaAndSiteEntity(lemma, siteEntity)) {
-							lemmaEntity = new LemmaEntity(siteEntity, lemma, INIT_FREQ);
-						} else lemmaEntity = updateFreqOfLemma(siteEntity, lemma);
+				for (String lemma : collectedLemmas.keySet()) {
+					if (indexingStopped) break;
 
-						lemmaRepository.save(lemmaEntity);
-
-						SearchIndexEntity searchIndexEntity = new SearchIndexEntity(pageEntity, lemmaEntity, lemmasOnPage.get(lemma), new SearchIndexId(pageEntity.getId(), lemmaEntity.getId()));
-
-						try {
-							searchIndexRepository.save(searchIndexEntity);
-						} catch (Exception e){
-							e.printStackTrace();
-							System.out.println("sss");
-						}
-
+//					увеличиваем частоту, если лемма уже есть в базе
+					if (lemmaFreqMap.containsKey(lemma)) {
+						var freqOld = lemmaFreqMap.get(lemma);
+						lemmaFreqMap.replace(lemma, freqOld + 1);
+						lemmaEntityMap.remove(lemma);
+						lemmaEntityMap.put(lemma, new LemmaEntity(siteEntity, lemma, lemmaFreqMap.get(lemma)));
+					} else {
+//					создаем лемму и добавляем во все Map
+						lemmaFreqMap.put(lemma, INIT_FREQ);
+						/*
+						Frequency - Количество страниц, на которых слово встречается хотя бы один раз. Максимальное значение не может
+						превышать общее количество слов на сайте
+						 */
+						lemmaEntityMap.put(lemma, new LemmaEntity(siteEntity, lemma, INIT_FREQ));
 					}
-				} try {
-					Thread.sleep(100);
-				} catch (InterruptedException e){
-					e.printStackTrace();
-				}
 
-				if (notAllowed() || indexingStopped) {
-					rootLogger.info(":: Lemmas of " + site.getName() + " finding finished in " + (System.currentTimeMillis() - timeLemmas) + " ms");
-					rootLogger.warn(":: " + lemmaRepository.countBySiteEntity(siteRepository.findByName(site.getName())) + " lemmas in DB, site -> " + site.getName());
-					rootLogger.warn(":: " + searchIndexRepository.count() + " total indexes in DB, site -> " + site.getName());
+//					Добавим лемму в Мап для данной страницы
+					lemmasOnCurrentPage.put(lemma, lemmaEntityMap.get(lemma));
 
-					return;
+//					Формируем поисковый индекс
+					for (String lemmaAsSting : collectedLemmas.keySet()) {
+						Map<PageEntity, String> key = new HashMap<>();
+						key.put(pageEntity, lemmaAsSting);
+						indexMap.put(key, Float.valueOf(collectedLemmas.get(lemmaAsSting)));
+					}
 				}
+//
+//				lemmaRepository.saveAll(lemmasOnCurrentPage.values());
+//				System.out.println(lemmasOnCurrentPage.size());
+
 			}
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+
+			if (notAllowed() || indexingStopped) {
+//				Сохраняем леммы для данного сайта
+				long timeLemmasSaving = System.currentTimeMillis();
+				lemmaRepository.saveAllAndFlush(lemmaEntityMap.values());
+				rootLogger.warn(":: " + lemmasOnCurrentPage.size() + " lemmas saved in DB, site -> " + site.getName() + " in " + (System.currentTimeMillis() - timeLemmasSaving) + " ms");
+				lemmasOnCurrentPage.clear();
+				logger.debug(siteRepository.count() + " sites in DB, " + "site id " + siteRepository.findAll().get(0).getId() + " 129 lemma");
+
+				long timeIndexCreatingAndSaving = System.currentTimeMillis();
+				createIndexForThisPage(collectedLemmas);
+				logger.debug(siteRepository.count() + " sites in DB, " + "site id " + siteRepository.findAll().get(0).getId() + " 133 lemma");
+				searchIndexRepository.saveAllAndFlush(indexSet);
+				indexSet.clear();
+				logger.debug(siteRepository.count() + " sites in DB, " + "site id " + siteRepository.findAll().get(0).getId() + " 126 lemma");
+				rootLogger.warn(":: " + indexMap.size() + " index entries generated and saved in DB, site -> " + site.getName() + " in " + (System.currentTimeMillis() - timeIndexCreatingAndSaving) + " ms");
+				return;
+			}
+		}
 	}
 
-	private void waitUntilFirstPageWillBeSaved(){
-		while (true){
-			try {
-				Thread.sleep(20_000);
-			} catch (InterruptedException e) {
-				throw new RuntimeException(e);
-			}
-			if (pageRepository.existsBySiteEntity(siteRepository.findByName(site.getName())))
-				break;
+	private void createIndexForThisPage(@NotNull Map<String, Integer> collectedLemmas) {
+		for (Map.Entry<Map<PageEntity, String >, Float> entry: indexMap.entrySet()) {
+			Map<PageEntity, String> innerMap = entry.getKey();
+			PageEntity pageIdAsEntity = innerMap.keySet().stream().findFirst().get();
+			String lemmaAsString = innerMap.values().stream().findFirst().get();
+			LemmaEntity lemmaIdAsEntity = lemmaEntityMap.get(lemmaAsString);
+			Float rankAsFloat = entry.getValue();
+			indexSet.add(
+					new SearchIndexEntity(pageIdAsEntity, lemmaIdAsEntity, rankAsFloat, new SearchIndexId(pageIdAsEntity.getId(), lemmaEntityMap.get(lemmaAsString).getId())));
 		}
 	}
 
 	private boolean notAllowed() {
-		return scrapingIsDone && !queue.iterator().hasNext();
-	}
-
-	private LemmaEntity updateFreqOfLemma(SiteEntity siteEntity, String lemma) {
-		LemmaEntity lemmaNeedsUpdateFreq;
-		try {
-			lemmaNeedsUpdateFreq = lemmaRepository.findByLemmaAndSiteEntity(lemma, siteEntity);
-		} catch (IncorrectResultSizeDataAccessException e) {
-			e.printStackTrace();
-		} finally {
-			lemmaNeedsUpdateFreq = lemmaRepository.findFirstByLemmaAndSiteEntity(lemma, siteEntity);
-
-		}
-
-		lemmaNeedsUpdateFreq.setFrequency(lemmaNeedsUpdateFreq.getFrequency() + 1);
-		lemmaRepository.save(lemmaNeedsUpdateFreq);
-		return lemmaNeedsUpdateFreq;
+		return savingPagesIsDone && !queue.iterator().hasNext();
 	}
 
 	public Map<String, Integer> collectLemmas(String text) {

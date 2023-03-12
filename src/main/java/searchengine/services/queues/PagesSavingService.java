@@ -5,6 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import searchengine.config.Site;
@@ -57,21 +58,25 @@ public class PagesSavingService {
 
 			if (entities.size() == COUNT_TO_SAVE) {
 				pageRepository.saveAll(entities);
-				for (PageEntity e : entities) {
-					try {
-						queueForIndexing.put(e);
-					} catch (InterruptedException ex) {
-						throw new RuntimeException(ex);
-					}
-				}
+				extracted(entities);
 				entities.clear();
 			}
 
 			if (notAllowed() || indexingStopped) {
 				pageRepository.saveAll(entities);
-				rootLogger.info("::: Pages saved finished in " + (System.currentTimeMillis() - time) + " ms");
-				rootLogger.warn("::: " + pageRepository.countBySiteEntity(siteEntity) + " pages in DB");
+				extracted(entities);
+				rootLogger.warn("::: " + pageRepository.countBySiteEntity(siteEntity) + " pages saved in DB, site -> " + site.getName() + " in " + (System.currentTimeMillis() - time) + " ms");
 				return;
+			}
+		}
+	}
+
+	private void extracted(@NotNull Set<PageEntity> entities) {
+		for (PageEntity e : entities) {
+			try {
+				queueForIndexing.put(e);
+			} catch (InterruptedException ex) {
+				throw new RuntimeException(ex);
 			}
 		}
 	}

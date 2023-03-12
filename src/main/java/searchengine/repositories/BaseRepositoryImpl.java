@@ -28,4 +28,8 @@ public class BaseRepositoryImpl<T extends BaseEntity, ID extends Serializable> e
 	public void resetIdOnLemmaTable() {
 	}
 
+	@Override
+	public void resetIdOnIndexTable() {
+	}
+
 }

@@ -26,4 +26,8 @@ public interface BaseRepository<T extends BaseEntity, ID extends Serializable> e
 	@Query(value = "ALTER TABLE `lemma` AUTO_INCREMENT = 0", nativeQuery = true)
 	void resetIdOnLemmaTable();
 
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query(value = "ALTER TABLE `search_index` AUTO_INCREMENT = 0", nativeQuery = true)
+	void resetIdOnIndexTable();
+
 }

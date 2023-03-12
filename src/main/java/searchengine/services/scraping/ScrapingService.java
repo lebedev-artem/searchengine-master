@@ -19,14 +19,12 @@ import searchengine.model.SiteEntity;
 import searchengine.repositories.PageRepository;
 import searchengine.services.stuff.AcceptableContentTypes;
 import searchengine.services.stuff.StringPool;
-import searchengine.services.stuff.TempStorage;
+import searchengine.services.stuff.StaticVault;
 
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static searchengine.services.stuff.Regex.*;
 
@@ -40,7 +38,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 	private static final Logger logger = LogManager.getLogger(ScrapingService.class);
 	public static volatile boolean allowed = true;
 	private ScrapTask parentTask;
-	private final ReadWriteLock lock = new ReentrantReadWriteLock();
+//	private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
 	private Connection.Response jsoupResponse;
 	private Document document;
@@ -115,7 +113,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 			String href = getHrefFromElement(element);
 
 			try {
-				if (url.matches(URL_IS_VALID) && href.startsWith(TempStorage.siteUrl) && !newChildLinks.containsKey(href) && !href.equals(url)) {
+				if (url.matches(URL_IS_VALID) && href.startsWith(StaticVault.siteUrl) && !newChildLinks.containsKey(href) && !href.equals(url)) {
 					if (((HTML_EXT.stream().anyMatch(href.substring(href.length() - 4)::contains) || !href.matches(URL_IS_FILE_LINK)))) {
 
 						String elementPath = href.substring(url.length() - 1);
@@ -141,7 +139,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 			jsoupResponse = Jsoup.connect(url).execute();
 			parentUrl = jsoupResponse.url().toString();
 			jsoupResponse.bufferUp();
-			if (TempStorage.siteUrl.isEmpty()) TempStorage.siteUrl = parentUrl;
+			if (StaticVault.siteUrl.isEmpty()) StaticVault.siteUrl = parentUrl;
 		} catch (IOException | UncheckedIOException exception) {
 			parentTask.setLastError(exception.getMessage());
 			return null;
@@ -163,10 +161,10 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 	}
 
 	private void dropPageToQueue() {
-		synchronized (stringPool.getAddedPaths()) {
-			if (!stringPool.getAddedPaths().containsKey(pageEntity.getPath())) {
+		synchronized (stringPool.getAddedPathsToQueue()) {
+			if (!stringPool.getAddedPathsToQueue().containsKey(pageEntity.getPath())) {
 				try {
-					stringPool.internAddedPath(parentPath);
+					stringPool.internAddedPathToQueue(parentPath);
 					queueOfPagesForSaving.put(pageEntity);
 				} catch (InterruptedException e) {
 					throw new RuntimeException(e);

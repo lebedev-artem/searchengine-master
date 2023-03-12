@@ -17,7 +17,7 @@ import searchengine.services.interfaces.IndexService;
 import searchengine.services.lemmatization.LemmasIndexService;
 import searchengine.services.queues.PagesSavingService;
 import searchengine.services.stuff.StringPool;
-import searchengine.services.stuff.TempStorage;
+import searchengine.services.stuff.StaticVault;
 import searchengine.services.scraping.ScrapingService;
 import searchengine.services.scraping.ScrapTask;
 import searchengine.services.stuff.SingleSiteListCreator;
@@ -42,7 +42,7 @@ public class IndexServiceImpl implements IndexService {
 	private static final ThreadLocal<Thread> taskSavingPages = new ThreadLocal<>();
 	private static final ThreadLocal<Thread> taskLemmasFinding = new ThreadLocal<>();
 
-//	private static Future<?> futureForScrapingSite;
+	//	private static Future<?> futureForScrapingSite;
 	public volatile boolean allowed = true;
 	public volatile boolean isStarted = false;
 	//	private static ScrapingService scrapingService;
@@ -69,7 +69,7 @@ public class IndexServiceImpl implements IndexService {
 	@Override
 	@Transactional
 	public synchronized ResponseEntity<?> indexingStart(@NotNull SitesList sitesList) throws MalformedURLException {
-		long timeMain = System.currentTimeMillis();
+		long time = System.currentTimeMillis();
 		if (isStarted) return indexResponse.startFailed();
 
 		isStarted = true;
@@ -77,39 +77,39 @@ public class IndexServiceImpl implements IndexService {
 		scrapingService.setAllowed(true);
 
 		ForkJoinPool fjpPool = new ForkJoinPool();
-//		ExecutorService executor = Executors.newSingleThreadExecutor();
 		initSchema(sitesList);
-
 		singleTask.set(new Thread(() -> {
 			for (Site site : sitesList.getSites()) {
+				siteId = siteRepository.findByName(site.getName()).getId();
+
 				pagesSavingService.setScrapingIsDone(false);
-				lemmasIndexService.setScrapingIsDone(false);
+				lemmasIndexService.setSavingPagesIsDone(false);
 				CountDownLatch latch = new CountDownLatch(3);
 				ScrapTask rootScrapTask = new ScrapTask(site.getUrl());
 				if (allowed) {
-					siteId = siteRepository.findByName(site.getName()).getId();
-
 					Thread scrapingThread = new Thread(() -> {
+						long timeMain = System.currentTimeMillis();
 						startScrapingOfSite(rootScrapTask, fjpPool, site, siteId);
 						latch.countDown();
 						pagesSavingService.setScrapingIsDone(true);
-						lemmasIndexService.setScrapingIsDone(true);
-						TempStorage.pages.clear();
+						StaticVault.pages.clear();
 						rootLogger.info(": Scraping of " + site.getName() + " finished in " + (System.currentTimeMillis() - timeMain) + " ms");
-						rootLogger.warn(": " + stringPool.pathsSize() + " paths processed");
+//						rootLogger.warn(": " + stringPool.pathsSize() + " paths processed");
+						rootLogger.info("::: scraping-thread finished");
 					}, "scrap-thread");
-
-					Thread lemmasFindingThread = new Thread(() -> {
-						startLemmasIndexFinder(site);
-						latch.countDown();
-						rootLogger.info(":: lemmasFindingThread finished");
-					}, "lemmas-thread");
 
 					Thread savingPagesThread = new Thread(() -> {
 						startSavingPagesService(site);
 						latch.countDown();
-						rootLogger.info("::: savingPagesThread finished");
+						lemmasIndexService.setSavingPagesIsDone(true);
+						rootLogger.info("::: saving-pages-thread finished");
 					}, "saving-thread");
+
+					Thread lemmasFindingThread = new Thread(() -> {
+						startLemmasIndexFinder(site);
+						latch.countDown();
+						rootLogger.info(":: lemmas-finding-thread finished");
+					}, "lemmas-thread");
 
 					scrapingThread.start();
 					savingPagesThread.start();
@@ -134,7 +134,13 @@ public class IndexServiceImpl implements IndexService {
 				}
 			}
 			shutDownService(fjpPool);
+			rootLogger.warn(siteRepository.count() + " site(s)");
+			rootLogger.warn(pageRepository.count() + " pages");
+			rootLogger.warn(lemmaRepository.count() + " lemmas");
+			rootLogger.warn(searchIndexRepository.count() + " index entries");
+			rootLogger.warn("Just in " + (System.currentTimeMillis() - time) + " ms");
 			rootLogger.warn("- I'm ready to start again and again");
+			System.gc();
 		}, "start-thread"));
 
 		singleTask.get().start();
@@ -180,7 +186,8 @@ public class IndexServiceImpl implements IndexService {
 	private void startActionsAfterScraping(@NotNull Site site, ScrapTask scrapTask) {
 		String status = pageRepository.existsBySiteEntity(siteRepository.findByName(site.getName())) ? "INDEXED" : "FAILED";
 		stringPool.getPaths().clear();
-		TempStorage.siteUrl = "";
+		stringPool.getAddedPathsToQueue().clear();
+		StaticVault.siteUrl = "";
 
 		if (allowed) {
 			siteRepository.updateStatusStatusTimeError(status, LocalDateTime.now(), scrapTask.getLastError(), site.getName());
@@ -209,11 +216,21 @@ public class IndexServiceImpl implements IndexService {
 
 		} else {
 			siteRepository.deleteAllInBatch();
-			siteRepository.resetIdOnSiteTable();
-			pageRepository.resetIdOnPageTable();
+			try {
+				Thread.sleep(2000);
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+			searchIndexRepository.resetIdOnIndexTable();
 			lemmaRepository.resetIdOnLemmaTable();
-			siteRepository.saveAllAndFlush(initSiteTable(sitesList));
-			System.out.println(siteRepository.count());
+			pageRepository.resetIdOnPageTable();
+			siteRepository.resetIdOnSiteTable();
+
+//			logger.debug(siteRepository.count() + " sites in DB, " + "site id " + siteRepository.findAll().get(0).getId());
+			List<SiteEntity> siteEntityList = initSiteTable(sitesList);
+			siteRepository.saveAllAndFlush(siteEntityList);
+			logger.debug(siteRepository.count() + " sites in DB, " + "site id " + siteRepository.findAll().get(0).getId() + " init site table");
+
 		}
 	}
 
@@ -238,7 +255,7 @@ public class IndexServiceImpl implements IndexService {
 		return allowed;
 	}
 
-	private void shutDownService(ForkJoinPool fjpPool) {
+	private void shutDownService(@NotNull ForkJoinPool fjpPool) {
 		isStarted = false;
 		allowed = false;
 		fjpPool.shutdownNow();

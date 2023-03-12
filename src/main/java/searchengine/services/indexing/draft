@@ -25,7 +25,7 @@ import searchengine.services.scraping.ScrapTask;
 import searchengine.services.scraping.ScrapingService;
 import searchengine.services.stuff.SingleSiteListCreator;
 import searchengine.services.stuff.StringPool;
-import searchengine.services.stuff.TempStorage;
+import searchengine.services.stuff.StaticVault;
 
 import javax.servlet.http.HttpServletRequest;
 import java.net.MalformedURLException;
@@ -87,7 +87,7 @@ package searchengine.services.indexing;
 		import searchengine.services.lemmatization.LemmasIndexService;
 		import searchengine.services.queues.PagesSavingService;
 		import searchengine.services.stuff.StringPool;
-		import searchengine.services.stuff.TempStorage;
+		import searchengine.services.stuff.StaticVault;
 		import searchengine.services.scraping.ScrapingService;
 		import searchengine.services.scraping.ScrapTask;
 		import searchengine.services.stuff.SingleSiteListCreator;
