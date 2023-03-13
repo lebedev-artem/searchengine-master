@@ -1,4 +1,4 @@
-package searchengine.services.lemmatization;
+package searchengine.bucket;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -7,21 +7,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
-import org.jetbrains.annotations.NotNull;
-import org.jsoup.Jsoup;
-import org.jsoup.safety.Safelist;
-import org.springframework.beans.factory.annotation.Autowired;
 import searchengine.model.LemmaEntity;
 import searchengine.model.PageEntity;
-import searchengine.model.SearchIndexEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SearchIndexRepository;
-import searchengine.services.indexing.IndexServiceImpl;
-import searchengine.services.scraping.ScrapingService;
 
-import javax.persistence.criteria.CriteriaBuilder;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;

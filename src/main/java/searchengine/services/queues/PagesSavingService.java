@@ -8,7 +8,6 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import searchengine.config.Site;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.PageRepository;
@@ -31,7 +30,8 @@ public class PagesSavingService {
 	private final Integer COUNT_TO_SAVE = 50;
 	private BlockingQueue<PageEntity> queue;
 	private BlockingQueue<PageEntity> queueForIndexing;
-	private Site site;
+//	private Site site;
+	private SiteEntity siteEntity;
 
 	@Autowired
 	PageRepository pageRepository;
@@ -39,7 +39,6 @@ public class PagesSavingService {
 	SiteRepository siteRepository;
 
 	public void pagesSaving() {
-		SiteEntity siteEntity = siteRepository.findByName(site.getName());
 		long time = System.currentTimeMillis();
 		Set<PageEntity> entities = new HashSet<>();
 
@@ -58,20 +57,20 @@ public class PagesSavingService {
 
 			if (entities.size() == COUNT_TO_SAVE) {
 				pageRepository.saveAll(entities);
-				extracted(entities);
+				dropPageEntitiesToLemmasQueue(entities);
 				entities.clear();
 			}
 
 			if (notAllowed() || indexingStopped) {
 				pageRepository.saveAll(entities);
-				extracted(entities);
-				rootLogger.warn("::: " + pageRepository.countBySiteEntity(siteEntity) + " pages saved in DB, site -> " + site.getName() + " in " + (System.currentTimeMillis() - time) + " ms");
+				dropPageEntitiesToLemmasQueue(entities);
+				rootLogger.warn("::: " + pageRepository.countBySiteEntity(siteEntity) + " pages saved in DB, site -> " + siteEntity.getName() + " in " + (System.currentTimeMillis() - time) + " ms");
 				return;
 			}
 		}
 	}
 
-	private void extracted(@NotNull Set<PageEntity> entities) {
+	private void dropPageEntitiesToLemmasQueue(@NotNull Set<PageEntity> entities) {
 		for (PageEntity e : entities) {
 			try {
 				queueForIndexing.put(e);

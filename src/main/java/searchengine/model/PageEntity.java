@@ -11,14 +11,15 @@ import java.util.Set;
 @Getter
 @Entity
 @Table(name = "page", indexes = @Index(name = "path_index", columnList = "path, site_id", unique = true))
-public class PageEntity implements BaseEntity {
+public class PageEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(nullable = false)
 	private int id;
 
-	@ManyToOne(fetch = FetchType.EAGER, targetEntity = SiteEntity.class, cascade = CascadeType.REMOVE, optional = false)
+//	cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH}
+	@ManyToOne(fetch = FetchType.EAGER, targetEntity = SiteEntity.class, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH}, optional = false)
 	@OnDelete(action = OnDeleteAction.CASCADE)
 	@JoinColumn(foreignKey = @ForeignKey(name = "site_page_FK"), columnDefinition = "Integer",
 			referencedColumnName = "id", name = "site_id", nullable = false, updatable = false)

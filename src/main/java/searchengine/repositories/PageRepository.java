@@ -1,6 +1,7 @@
 package searchengine.repositories;
 
 import org.springframework.data.domain.Example;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -13,7 +14,11 @@ import java.util.Set;
 
 @Transactional
 @Repository
-public interface PageRepository extends BaseRepository<PageEntity, Long> {
+public interface PageRepository extends JpaRepository<PageEntity, Long> {
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query(value = "ALTER TABLE `page` AUTO_INCREMENT = 1", nativeQuery = true)
+	void resetIdOnPageTable();
 
 	//	@Query("SELECT s FROM SiteEntity s WHERE s.url = :url")
 	PageEntity findByPath(String path);

@@ -9,7 +9,7 @@ import java.util.Set;
 @Getter
 @Entity(name = "SiteEntity")
 @Table(name = "site")
-public class SiteEntity implements BaseEntity{
+public class SiteEntity {
 
 	public SiteEntity(String status, LocalDateTime statusTime, String lastError, String url, String name) {
 		this.status = status;

@@ -2,19 +2,22 @@ package searchengine.controllers;
 
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import searchengine.config.SitesList;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.TotalStatistics;
-import searchengine.services.indexing.IndexResponse;
+import searchengine.model.SiteEntity;
+import searchengine.repositories.SiteRepository;
+import searchengine.services.indexing.IndexingMode;
+import searchengine.services.indexing.SchemaInitialization;
 import searchengine.services.interfaces.IndexService;
 import searchengine.services.interfaces.StatisticsService;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Set;
 import java.util.concurrent.*;
 
 @Setter
@@ -23,18 +26,15 @@ import java.util.concurrent.*;
 @RequiredArgsConstructor
 public class ApiController {
 
-//	@Autowired
-//	private final PageRepository pageRepository;
-//	@Autowired
-//	private final SiteRepository siteRepository;
-//	@Autowired
-//	private final LemmaRepository lemmaRepository;
-//	@Autowired
-//	private final SearchIndexRepository searchIndexRepository;
-//	@Autowired
-	private final IndexService indexService;
-//	@Autowired
-	private final SitesList sitesList;
+
+	@Autowired
+	IndexService indexService;
+	@Autowired
+	SitesList sitesList;
+	@Autowired
+	SchemaInitialization schemaInitialization;
+	@Autowired
+	SiteRepository siteRepository;
 
 	private final StatisticsService statisticsService;
 	TotalStatistics totalStatistics = new TotalStatistics();
@@ -46,11 +46,15 @@ public class ApiController {
 
 	@GetMapping("/startIndexing")
 	public ResponseEntity<?> startIndexing() throws Exception {
-		return indexService.indexingStart(sitesList);
+		schemaInitialization.setMode(IndexingMode.FULL);
+		Set<SiteEntity> siteEntities = schemaInitialization.fullInit();
+		siteRepository.saveAll(siteEntities);
+		return indexService.indexingStart(siteEntities);
 	}
 
 	@GetMapping("/stopIndexing")
 	public ResponseEntity<?> stopIndexing() throws ExecutionException, InterruptedException {
+		schemaInitialization.setMode(IndexingMode.PARTIAL);
 		return indexService.indexingStop();
 	}
 
@@ -58,9 +62,5 @@ public class ApiController {
 	public ResponseEntity<?> indexPage(@NotNull HttpServletRequest request) throws Exception {
 		return indexService.indexingPageStart(request);
 	}
-//
-//	@PostMapping("/testDeleteSiteWithPages")
-//	public ResponseEntity<?> testDeleteSiteWithPages(@NotNull @RequestParam String name) throws Exception {
-//		return indexService.testDeleteSiteWithPages(name);
-//	}
+
 }

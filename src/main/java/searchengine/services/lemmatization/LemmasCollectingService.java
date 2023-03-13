@@ -9,7 +9,7 @@ import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import searchengine.config.Site;
+import searchengine.bucket.LemmaFinder;
 import searchengine.model.*;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
@@ -17,16 +17,14 @@ import searchengine.repositories.SearchIndexRepository;
 import searchengine.repositories.SiteRepository;
 import searchengine.services.stuff.StaticVault;
 
-import javax.persistence.criteria.CriteriaBuilder;
 import java.io.IOException;
-import java.nio.channels.FileLock;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 
 @Getter
 @Setter
 @Service
-public class LemmasIndexService {
+public class LemmasCollectingService {
 	@Autowired
 	LemmaRepository lemmaRepository;
 	@Autowired
@@ -43,23 +41,20 @@ public class LemmasIndexService {
 	private volatile boolean indexingStopped = false;
 	private LuceneMorphology luceneMorphology;
 	private BlockingQueue<PageEntity> queue;
-	private Site site;
+	private BlockingQueue<SearchIndexEntity> queueForIndexGeneration;
+//	private Site site;
 	private boolean savingPagesIsDone = false;
 	private LemmaEntity lemmaEntity;
 	private SiteEntity siteEntity;
 	private PageEntity pageEntity;
 	private Map<String, LemmaEntity> lemmaEntityMap = StaticVault.lemmaEntityMap;
 	private Map<String, Integer> lemmaFreqMap = StaticVault.lemmaFreqMap;
+	public static Set<SearchIndexEntity> indexEntitiesSet = StaticVault.indexEntitiesSet;
 	private Map<String, Integer> collectedLemmas = new HashMap<>();
-
-//	private Map<PageEntity, String> keyPageLemma = new HashMap<>();
-	private Map<Map<PageEntity, String>, Float> indexMap = new HashMap<>();
+	private Map<Map<PageEntity, String>, Float> indexAsVarMap = new HashMap<>();
 
 
-	//	private Map<LemmaEntity, Float> lemmasMap = StaticVault.lemmasMap;
-	public static Set<SearchIndexEntity> indexSet = StaticVault.indexSet;
-
-	public LemmasIndexService() {
+	public LemmasCollectingService() {
 	}
 
 	@Autowired
@@ -72,7 +67,6 @@ public class LemmasIndexService {
 	}
 
 	public void lemmasIndexGeneration() {
-		siteEntity = siteRepository.findByName(site.getName());
 		Map<String, LemmaEntity> lemmasOnCurrentPage = new HashMap<>();
 
 		while (true) {
@@ -106,13 +100,9 @@ public class LemmasIndexService {
 					for (String lemmaAsSting : collectedLemmas.keySet()) {
 						Map<PageEntity, String> key = new HashMap<>();
 						key.put(pageEntity, lemmaAsSting);
-						indexMap.put(key, Float.valueOf(collectedLemmas.get(lemmaAsSting)));
+						indexAsVarMap.put(key, Float.valueOf(collectedLemmas.get(lemmaAsSting)));
 					}
 				}
-//
-//				lemmaRepository.saveAll(lemmasOnCurrentPage.values());
-//				System.out.println(lemmasOnCurrentPage.size());
-
 			}
 			try {
 				Thread.sleep(100);
@@ -123,33 +113,39 @@ public class LemmasIndexService {
 			if (notAllowed() || indexingStopped) {
 //				Сохраняем леммы для данного сайта
 				long timeLemmasSaving = System.currentTimeMillis();
-				lemmaRepository.saveAllAndFlush(lemmaEntityMap.values());
-				rootLogger.warn(":: " + lemmasOnCurrentPage.size() + " lemmas saved in DB, site -> " + site.getName() + " in " + (System.currentTimeMillis() - timeLemmasSaving) + " ms");
+				lemmaRepository.saveAll(lemmaEntityMap.values());
+				createIndexForThisSite();
+				rootLogger.warn(":: " + lemmasOnCurrentPage.size() + " lemmas saved in DB, site -> " + siteEntity.getName() + " in " + (System.currentTimeMillis() - timeLemmasSaving) + " ms");
 				lemmasOnCurrentPage.clear();
 				logger.debug(siteRepository.count() + " sites in DB, " + "site id " + siteRepository.findAll().get(0).getId() + " 129 lemma");
-
-				long timeIndexCreatingAndSaving = System.currentTimeMillis();
-				createIndexForThisPage(collectedLemmas);
-				logger.debug(siteRepository.count() + " sites in DB, " + "site id " + siteRepository.findAll().get(0).getId() + " 133 lemma");
-				searchIndexRepository.saveAllAndFlush(indexSet);
-				indexSet.clear();
-				logger.debug(siteRepository.count() + " sites in DB, " + "site id " + siteRepository.findAll().get(0).getId() + " 126 lemma");
-				rootLogger.warn(":: " + indexMap.size() + " index entries generated and saved in DB, site -> " + site.getName() + " in " + (System.currentTimeMillis() - timeIndexCreatingAndSaving) + " ms");
 				return;
 			}
 		}
 	}
 
-	private void createIndexForThisPage(@NotNull Map<String, Integer> collectedLemmas) {
-		for (Map.Entry<Map<PageEntity, String >, Float> entry: indexMap.entrySet()) {
+	private void createIndexForThisSite() {
+		for (Map.Entry<Map<PageEntity, String >, Float> entry: indexAsVarMap.entrySet()) {
 			Map<PageEntity, String> innerMap = entry.getKey();
 			PageEntity pageIdAsEntity = innerMap.keySet().stream().findFirst().get();
 			String lemmaAsString = innerMap.values().stream().findFirst().get();
 			LemmaEntity lemmaIdAsEntity = lemmaEntityMap.get(lemmaAsString);
 			Float rankAsFloat = entry.getValue();
-			indexSet.add(
-					new SearchIndexEntity(pageIdAsEntity, lemmaIdAsEntity, rankAsFloat, new SearchIndexId(pageIdAsEntity.getId(), lemmaEntityMap.get(lemmaAsString).getId())));
+			try {
+				queueForIndexGeneration.put(
+						new SearchIndexEntity(
+								pageIdAsEntity,
+								lemmaIdAsEntity,
+								rankAsFloat,
+								new SearchIndexId(
+										pageIdAsEntity.getId(),
+										lemmaEntityMap.get(lemmaAsString).getId())));
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+//			indexEntitiesSet.add(
+//					new SearchIndexEntity(pageIdAsEntity, lemmaIdAsEntity, rankAsFloat, new SearchIndexId(pageIdAsEntity.getId(), lemmaEntityMap.get(lemmaAsString).getId())));
 		}
+		rootLogger.warn("drop to index queue done");
 	}
 
 	private boolean notAllowed() {

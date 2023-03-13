@@ -6,13 +6,14 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Service
+@Component
 public class IndexResponse {
 	private boolean result;
 	private String error;

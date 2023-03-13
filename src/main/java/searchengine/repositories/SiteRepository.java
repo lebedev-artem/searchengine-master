@@ -1,4 +1,5 @@
 package searchengine.repositories;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,20 +13,11 @@ import java.util.List;
 
 @Transactional
 @Repository
-public interface SiteRepository extends BaseRepository<SiteEntity, Long> {
+public interface SiteRepository extends JpaRepository<SiteEntity, Long> {
 
-	/**
-	 * Для создания SQL запроса, необходимо указать nativeQuery = true<
-	 * каждый параметр в SQL запросе можно вставить, используя запись :ИМЯ_ПЕРЕМEННОЙ
-	 * перед именем двоеточие, так hibernate поймет, что надо заменить на значение переменной
-	 */
-
-//	@Query(value = "SELECT * from site where name LIKE %:namePart% LIMIT :limit", nativeQuery = true)
-//	List<SiteEntity> findAllContains(String namePart, int limit);
-
-/*
-Надо проверить скорость работы с параметром и без clearAutomatically = true, flushAutomatically = true
- */
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query(value = "ALTER TABLE `site` AUTO_INCREMENT = 1", nativeQuery = true)
+	void resetIdOnSiteTable();
 
 	@Query("SELECT COUNT(*) FROM SiteEntity")
 	int findCount();

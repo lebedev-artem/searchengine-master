@@ -17,6 +17,8 @@ import searchengine.config.Site;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.PageRepository;
+import searchengine.repositories.SiteRepository;
+import searchengine.services.indexing.IndexServiceImpl;
 import searchengine.services.stuff.AcceptableContentTypes;
 import searchengine.services.stuff.StringPool;
 import searchengine.services.stuff.StaticVault;
@@ -53,30 +55,28 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 	private SiteEntity siteEntity;
 	private PageEntity pageEntity;
 
-	private Future<Integer> future;
-	private ExecutorService executor = Executors.newSingleThreadExecutor();
 	private BlockingQueue<PageEntity> queueOfPagesForSaving;
 	private BlockingQueue<PageEntity> queueOfPagesForIndexing;
 
 	private PageRepository pageRepository;
+	private SiteRepository siteRepository;
 	private StringPool stringPool;
 
 	public ScrapingService(ScrapTask scrapTask,
-	                       @NotNull Site site,
 	                       @NotNull SiteEntity siteEntity,
 	                       BlockingQueue<PageEntity> queueOfPagesForSaving,
 	                       BlockingQueue<PageEntity> queueOfPagesForIndexing,
 	                       PageRepository pageRepository,
-	                       StringPool stringPool) {
+	                       SiteRepository siteRepository) {
 		this.parentTask = scrapTask;
-		this.site = site;
-		parentUrl = site.getUrl();
 		this.siteEntity = siteEntity;
 		this.siteId = siteEntity.getId();
 		this.queueOfPagesForSaving = queueOfPagesForSaving;
 		this.queueOfPagesForIndexing = queueOfPagesForIndexing;
 		this.pageRepository = pageRepository;
-		this.stringPool = stringPool;
+		this.siteRepository = siteRepository;
+		this.stringPool = IndexServiceImpl.stringPool;
+		parentUrl = siteEntity.getUrl();
 	}
 
 	@Override
@@ -180,7 +180,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 		for (String subLink : subLinks.keySet()) {
 			if (childIsValidToFork(subLink)) {
 				ScrapTask childScrapTask = new ScrapTask(subLink);
-				ScrapingService task = new ScrapingService(childScrapTask, site, siteEntity, queueOfPagesForSaving, queueOfPagesForIndexing, pageRepository, stringPool);
+				ScrapingService task = new ScrapingService(childScrapTask, siteEntity, queueOfPagesForSaving, queueOfPagesForIndexing, pageRepository, siteRepository);
 				task.fork();
 				subTasks.add(task);
 				parentTask.addChildTask(childScrapTask);

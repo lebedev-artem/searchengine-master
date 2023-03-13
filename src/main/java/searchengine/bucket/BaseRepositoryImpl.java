@@ -1,13 +1,11 @@
-package searchengine.repositories;
+package searchengine.bucket;
 import org.springframework.data.jpa.repository.support.JpaEntityInformation;
 import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
-import searchengine.model.BaseEntity;
 
 import javax.persistence.EntityManager;
 import java.io.Serializable;
-import java.util.List;
 
-public class BaseRepositoryImpl<T extends BaseEntity, ID extends Serializable> extends SimpleJpaRepository<T, ID> implements BaseRepository<T, ID> {
+public class BaseRepositoryImpl<T, ID extends Serializable> extends SimpleJpaRepository<T, ID> implements BaseRepository<T, ID> {
 
 	private final EntityManager entityManager;
 
