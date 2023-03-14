@@ -2,8 +2,12 @@ package searchengine.controllers;
 
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.hibernate.annotations.Cache;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import searchengine.config.SitesList;
@@ -11,6 +15,7 @@ import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.TotalStatistics;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.SiteRepository;
+import searchengine.services.indexing.IndexResponse;
 import searchengine.services.indexing.IndexingMode;
 import searchengine.services.indexing.SchemaInitialization;
 import searchengine.services.interfaces.IndexService;
@@ -27,6 +32,7 @@ import java.util.concurrent.*;
 public class ApiController {
 
 
+	private static final Logger rootLogger = LogManager.getRootLogger();
 	@Autowired
 	IndexService indexService;
 	@Autowired
@@ -35,6 +41,8 @@ public class ApiController {
 	SchemaInitialization schemaInitialization;
 	@Autowired
 	SiteRepository siteRepository;
+	@Autowired
+	IndexResponse indexResponse;
 
 	private final StatisticsService statisticsService;
 	TotalStatistics totalStatistics = new TotalStatistics();
@@ -48,7 +56,14 @@ public class ApiController {
 	public ResponseEntity<?> startIndexing() throws Exception {
 		schemaInitialization.setMode(IndexingMode.FULL);
 		Set<SiteEntity> siteEntities = schemaInitialization.fullInit();
-		siteRepository.saveAll(siteEntities);
+
+		if (siteEntities.size() == 0) return indexResponse.startFailedEmptySites();
+
+		for (SiteEntity s: siteEntities) {
+			if (!siteRepository.existsByUrl(s.getUrl())){
+				siteRepository.save(s);
+			}
+		}
 		return indexService.indexingStart(siteEntities);
 	}
 

@@ -13,7 +13,7 @@ import searchengine.config.SitesList;
 import searchengine.model.PageEntity;
 import searchengine.model.SearchIndexEntity;
 import searchengine.model.SiteEntity;
-import searchengine.model.StatusIndexing;
+import searchengine.model.IndexingStatus;
 import searchengine.repositories.*;
 import searchengine.services.interfaces.IndexService;
 import searchengine.services.lemmatization.LemmasCollectingService;
@@ -46,7 +46,7 @@ public class IndexServiceImpl implements IndexService {
 
 	public volatile boolean allowed = true;
 	public volatile boolean isStarted = false;
-	public static boolean isRanOnce = false;
+//	public static boolean isRanOnce = false;
 
 //	private Integer siteId;
 	public static final StringPool stringPool = new StringPool();
@@ -80,6 +80,15 @@ public class IndexServiceImpl implements IndexService {
 	@Override
 	@Transactional
 	public synchronized ResponseEntity<?> indexingStart(@NotNull Set<SiteEntity> siteEntities) {
+		CountDownLatch latch = new CountDownLatch(4);
+		rootLogger.warn("start of indexingStart");
+		for (SiteEntity s: siteRepository.findAll()) {
+			rootLogger.error(s.getName() + " from DB has id = " + s.getId());
+		}
+		for (SiteEntity sE: siteEntities) {
+			rootLogger.error("id of " + sE.getName() + "from entities = " + sE.getId());
+		}
+
 
 		long time = System.currentTimeMillis();
 		if (isStarted) return indexResponse.startFailed();
@@ -93,11 +102,7 @@ public class IndexServiceImpl implements IndexService {
 
 		singleTask.set(new Thread(() -> {
 			for (SiteEntity siteEntity : siteEntities) {
-				rootLogger.error(siteEntity.toString());
-				pagesSavingService.setScrapingIsDone(false);
-				lemmasCollectingService.setSavingPagesIsDone(false);
-				indexGenerationService.setLemmasCollectingIsDone(false);
-				CountDownLatch latch = new CountDownLatch(4);
+
 				ScrapTask rootScrapTask = new ScrapTask(siteEntity.getUrl());
 				if (allowed) {
 					Thread scrapingThread = new Thread(() -> {
@@ -107,34 +112,37 @@ public class IndexServiceImpl implements IndexService {
 						pagesSavingService.setScrapingIsDone(true);
 						StaticVault.pages.clear();
 						rootLogger.info(": Scraping of " + siteEntity.getName() + " finished in " + (System.currentTimeMillis() - timeMain) + " ms");
-//						rootLogger.warn(": " + stringPool.pathsSize() + " paths processed");
-						rootLogger.info("::: scraping-thread finished");
+						rootLogger.info("::: scraping-thread finished " + latch.getCount());
 					}, "scrap-thread");
 
 					Thread pagesSaverThread = new Thread(() -> {
 						startPagesSaver(siteEntity);
 						latch.countDown();
 						lemmasCollectingService.setSavingPagesIsDone(true);
-						rootLogger.info("::: saving-pages-thread finished");
+						rootLogger.info("::: saving-pages-thread finished " + latch.getCount());
 					}, "saving-thread");
 
 					Thread lemmasCollectorThread = new Thread(() -> {
 						startLemmasCollector(siteEntity);
 						latch.countDown();
 						indexGenerationService.setLemmasCollectingIsDone(true);
-						rootLogger.info(":: lemmas-finding-thread finished");
+						rootLogger.info(":: lemmas-finding-thread finished " + latch.getCount());
 					}, "lemmas-thread");
 
 					Thread indexGeneratorThread = new Thread(() -> {
 						startIndexGenerator(siteEntity);
 						latch.countDown();
-						rootLogger.info(":: index-generation-thread finished");
+						rootLogger.info(":: index-generation-thread finished " + latch.getCount());
 					}, "index-thread");
 
 					scrapingThread.start();
+					rootLogger.info("::: scraping-thread started " + latch.getCount());
 					pagesSaverThread.start();
+					rootLogger.info("::: saving-pages-thread started " + latch.getCount());
 					lemmasCollectorThread.start();
+					rootLogger.info(":: lemmas-finding-thread started " + latch.getCount());
 					indexGeneratorThread.start();
+					rootLogger.info(":: index-generation-thread started " + latch.getCount());
 
 					try {
 						latch.await();
@@ -142,7 +150,7 @@ public class IndexServiceImpl implements IndexService {
 						e.printStackTrace();
 					}
 
-					startActionsAfterScraping(site, rootScrapTask);
+					startActionsAfterScraping(siteEntity, rootScrapTask);
 				} else {
 					try {
 						Thread.sleep(5_000);
@@ -160,8 +168,7 @@ public class IndexServiceImpl implements IndexService {
 			rootLogger.warn(lemmaRepository.count() + " lemmas");
 			rootLogger.warn(searchIndexRepository.count() + " index entries");
 			rootLogger.warn("Just in " + (System.currentTimeMillis() - time) + " ms");
-			rootLogger.warn("- I'm ready to start again and again");
-			setIsRanOnce(true);
+			rootLogger.error("FINISHED. I'm ready to start again and again");
 			System.gc();
 		}, "start-thread"));
 
@@ -193,7 +200,8 @@ public class IndexServiceImpl implements IndexService {
 		scrapingService.setAllowed(false);
 		pagesSavingService.setIndexingStopped(true);
 		lemmasCollectingService.setIndexingStopped(true);
-		siteRepository.updateAllStatusStatusTimeError(StatusIndexing.FAILED.status, LocalDateTime.now(), "Индексация остановлена пользователем");
+		indexGenerationService.setIndexingStopped(true);
+		siteRepository.updateAllStatusStatusTimeError(IndexingStatus.FAILED.status, LocalDateTime.now(), "Индексация остановлена пользователем");
 		return indexResponse.successfully();
 	}
 
@@ -201,80 +209,20 @@ public class IndexServiceImpl implements IndexService {
 		scrapingService.setAllowed(true);
 		scrapingService = new ScrapingService(rootScrapTask, siteEntity, queueOfPagesForSaving, queueOfPagesForLemmasCollecting, pageRepository, siteRepository);
 		rootLogger.error("---------------------------------------------------------");
-		rootLogger.info("- Start scraping " + site.getName() + " " + site.getUrl());
+		rootLogger.info("- Start scraping " + siteEntity.getName() + " " + siteEntity.getUrl());
 		fjpPool.invoke(scrapingService);
 	}
 
-	private void startActionsAfterScraping(@NotNull Site site, ScrapTask scrapTask) {
-		String status = pageRepository.existsBySiteEntity(siteRepository.findByUrl(site.getUrl())) ? StatusIndexing.INDEXED.status : StatusIndexing.FAILED.status;
+	private void startActionsAfterScraping(@NotNull SiteEntity siteEntity, ScrapTask scrapTask) {
+		String status = pageRepository.existsBySiteEntity(siteEntity) ? IndexingStatus.INDEXED.status : IndexingStatus.FAILED.status;
 		stringPool.getPaths().clear();
 		stringPool.getAddedPathsToQueue().clear();
 		StaticVault.siteUrl = "";
 
 		if (allowed) {
-			siteRepository.updateStatusStatusTimeError(status, LocalDateTime.now(), scrapTask.getLastError(), site.getName());
-			rootLogger.info("- Status of site " + site.getName() + " set to " + status);
+			siteRepository.updateStatusStatusTimeErrorByUrl(status, LocalDateTime.now(), scrapTask.getLastError(), siteEntity.getUrl());
+			rootLogger.info("- Status of site " + siteEntity.getName() + " set to " + status);
 		}
-	}
-
-	@Transactional
-	private void initSchema(@NotNull SitesList siteListToInit) throws MalformedURLException {
-		if (isRanOnce) {
-			searchIndexRepository.deleteAllInBatch();
-			lemmaRepository.deleteAllInBatch();
-			pageRepository.deleteAllInBatch();
-			for (Site s : siteListToInit.getSites()) {
-				siteRepository.updateStatusStatusTime(StatusIndexing.INDEXING.status, LocalDateTime.now(), s.getName());
-			}
-			return;
-		}
-
-		for (Site s : siteListToInit.getSites()) {
-			if (s.getUrl().startsWith("www"))
-				s.setUrl("https://".concat(s.getUrl()));
-			if (s.getUrl().lastIndexOf("/") != (s.getUrl().length() - 1)) {
-				s.setUrl(s.getUrl().concat("/"));
-			}
-		}
-
-		if ((sitesList.getSites().size() > 1) && (siteListToInit.getSites().size() == 1)) {
-			SiteEntity siteEntity = siteRepository.findByName(siteListToInit.getSites().get(0).getName());
-			if (siteEntity != null) {
-				String path = new URL(siteListToInit.getSites().get(0).getUrl()).getPath();
-				pageRepository.deletePagesBySiteIdContainingPath(path, siteEntity.getId());
-				siteRepository.updateStatusStatusTime(StatusIndexing.INDEXING.status, LocalDateTime.now(), siteListToInit.getSites().get(0).getName());
-			} else {
-				siteRepository.saveAll(initSiteTable(siteListToInit));
-			}
-
-		} else {
-			siteRepository.deleteAllInBatch();
-//			searchIndexRepository.resetIdOnIndexTable();
-//			lemmaRepository.resetIdOnLemmaTable();
-//			pageRepository.resetIdOnPageTable();
-//			siteRepository.resetIdOnSiteTable();
-
-//			logger.debug(siteRepository.count() + " sites in DB, " + "site id " + siteRepository.findAll().get(0).getId());
-			List<SiteEntity> siteEntityList = initSiteTable(sitesList);
-			siteRepository.saveAll(siteEntityList);
-			logger.debug(siteRepository.count() + " sites in DB, " + "site id " + siteRepository.findAll().get(0).getId() + " init site table");
-		}
-	}
-
-	private @NotNull List<SiteEntity> initSiteTable(@NotNull SitesList sl) {
-		List<SiteEntity> siteEntities = new ArrayList<>();
-		for (Site site : sl.getSites()) siteEntities.add(initSiteRow(site));
-		return siteEntities;
-	}
-
-	private @NotNull SiteEntity initSiteRow(@NotNull Site s) {
-		SiteEntity siteEntity = new SiteEntity();
-		siteEntity.setStatus("INDEXING");
-		siteEntity.setStatusTime(LocalDateTime.now());
-		siteEntity.setLastError("");
-		siteEntity.setUrl(s.getUrl());
-		siteEntity.setName(s.getName());
-		return siteEntity;
 	}
 
 	@Override
@@ -311,7 +259,7 @@ public class IndexServiceImpl implements IndexService {
 		indexGenerationService.indexGenerate();
 	}
 
-	public void setIsRanOnce(boolean value) {
-		isRanOnce = value;
-	}
+//	public void setIsRanOnce(boolean value) {
+//		isRanOnce = value;
+//	}
 }

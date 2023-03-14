@@ -67,6 +67,7 @@ public class LemmasCollectingService {
 	}
 
 	public void lemmasIndexGeneration() {
+		savingPagesIsDone = false;
 		Map<String, LemmaEntity> lemmasOnCurrentPage = new HashMap<>();
 
 		while (true) {
@@ -126,6 +127,7 @@ public class LemmasCollectingService {
 	private void createIndexForThisSite() {
 		for (Map.Entry<Map<PageEntity, String >, Float> entry: indexAsVarMap.entrySet()) {
 			Map<PageEntity, String> innerMap = entry.getKey();
+
 			PageEntity pageIdAsEntity = innerMap.keySet().stream().findFirst().get();
 			String lemmaAsString = innerMap.values().stream().findFirst().get();
 			LemmaEntity lemmaIdAsEntity = lemmaEntityMap.get(lemmaAsString);
@@ -142,10 +144,7 @@ public class LemmasCollectingService {
 			} catch (InterruptedException e) {
 				throw new RuntimeException(e);
 			}
-//			indexEntitiesSet.add(
-//					new SearchIndexEntity(pageIdAsEntity, lemmaIdAsEntity, rankAsFloat, new SearchIndexId(pageIdAsEntity.getId(), lemmaEntityMap.get(lemmaAsString).getId())));
 		}
-		rootLogger.warn("drop to index queue done");
 	}
 
 	private boolean notAllowed() {

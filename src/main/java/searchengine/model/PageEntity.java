@@ -19,8 +19,8 @@ public class PageEntity {
 	private int id;
 
 //	cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH}
-	@ManyToOne(fetch = FetchType.EAGER, targetEntity = SiteEntity.class, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH}, optional = false)
-	@OnDelete(action = OnDeleteAction.CASCADE)
+	@ManyToOne(fetch = FetchType.EAGER, targetEntity = SiteEntity.class, cascade = {CascadeType.MERGE, CascadeType.REFRESH}, optional = false)
+	@OnDelete(action = OnDeleteAction.NO_ACTION)
 	@JoinColumn(foreignKey = @ForeignKey(name = "site_page_FK"), columnDefinition = "Integer",
 			referencedColumnName = "id", name = "site_id", nullable = false, updatable = false)
 	private SiteEntity siteEntity;
@@ -34,7 +34,8 @@ public class PageEntity {
 	@Column(length = 16777215, columnDefinition = "mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", nullable = false)
 	private String content;
 
-	@ManyToMany(mappedBy = "pageEntities")
+	@ManyToMany(mappedBy = "pageEntities", cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
+	@OnDelete(action = OnDeleteAction.CASCADE)
 	private Set<LemmaEntity> lemmaEntities = new HashSet<>();
 
 

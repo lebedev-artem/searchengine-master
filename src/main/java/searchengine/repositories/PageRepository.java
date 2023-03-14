@@ -31,6 +31,7 @@ public interface PageRepository extends JpaRepository<PageEntity, Long> {
 	PageEntity findByPathAndSiteEntity(String path, SiteEntity siteEntity);
 	Set<PageEntity> findAllBySiteEntity(SiteEntity siteEntity);
 	Integer countBySiteEntity(SiteEntity siteEntity);
+	void deleteAllBySiteEntity(SiteEntity siteEntity);
 
 
 	@Override

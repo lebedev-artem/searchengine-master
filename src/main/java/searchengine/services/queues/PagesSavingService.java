@@ -39,6 +39,7 @@ public class PagesSavingService {
 	SiteRepository siteRepository;
 
 	public void pagesSaving() {
+		scrapingIsDone = false;
 		long time = System.currentTimeMillis();
 		Set<PageEntity> entities = new HashSet<>();
 
@@ -62,9 +63,15 @@ public class PagesSavingService {
 			}
 
 			if (notAllowed() || indexingStopped) {
-				pageRepository.saveAll(entities);
+				for (PageEntity pE: entities) {
+					pageRepository.save(pE);
+				}
+//				pageRepository.saveAll(entities);
 				dropPageEntitiesToLemmasQueue(entities);
-				rootLogger.warn("::: " + pageRepository.countBySiteEntity(siteEntity) + " pages saved in DB, site -> " + siteEntity.getName() + " in " + (System.currentTimeMillis() - time) + " ms");
+				rootLogger.warn("::: "
+						+ pageRepository.countBySiteEntity(siteEntity)
+						+ " pages saved in DB, site -> " + siteEntity.getName()
+						+ " in " + (System.currentTimeMillis() - time) + " ms");
 				return;
 			}
 		}

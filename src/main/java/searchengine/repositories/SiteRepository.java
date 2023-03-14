@@ -5,8 +5,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import searchengine.model.IndexingStatus;
 import searchengine.model.SiteEntity;
-import searchengine.model.StatusIndexing;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,7 +23,7 @@ public interface SiteRepository extends JpaRepository<SiteEntity, Long> {
 	int findCount();
 
 	@Query("SELECT s FROM SiteEntity s WHERE s.status = :status")
-	Iterable<SiteEntity> findByStatus(@Param("status") StatusIndexing statusIndexing);
+	Iterable<SiteEntity> findByStatus(@Param("status") IndexingStatus indexingStatus);
 
 	@Query("SELECT s FROM SiteEntity s")
 	List<SiteEntity> findAllSites();
@@ -37,6 +37,7 @@ public interface SiteRepository extends JpaRepository<SiteEntity, Long> {
 	boolean existsByName(String name);
 	void deleteByUrl(String url);
 //	void deleteById(Integer id);
+	boolean existsByUrl(String url);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("DELETE FROM SiteEntity s WHERE s.url = :url")
@@ -67,12 +68,12 @@ public interface SiteRepository extends JpaRepository<SiteEntity, Long> {
 	void updateAllStatusStatusTimeError(String status, LocalDateTime statusTime, String error);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
-	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime, `last_error` = :error WHERE `name` = :name", nativeQuery = true)
-	void updateStatusStatusTimeError(String status, LocalDateTime statusTime, String error, String name);
+	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime, `last_error` = :error WHERE `url` = :url", nativeQuery = true)
+	void updateStatusStatusTimeErrorByUrl(String status, LocalDateTime statusTime, String error, String url);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
-	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime WHERE `name` = :name", nativeQuery = true)
-	void updateStatusStatusTime(String status, LocalDateTime statusTime, String name);
+	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime WHERE `url` = :url", nativeQuery = true)
+	void updateStatusStatusTimeByUrl(String status, LocalDateTime statusTime, String url);
 
 
 

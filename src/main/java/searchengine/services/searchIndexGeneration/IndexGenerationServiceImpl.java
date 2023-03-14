@@ -41,10 +41,8 @@ public class IndexGenerationServiceImpl {
 	@Autowired
 	PageRepository pageRepository;
 
-//	@CacheEvict(value = "siteEntityCache", allEntries = true)
-//	@Transactional
-//	@Modifying
 	public void indexGenerate() {
+		lemmasCollectingIsDone = false;
 		long timeIndexCreatingAndSaving = System.currentTimeMillis();
 		Set<SearchIndexEntity> indexEntitiesSet = new HashSet<>();
 		while (true) {
@@ -60,10 +58,16 @@ public class IndexGenerationServiceImpl {
 			}
 
 			if (notAllowed() || indexingStopped) {
-				rootLogger.warn("index created");
+				for (SiteEntity s : siteRepository.findAll()) {
+					rootLogger.error(s.getName() + " from DB has id = " + s.getId());
+				}
+
+				rootLogger.error("id of " + indexEntitiesSet.stream().findFirst().get().getPageEntity().getSiteEntity().getName()
+						+ "from entities = " + indexEntitiesSet.stream().findFirst().get().getPageEntity().getSiteEntity().getId());
 //				for (SearchIndexEntity sIE: indexEntitiesSet) {
 //					searchIndexRepository.save(sIE);
 //				}
+
 				searchIndexRepository.saveAll(indexEntitiesSet);
 				rootLogger.warn(":: " + indexEntitiesSet.size() + " index entries generated and saved in DB, site -> " + siteEntity.getName() + " in " + (System.currentTimeMillis() - timeIndexCreatingAndSaving) + " ms");
 				return;
@@ -71,7 +75,7 @@ public class IndexGenerationServiceImpl {
 		}
 	}
 
-		private boolean notAllowed () {
-			return !queue.iterator().hasNext() && lemmasCollectingIsDone;
-		}
+	private boolean notAllowed() {
+		return lemmasCollectingIsDone && !queue.iterator().hasNext();
 	}
+}

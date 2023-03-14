@@ -18,6 +18,6 @@ public interface IndexService{
 	void startIndexGenerator(SiteEntity siteEntity);
 
 	Boolean isAllowed();
-	void setIsRanOnce(boolean value);
+//	void setIsRanOnce(boolean value);
 
 }

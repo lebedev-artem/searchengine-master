@@ -1,0 +1,61 @@
+	@Transactional
+	private void initSchema(@NotNull SitesList siteListToInit) throws MalformedURLException {
+		if (isRanOnce) {
+			searchIndexRepository.deleteAllInBatch();
+			lemmaRepository.deleteAllInBatch();
+			pageRepository.deleteAllInBatch();
+			for (Site s : siteListToInit.getSites()) {
+				siteRepository.updateStatusStatusTimeByUrl(IndexingStatus.INDEXING.status, LocalDateTime.now(), s.getUrl());
+			}
+			return;
+		}
+
+		for (Site s : siteListToInit.getSites()) {
+			if (s.getUrl().startsWith("www"))
+				s.setUrl("https://".concat(s.getUrl()));
+			if (s.getUrl().lastIndexOf("/") != (s.getUrl().length() - 1)) {
+				s.setUrl(s.getUrl().concat("/"));
+			}
+		}
+
+		if ((sitesList.getSites().size() > 1) && (siteListToInit.getSites().size() == 1)) {
+			SiteEntity siteEntity = siteRepository.findByName(siteListToInit.getSites().get(0).getName());
+			if (siteEntity != null) {
+				String path = new URL(siteListToInit.getSites().get(0).getUrl()).getPath();
+				pageRepository.deletePagesBySiteIdContainingPath(path, siteEntity.getId());
+				siteRepository.updateStatusStatusTimeByUrl(IndexingStatus.INDEXING.status, LocalDateTime.now(), siteListToInit.getSites().get(0).getUrl());
+			} else {
+				siteRepository.saveAll(initSiteTable(siteListToInit));
+			}
+
+		} else {
+			siteRepository.deleteAllInBatch();
+//			searchIndexRepository.resetIdOnIndexTable();
+//			lemmaRepository.resetIdOnLemmaTable();
+//			pageRepository.resetIdOnPageTable();
+//			siteRepository.resetIdOnSiteTable();
+
+//			logger.debug(siteRepository.count() + " sites in DB, " + "site id " + siteRepository.findAll().get(0).getId());
+			List<SiteEntity> siteEntityList = initSiteTable(sitesList);
+			siteRepository.saveAll(siteEntityList);
+			logger.debug(siteRepository.count() + " sites in DB, " + "site id " + siteRepository.findAll().get(0).getId() + " init site table");
+		}
+	}
+
+
+	private @NotNull List<SiteEntity> initSiteTable(@NotNull SitesList sl) {
+		List<SiteEntity> siteEntities = new ArrayList<>();
+		for (Site site : sl.getSites()) siteEntities.add(initSiteRow(site));
+		return siteEntities;
+	}
+
+	private @NotNull SiteEntity initSiteRow(@NotNull Site s) {
+		SiteEntity siteEntity = new SiteEntity();
+		siteEntity.setStatus("INDEXING");
+		siteEntity.setStatusTime(LocalDateTime.now());
+		siteEntity.setLastError("");
+		siteEntity.setUrl(s.getUrl());
+		siteEntity.setName(s.getName());
+		return siteEntity;
+	}
+

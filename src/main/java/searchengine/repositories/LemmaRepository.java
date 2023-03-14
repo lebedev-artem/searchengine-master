@@ -21,6 +21,7 @@ public interface LemmaRepository extends JpaRepository<LemmaEntity, Long> {
 	void resetIdOnLemmaTable();
 
 	boolean existsByLemmaAndSiteEntity(String lemma, SiteEntity siteEntity);
+	void deleteAllBySiteEntity(SiteEntity siteEntity);
 	LemmaEntity findByLemmaAndSiteEntity(String lemma, SiteEntity siteEntity);
 	LemmaEntity findFirstByLemmaAndSiteEntity(String lemma, SiteEntity siteEntity);
 	Set<LemmaEntity> findAllByLemmaAndSiteEntity(String lemma, SiteEntity siteEntity);

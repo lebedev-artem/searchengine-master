@@ -17,13 +17,13 @@ public class SearchIndexEntity {
 	private SearchIndexId id;
 
 	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
-//	@OnDelete(action = OnDeleteAction.CASCADE)
+	@OnDelete(action = OnDeleteAction.CASCADE)
 	@MapsId("pageId")
 	@JoinColumn(name = "page_id")
 	private PageEntity pageEntity;
 
 	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
-//	@OnDelete(action = OnDeleteAction.CASCADE)
+	@OnDelete(action = OnDeleteAction.CASCADE)
 	@MapsId("lemmaId")
 	@JoinColumn(name = "lemma_id")
 	private LemmaEntity lemmaEntity;

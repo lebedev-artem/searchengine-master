@@ -1,6 +1,6 @@
 package searchengine.model;
 
-public enum StatusIndexing
+public enum IndexingStatus
 {
 	INDEXING("INDEXING"),
 	INDEXED("INDEXED"),
@@ -8,7 +8,7 @@ public enum StatusIndexing
 
 	public final String status;
 
-	StatusIndexing (String status){
+	IndexingStatus(String status){
 		this.status = status;
 	}
 
