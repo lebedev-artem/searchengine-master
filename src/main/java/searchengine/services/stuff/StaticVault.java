@@ -25,6 +25,6 @@ public class StaticVault {
 	public static Map<String, Integer> lemmaFreqMap = new HashMap<>();
 	public static Map<String, Integer> lemmaRankMap = new HashMap<>();
 	public static Map<LemmaEntity, Float> lemmasMap = new HashMap<>();
-	public static Set<SearchIndexEntity> indexEntitiesSet = new HashSet<>();
+//	public static Set<SearchIndexEntity> indexEntitiesSet = new HashSet<>();
 
 }

@@ -57,13 +57,13 @@ public class ApiController {
 		schemaInitialization.setMode(IndexingMode.FULL);
 		Set<SiteEntity> siteEntities = schemaInitialization.fullInit();
 
-		if (siteEntities.size() == 0) return indexResponse.startFailedEmptySites();
+		if (siteEntities.size() == 0)
+			return indexResponse.startFailedEmptySites();
 
-		for (SiteEntity s: siteEntities) {
-			if (!siteRepository.existsByUrl(s.getUrl())){
-				siteRepository.save(s);
-			}
-		}
+		siteEntities.forEach(e -> {
+			if (!siteRepository.existsByUrl(e.getUrl())) siteRepository.save(e);
+		});
+
 		return indexService.indexingStart(siteEntities);
 	}
 

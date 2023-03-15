@@ -22,7 +22,8 @@ public class SearchIndexEntity {
 	@JoinColumn(name = "page_id")
 	private PageEntity pageEntity;
 
-	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
+//	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
+	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REMOVE, CascadeType.REFRESH})
 	@OnDelete(action = OnDeleteAction.CASCADE)
 	@MapsId("lemmaId")
 	@JoinColumn(name = "lemma_id")

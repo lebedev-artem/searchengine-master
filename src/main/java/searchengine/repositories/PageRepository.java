@@ -50,4 +50,5 @@ public interface PageRepository extends JpaRepository<PageEntity, Long> {
 	@Query(value = "SELECT count(*) FROM `page`", nativeQuery = true)
 	Integer countAllPages();
 
+
 }

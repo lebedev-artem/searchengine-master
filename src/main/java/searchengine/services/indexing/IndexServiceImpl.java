@@ -18,7 +18,7 @@ import searchengine.repositories.*;
 import searchengine.services.interfaces.IndexService;
 import searchengine.services.lemmatization.LemmasCollectingService;
 import searchengine.services.queues.PagesSavingService;
-import searchengine.services.searchIndexGeneration.IndexGenerationServiceImpl;
+import searchengine.services.searchIndexGeneration.IndexCollectingServiceImpl;
 import searchengine.services.stuff.StringPool;
 import searchengine.services.stuff.StaticVault;
 import searchengine.services.scraping.ScrapingService;
@@ -73,7 +73,7 @@ public class IndexServiceImpl implements IndexService {
 	@Autowired
 	ScrapingService scrapingService;
 	@Autowired
-	IndexGenerationServiceImpl indexGenerationService;
+	IndexCollectingServiceImpl indexGenerationService;
 	@Autowired
 	IndexResponse indexResponse;
 
@@ -237,6 +237,7 @@ public class IndexServiceImpl implements IndexService {
 	}
 
 	public void startPagesSaver(SiteEntity siteEntity) {
+		pagesSavingService.setScrapingIsDone(false);
 		pagesSavingService.setIndexingStopped(false);
 		pagesSavingService.setQueue(queueOfPagesForSaving);
 		pagesSavingService.setQueueForIndexing(queueOfPagesForLemmasCollecting);
@@ -246,7 +247,7 @@ public class IndexServiceImpl implements IndexService {
 
 	public void startLemmasCollector(SiteEntity siteEntity) {
 		lemmasCollectingService.setQueue(queueOfPagesForLemmasCollecting);
-		lemmasCollectingService.setQueueForIndexGeneration(queueOfLemmasForIndexGeneration);
+		lemmasCollectingService.setQueueOfSearchIndexEntities(queueOfLemmasForIndexGeneration);
 		lemmasCollectingService.setIndexingStopped(false);
 		lemmasCollectingService.setSiteEntity(siteEntity);
 		lemmasCollectingService.lemmasIndexGeneration();
@@ -256,7 +257,7 @@ public class IndexServiceImpl implements IndexService {
 		indexGenerationService.setIndexingStopped(false);
 		indexGenerationService.setQueue(queueOfLemmasForIndexGeneration);
 		indexGenerationService.setSiteEntity(siteEntity);
-		indexGenerationService.indexGenerate();
+		indexGenerationService.indexCollect();
 	}
 
 //	public void setIsRanOnce(boolean value) {

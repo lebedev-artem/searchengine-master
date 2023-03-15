@@ -1,5 +1,5 @@
 package searchengine.services.searchIndexGeneration;
 
-public interface IndexGenerationService {
+public interface IndexCollectingService {
 
 }

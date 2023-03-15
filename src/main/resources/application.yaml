@@ -44,14 +44,11 @@ jsoup-setting:
 
 indexing-settings:
   sites:
-#    -  url: http://www.twitter.com
-#       name: twitter
+
 #    - url: https://volochek.life/
 #      name: Volochek
 #    - url: https://www.playback.ru/
 #      name: PlayBack.Ru
-#    - url: https://www.twitter.com
-#      name: Switter
 #    - url: http://radiomv.ru/
 #      name: Радио_MV
 #    - url: https://ipfran.ru/
@@ -62,20 +59,20 @@ indexing-settings:
 #      name: BBC.com
 #    - url: https://lenta.ru/
 #      name: Lenta
-#    - url: https://nikoartgallery.com/
-#      name: Niko_Art_Gallery
-#    - url: https://et-cetera.ru/mobile/
-#      name: Et_Cetera_4_mobile
+    - url: https://nikoartgallery.com/
+      name: Niko_Art_Gallery
+    - url: https://et-cetera.ru/mobile/
+      name: Et_Cetera_4_mobile
 #    - url: https://www.lutherancathedral.ru/
 #      name: Lutheran_cathedral_BIG
-#    - url: https://dombulgakova.ru/
-#      name: Дом_Булгакова
+    - url: https://dombulgakova.ru/
+      name: Дом_Булгакова
 #    - url: http://www.artlebedev.ru/
 #      name: ArtLebedev
 #    - url: https://www.svetlovka.ru/
 #      name: Светловка
-    - url: http://cimus.biz/
-      name: cimus.biz
+#    - url: http://cimus.biz/
+#      name: cimus.biz
 #    - url: https://exotic-zoo.ru
 #      name: EXOTIC Zoo
 

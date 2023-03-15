@@ -30,4 +30,5 @@ public interface LemmaRepository extends JpaRepository<LemmaEntity, Long> {
 	Integer getFrequencyByLemma(String lemma);
 	LemmaEntity getByLemma(String lemma);
 	Integer getIdByLemma(String lemma);
+
 }
