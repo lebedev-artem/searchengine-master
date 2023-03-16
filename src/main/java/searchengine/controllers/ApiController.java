@@ -4,10 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hibernate.annotations.Cache;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import searchengine.config.SitesList;
@@ -78,4 +76,8 @@ public class ApiController {
 		return indexService.indexingPageStart(request);
 	}
 
+	@PostMapping("/testDeleteSiteWithPages")
+	public void test(long request) throws Exception {
+		indexService.test(request);
+	}
 }

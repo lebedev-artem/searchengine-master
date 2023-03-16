@@ -14,4 +14,5 @@ public interface SearchIndexRepository extends JpaRepository<SearchIndexEntity, 
 	@Query(value = "ALTER TABLE `search_index` AUTO_INCREMENT = 1", nativeQuery = true)
 	void resetIdOnIndexTable();
 
+
 }

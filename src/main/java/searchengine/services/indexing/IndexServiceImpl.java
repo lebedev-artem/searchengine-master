@@ -48,7 +48,7 @@ public class IndexServiceImpl implements IndexService {
 	public volatile boolean isStarted = false;
 //	public static boolean isRanOnce = false;
 
-//	private Integer siteId;
+	//	private Integer siteId;
 	public static final StringPool stringPool = new StringPool();
 	private BlockingQueue<PageEntity> queueOfPagesForLemmasCollecting = new LinkedBlockingQueue<>(1_000);
 	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(1_000);
@@ -80,12 +80,12 @@ public class IndexServiceImpl implements IndexService {
 	@Override
 	@Transactional
 	public synchronized ResponseEntity<?> indexingStart(@NotNull Set<SiteEntity> siteEntities) {
-		CountDownLatch latch = new CountDownLatch(4);
+
 		rootLogger.warn("start of indexingStart");
-		for (SiteEntity s: siteRepository.findAll()) {
+		for (SiteEntity s : siteRepository.findAll()) {
 			rootLogger.error(s.getName() + " from DB has id = " + s.getId());
 		}
-		for (SiteEntity sE: siteEntities) {
+		for (SiteEntity sE : siteEntities) {
 			rootLogger.error("id of " + sE.getName() + "from entities = " + sE.getId());
 		}
 
@@ -101,8 +101,9 @@ public class IndexServiceImpl implements IndexService {
 //		initSchema(sitesList);
 
 		singleTask.set(new Thread(() -> {
-			for (SiteEntity siteEntity : siteEntities) {
 
+			for (SiteEntity siteEntity : siteEntities) {
+				CountDownLatch latch = new CountDownLatch(4);
 				ScrapTask rootScrapTask = new ScrapTask(siteEntity.getUrl());
 				if (allowed) {
 					Thread scrapingThread = new Thread(() -> {
@@ -112,37 +113,37 @@ public class IndexServiceImpl implements IndexService {
 						pagesSavingService.setScrapingIsDone(true);
 						StaticVault.pages.clear();
 						rootLogger.info(": Scraping of " + siteEntity.getName() + " finished in " + (System.currentTimeMillis() - timeMain) + " ms");
-						rootLogger.info("::: scraping-thread finished " + latch.getCount());
+						rootLogger.info("::: scraping-thread finished, latch =  " + latch.getCount());
 					}, "scrap-thread");
 
 					Thread pagesSaverThread = new Thread(() -> {
 						startPagesSaver(siteEntity);
 						latch.countDown();
 						lemmasCollectingService.setSavingPagesIsDone(true);
-						rootLogger.info("::: saving-pages-thread finished " + latch.getCount());
+						rootLogger.info("::: saving-pages-thread finished, latch =  " + latch.getCount());
 					}, "saving-thread");
 
 					Thread lemmasCollectorThread = new Thread(() -> {
 						startLemmasCollector(siteEntity);
 						latch.countDown();
 						indexGenerationService.setLemmasCollectingIsDone(true);
-						rootLogger.info(":: lemmas-finding-thread finished " + latch.getCount());
+						rootLogger.info(":: lemmas-finding-thread finished, latch =  " + latch.getCount());
 					}, "lemmas-thread");
 
 					Thread indexGeneratorThread = new Thread(() -> {
 						startIndexGenerator(siteEntity);
 						latch.countDown();
-						rootLogger.info(":: index-generation-thread finished " + latch.getCount());
+						rootLogger.info(":: index-generation-thread finished, latch =  " + latch.getCount());
 					}, "index-thread");
 
 					scrapingThread.start();
-					rootLogger.info("::: scraping-thread started " + latch.getCount());
+					rootLogger.info("::: scraping-thread started, latch = " + latch.getCount());
 					pagesSaverThread.start();
-					rootLogger.info("::: saving-pages-thread started " + latch.getCount());
+					rootLogger.info("::: saving-pages-thread started, latch =  " + latch.getCount());
 					lemmasCollectorThread.start();
-					rootLogger.info(":: lemmas-finding-thread started " + latch.getCount());
+					rootLogger.info(":: lemmas-finding-thread started, latch =  " + latch.getCount());
 					indexGeneratorThread.start();
-					rootLogger.info(":: index-generation-thread started " + latch.getCount());
+					rootLogger.info(":: index-generation-thread started, latch =  " + latch.getCount());
 
 					try {
 						latch.await();
@@ -247,6 +248,7 @@ public class IndexServiceImpl implements IndexService {
 
 	public void startLemmasCollector(SiteEntity siteEntity) {
 		lemmasCollectingService.setQueue(queueOfPagesForLemmasCollecting);
+		lemmasCollectingService.setSavingPagesIsDone(false);
 		lemmasCollectingService.setQueueOfSearchIndexEntities(queueOfLemmasForIndexGeneration);
 		lemmasCollectingService.setIndexingStopped(false);
 		lemmasCollectingService.setSiteEntity(siteEntity);
@@ -255,6 +257,7 @@ public class IndexServiceImpl implements IndexService {
 
 	public void startIndexGenerator(SiteEntity siteEntity) {
 		indexGenerationService.setIndexingStopped(false);
+		indexGenerationService.setLemmasCollectingIsDone(false);
 		indexGenerationService.setQueue(queueOfLemmasForIndexGeneration);
 		indexGenerationService.setSiteEntity(siteEntity);
 		indexGenerationService.indexCollect();
@@ -263,4 +266,12 @@ public class IndexServiceImpl implements IndexService {
 //	public void setIsRanOnce(boolean value) {
 //		isRanOnce = value;
 //	}
+
+	public void test(Long id){
+
+
+		pageRepository.deleteAllInBatch(pageRepository.findAllBySiteEntity(siteRepository.getReferenceById(id)));
+//		pageRepository.deleteById(id);
+
+	}
 }

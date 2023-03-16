@@ -18,10 +18,11 @@ public class LemmaEntity {
 	@Id
 	@Column(nullable = false)
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private int id;
+	private Long id;
 
-	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.MERGE, CascadeType.REFRESH})
+//	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.MERGE, CascadeType.REFRESH})
 //	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REFRESH})
+	@ManyToOne(fetch = FetchType.EAGER)
 	@OnDelete(action = OnDeleteAction.NO_ACTION)
 	@JoinColumn(foreignKey = @ForeignKey(name = "lemma_site_FK"), columnDefinition = "Integer",
 			referencedColumnName = "id", name = "site_id", nullable = false, updatable = false)

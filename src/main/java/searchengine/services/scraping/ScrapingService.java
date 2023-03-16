@@ -51,7 +51,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 	private String parentPath;
 	private String parentUrl;
 	private Site site;
-	private Integer siteId;
+	private Long siteId;
 	private SiteEntity siteEntity;
 	private PageEntity pageEntity;
 

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.model.IndexingStatus;
+import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
@@ -51,24 +52,30 @@ public class SchemaInitialization {
 
 	public @NotNull Set<SiteEntity> fullInit() {
 		List<SiteEntity> existingSiteEntities = siteRepository.findAll();
-		Set<SiteEntity> newSiteEntities = new HashSet<>();
 		if (sitesList.getSites().size() == 0) return new HashSet<>();
+
+		Set<SiteEntity> newSiteEntities = new HashSet<>();
 		if (existingSiteEntities.size() == 0) {
-			virginSchema();
+			resetAllIds();
 			sitesList.getSites().forEach(site -> {
 				newSiteEntities.add(initSiteRow(site));
 			});
 		} else {
 			sitesList.getSites().forEach(n -> {
+				//Search in DB each site from SiteList
 				if (existingSiteEntities.stream().anyMatch(e -> e.getUrl().equals(n.getUrl()))) {
-					SiteEntity existingEntity = siteRepository.findByUrl(n.getUrl());
-					siteRepository.updateStatusStatusTimeByUrl(IndexingStatus.INDEXING.status, LocalDateTime.now(), existingEntity.getUrl());
-					newSiteEntities.add(existingEntity);
-//					lemmaRepository.deleteAllBySiteEntity(existingEntity);
-					pageRepository.deleteAllBySiteEntity(existingEntity);
+					//If exists get SiteEntity from DB, change status and time, put to SET of new entities
+					SiteEntity existingSiteEntity = siteRepository.findByUrl(n.getUrl());
+					siteRepository.updateStatusStatusTimeByUrl(IndexingStatus.INDEXING.status, LocalDateTime.now(), existingSiteEntity.getUrl());
+					newSiteEntities.add(existingSiteEntity);
+
+					//Delete all pages, lemmas By SitEntity, index entries by PageEntities in one Query. CASCADE
+
+
 					rootLogger.warn(pageRepository.count() + " pages");
 					rootLogger.warn(lemmaRepository.count() + " lemmas");
 					rootLogger.warn(searchIndexRepository.count() + " index entries");
+
 				} else {
 					newSiteEntities.add(initSiteRow(n));
 				}
@@ -99,6 +106,13 @@ public class SchemaInitialization {
 		lemmaRepository.resetIdOnLemmaTable();
 		pageRepository.resetIdOnPageTable();
 		siteRepository.resetIdOnSiteTable();
-		siteRepository.flush();
+	}
+
+	private void resetAllIds() {
+
+		searchIndexRepository.resetIdOnIndexTable();
+		lemmaRepository.resetIdOnLemmaTable();
+		pageRepository.resetIdOnPageTable();
+		siteRepository.resetIdOnSiteTable();
 	}
 }

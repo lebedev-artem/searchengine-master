@@ -25,7 +25,7 @@ public class SiteEntity {
 	@Id
 	@Column (nullable = false)
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private int id;
+	private Long id;
 
 	@Column(columnDefinition = "ENUM('INDEXING', 'INDEXED', 'FAILED')", nullable = false)
 	private String status;

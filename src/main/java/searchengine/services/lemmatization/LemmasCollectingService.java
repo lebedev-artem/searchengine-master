@@ -10,7 +10,6 @@ import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import searchengine.bucket.LemmaFinder;
 import searchengine.model.*;
 import searchengine.repositories.LemmaRepository;
@@ -50,10 +49,11 @@ public class LemmasCollectingService {
 	private LemmaEntity lemmaEntity;
 	private SiteEntity siteEntity;
 	private PageEntity pageEntity;
-	private Map<String, LemmaEntity> lemmaEntitiesMap = StaticVault.lemmaEntityMap;
+	private Map<String, LemmaEntity> lemmaEntitiesStaticMap = StaticVault.lemmaEntitiesMap;
+	private Set<SearchIndexEntity> searchIndexEntitiesStaticMap = StaticVault.searchIndexEntitiesMap;
 //	public static Set<SearchIndexEntity> indexEntitiesSet = StaticVault.indexEntitiesSet;//del
 	private Map<String, Integer> collectedLemmas = new HashMap<>();
-	private Set<SearchIndexEntity> searchIndexEntities = new HashSet<>();
+
 //	private Map<Map<PageEntity, LemmaEntity>, Float> indexAsHashMapWithKeyMap = new HashMap<>(); //del
 //	private Map<PageEntity, LemmaEntity> pageLemmaMap = new HashMap<>(); // del
 
@@ -68,21 +68,21 @@ public class LemmasCollectingService {
 					if (indexingStopped) break;
 					Float rank = Float.valueOf(collectedLemmas.get(lemma));
 
-					if (lemmaEntitiesMap.containsKey(lemma)) {
+					if (lemmaEntitiesStaticMap.containsKey(lemma)) {
 						//checking freq
-						var freqOld = lemmaEntitiesMap.get(lemma).getFrequency();
+						var freqOld = lemmaEntitiesStaticMap.get(lemma).getFrequency();
 						lemmaEntity = new LemmaEntity(siteEntity, lemma, freqOld + 1);
-						lemmaEntitiesMap.replace(lemma, lemmaEntity);
+						lemmaEntitiesStaticMap.replace(lemma, lemmaEntity);
 					} else {
 						//add new lemma to map
 						lemmaEntity = new LemmaEntity(siteEntity, lemma, INIT_FREQ);
-						lemmaEntitiesMap.put(lemma, lemmaEntity);
+						lemmaEntitiesStaticMap.put(lemma, lemmaEntity);
 					}
 
 					SearchIndexEntity searchIndexEntity = new SearchIndexEntity(
 							pageEntity, lemmaEntity, rank,
 							new SearchIndexId(pageEntity.getId(), lemmaEntity.getId()));
-					searchIndexEntities.add(searchIndexEntity);
+					searchIndexEntitiesStaticMap.add(searchIndexEntity);
 				}
 			}
 			try {
@@ -92,28 +92,27 @@ public class LemmasCollectingService {
 			}
 
 			if (notAllowed() || indexingStopped) {
-				saveLemmaEntitiesOfSite();
-				dropSearchIndexEntitiesToQueue();
-				lemmaEntitiesMap.clear();
+//				saveLemmaEntitiesOfSite();
+//				dropSearchIndexEntitiesToQueue();
 				return;
 			}
 		}
 	}
 
+	private void saveLemmaEntitiesOfSite() {
+		long timeLemmasSaving = System.currentTimeMillis();
+//		lemmaRepository.saveAll(lemmaEntitiesStaticMap.values());
+//		rootLogger.warn(":: " + lemmaRepository.countBySiteEntity(siteEntity) + " lemmas saved in DB, site -> " + siteEntity.getName() + " in " + (System.currentTimeMillis() - timeLemmasSaving) + " ms");
+	}
+
 	private void dropSearchIndexEntitiesToQueue() {
-		searchIndexEntities.forEach(searchIndexEntity -> {
+		searchIndexEntitiesStaticMap.forEach(searchIndexEntity -> {
 			try {
 				queueOfSearchIndexEntities.put(searchIndexEntity);
 			} catch (InterruptedException e) {
 				throw new RuntimeException(e);
 			}
 		});
-	}
-
-	private void saveLemmaEntitiesOfSite() {
-		long timeLemmasSaving = System.currentTimeMillis();
-		lemmaRepository.saveAll(lemmaEntitiesMap.values());
-		rootLogger.warn(":: " + lemmaRepository.countBySiteEntity(siteEntity) + " lemmas saved in DB, site -> " + siteEntity.getName() + " in " + (System.currentTimeMillis() - timeLemmasSaving) + " ms");
 	}
 
 	private boolean notAllowed() {

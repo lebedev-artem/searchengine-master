@@ -19,14 +19,14 @@ public class SearchIndexEntity {
 	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
 	@OnDelete(action = OnDeleteAction.CASCADE)
 	@MapsId("pageId")
-	@JoinColumn(name = "page_id")
+	@JoinColumn(name = "page_id", updatable = false)
 	private PageEntity pageEntity;
 
-//	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
-	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REMOVE, CascadeType.REFRESH})
+	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
+//	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REMOVE, CascadeType.REFRESH})
 	@OnDelete(action = OnDeleteAction.CASCADE)
 	@MapsId("lemmaId")
-	@JoinColumn(name = "lemma_id")
+	@JoinColumn(name = "lemma_id", updatable = false)
 	private LemmaEntity lemmaEntity;
 
 	@Column(name = "lemma_rank", nullable = false)

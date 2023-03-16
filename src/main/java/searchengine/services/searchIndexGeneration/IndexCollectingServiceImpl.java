@@ -33,8 +33,10 @@ public class IndexCollectingServiceImpl {
 	private volatile boolean indexingStopped = false;
 	private BlockingQueue<SearchIndexEntity> queue;
 	private SiteEntity siteEntity;
-	private Map<String, LemmaEntity> lemmaEntitiesMap = StaticVault.lemmaEntityMap;
+	private Map<String, LemmaEntity> lemmaEntitiesStaticMap = StaticVault.lemmaEntitiesMap;
+	private Set<SearchIndexEntity> searchIndexEntitiesStaticMap = StaticVault.searchIndexEntitiesMap;
 	private LemmaEntity lemmaEntity;
+	private boolean saved = false;
 
 	@Autowired
 	SearchIndexRepository searchIndexRepository;
@@ -48,36 +50,40 @@ public class IndexCollectingServiceImpl {
 	public void indexCollect() {
 		lemmasCollectingIsDone = false;
 		long timeIndexCreatingAndSaving = System.currentTimeMillis();
-		Set<SearchIndexEntity> indexEntitiesSet = new HashSet<>();
+
 		while (true) {
-			SearchIndexEntity searchIndexEntity = queue.poll();
-			if (searchIndexEntity != null) {
-				lemmaEntity = lemmaRepository.getByLemma(searchIndexEntity.getLemmaEntity().getLemma());
-				searchIndexEntity.setLemmaEntity(lemmaEntity);
-				indexEntitiesSet.add(searchIndexEntity);
-			} else {
-				try {
-					sleep(100);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
+			if (lemmasCollectingIsDone){
+				for (SearchIndexEntity s: searchIndexEntitiesStaticMap) {
+					s.setLemmaEntity(lemmaEntitiesStaticMap.get(s.getLemmaEntity().getLemma()));
 				}
+				System.out.println("updated");
+				System.out.println(" lemmas size " + lemmaEntitiesStaticMap.size());
+				int count = 0;
+				lemmaRepository.saveAll(lemmaEntitiesStaticMap.values());
+				System.out.println(lemmaRepository.countBySiteEntity(siteEntity) + " saved");
+				System.out.println("start saving index");
+				int beforasavin = (int) searchIndexRepository.count();
+				searchIndexRepository.saveAll(searchIndexEntitiesStaticMap);
+				System.out.println( searchIndexRepository.count() - beforasavin + " index entries saved");
+				saved = true;
+//					lemmaRepository.save(lemmaEntitiesStaticMap.get(s.getLemmaEntity().getLemma()));
 			}
 
 			if (notAllowed() || indexingStopped) {
-//				for (SearchIndexEntity sIE: indexEntitiesSet) {
-//					System.out.println("page_id - " + sIE.getPageEntity().getId() + " lemma_id - " + sIE.getLemmaEntity().getId() + " lemma - " + sIE.getLemmaEntity().getLemma() + " rank - " + sIE.getLemmaRank());
-//					searchIndexRepository.save(sIE);
-//				}
-
-				searchIndexRepository.saveAll(indexEntitiesSet);
-				rootLogger.warn(":: " + indexEntitiesSet.size() + " index entries generated and saved in DB, site -> " + siteEntity.getName() + " in " + (System.currentTimeMillis() - timeIndexCreatingAndSaving) + " ms");
-				lemmaEntitiesMap.clear();
+//				searchIndexRepository.saveAll(indexEntitiesSet);
+				rootLogger.warn(":: " + lemmaRepository.countBySiteEntity(siteEntity) + " lemmas saved in DB, site -> " + siteEntity.getName());
+				rootLogger.warn(":: " + searchIndexEntitiesStaticMap.size() + " index entries generated and saved in DB, site -> " + siteEntity.getName());
+//				rootLogger.warn(":: " + lemmaRepository.countBySiteEntity(siteEntity) + " lemmas saved in DB, site -> " + siteEntity.getName() + " in " + (System.currentTimeMillis() - timeLemmasSaving) + " ms");
+//				rootLogger.warn(":: " + searchIndexEntitiesStaticMap.size() + " index entries generated and saved in DB, site -> " + siteEntity.getName() + " in " + (System.currentTimeMillis() - timeIndexCreatingAndSaving) + " ms");
+				StaticVault.lemmaEntitiesMap.clear();
+				StaticVault.searchIndexEntitiesMap.clear();
 				return;
 			}
 		}
 	}
 
 	private boolean notAllowed() {
-		return lemmasCollectingIsDone && !queue.iterator().hasNext();
+		return lemmasCollectingIsDone && saved;
+//		return lemmasCollectingIsDone && !queue.iterator().hasNext();
 	}
 }

@@ -19,5 +19,6 @@ public interface IndexService{
 
 	Boolean isAllowed();
 //	void setIsRanOnce(boolean value);
+	void test(Long id);
 
 }

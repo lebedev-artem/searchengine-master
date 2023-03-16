@@ -1,5 +1,6 @@
 package searchengine.repositories;
 
+import org.jetbrains.annotations.NotNull;
 import org.springframework.data.domain.Example;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -33,6 +34,11 @@ public interface PageRepository extends JpaRepository<PageEntity, Long> {
 	Integer countBySiteEntity(SiteEntity siteEntity);
 	void deleteAllBySiteEntity(SiteEntity siteEntity);
 
+
+	@Override
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query(value = "DELETE FROM `page` WHERE `id` = :id", nativeQuery = true)
+	void deleteById (@NotNull Long id);
 
 	@Override
 	<S extends PageEntity> boolean exists(Example<S> example);

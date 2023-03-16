@@ -35,7 +35,7 @@ public class LemmaFinder implements Runnable {
 	private static final String WORD_TYPE_REGEX = "\\W\\w&&[^а-яА-Я\\s]";
 	private static final String[] PARTICLES_NAMES = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
 	private final Future<?> future;
-	private Integer siteId;
+	private Long siteId;
 	private SiteEntity siteEntity;
 
 //	public static LemmaFinder getInstance() throws IOException {
