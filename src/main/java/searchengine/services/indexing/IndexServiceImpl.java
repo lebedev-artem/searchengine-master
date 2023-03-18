@@ -10,12 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
-import searchengine.model.PageEntity;
-import searchengine.model.SearchIndexEntity;
-import searchengine.model.SiteEntity;
-import searchengine.model.IndexingStatus;
+import searchengine.model.*;
 import searchengine.repositories.*;
-import searchengine.services.interfaces.IndexService;
 import searchengine.services.lemmatization.LemmasCollectingService;
 import searchengine.services.queues.PagesSavingService;
 import searchengine.services.searchIndexGeneration.IndexCollectingServiceImpl;
@@ -50,9 +46,9 @@ public class IndexServiceImpl implements IndexService {
 
 	//	private Integer siteId;
 	public static final StringPool stringPool = new StringPool();
-	private BlockingQueue<PageEntity> queueOfPagesForLemmasCollecting = new LinkedBlockingQueue<>(100);
-	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(100);
-	private BlockingQueue<SearchIndexEntity> queueOfLemmasForIndexGeneration = new LinkedBlockingQueue<>(1_000);
+	private BlockingQueue<PageEntity> queueOfPagesForLemmasCollecting = new LinkedBlockingQueue<>(10_000);
+	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(1_000);
+	private BlockingQueue<SearchIndexEntity> queueOfLemmasForIndexGeneration = new LinkedBlockingQueue<>(100_000);
 
 	@Autowired
 	Site site;
@@ -80,15 +76,6 @@ public class IndexServiceImpl implements IndexService {
 	@Override
 	@Transactional
 	public synchronized ResponseEntity<?> indexingStart(@NotNull Set<SiteEntity> siteEntities) {
-//
-//		rootLogger.warn("start of indexingStart");
-//		for (SiteEntity s : siteRepository.findAll()) {
-//			rootLogger.error(s.getName() + " from DB has id = " + s.getId());
-//		}
-//		for (SiteEntity sE : siteEntities) {
-//			rootLogger.error("id of " + sE.getName() + "from entities = " + sE.getId());
-//		}
-
 
 		long time = System.currentTimeMillis();
 		if (isStarted) return indexResponse.startFailed();
@@ -98,8 +85,6 @@ public class IndexServiceImpl implements IndexService {
 		scrapingService.setAllowed(true);
 
 		ForkJoinPool fjpPool = new ForkJoinPool();
-//		initSchema(sitesList);
-
 		singleTask.set(new Thread(() -> {
 
 			for (SiteEntity siteEntity : siteEntities) {
@@ -111,8 +96,6 @@ public class IndexServiceImpl implements IndexService {
 						startScrapingOfSite(rootScrapTask, fjpPool, siteEntity);
 						latch.countDown();
 						pagesSavingService.setScrapingIsDone(true);
-						rootLogger.warn("string pool paths size = " + scrapingService.getStringPool().pathsSize());
-						rootLogger.warn("string pool added paths size = " + scrapingService.getStringPool().addedPathsToQueue.size());
 						scrapingService.getStringPool().paths.clear();
 						scrapingService.getStringPool().addedPathsToQueue.clear();
 						System.gc();
@@ -127,7 +110,7 @@ public class IndexServiceImpl implements IndexService {
 						lemmasCollectingService.setSavingPagesIsDone(true);
 //						StaticVault.pages.clear();
 						rootLogger.info("::: saving-pages-thread finished, latch =  " + latch.getCount());
-					}, "saving-thread");
+					}, "pages-thread");
 
 					Thread lemmasCollectorThread = new Thread(() -> {
 						startLemmasCollector(siteEntity);
@@ -140,16 +123,12 @@ public class IndexServiceImpl implements IndexService {
 						startIndexGenerator(siteEntity);
 						latch.countDown();
 						rootLogger.info(":: index-generation-thread finished, latch =  " + latch.getCount());
-					}, "index-thread");
+					}, "indexes-thread");
 
 					scrapingThread.start();
-					rootLogger.info("::: scraping-thread started, latch = " + latch.getCount());
 					pagesSaverThread.start();
-					rootLogger.info("::: saving-pages-thread started, latch =  " + latch.getCount());
 					lemmasCollectorThread.start();
-					rootLogger.info(":: lemmas-finding-thread started, latch =  " + latch.getCount());
 					indexGeneratorThread.start();
-					rootLogger.info(":: index-generation-thread started, latch =  " + latch.getCount());
 
 					try {
 						latch.await();
@@ -194,8 +173,6 @@ public class IndexServiceImpl implements IndexService {
 		if (singleSiteList == null)
 			return indexResponse.indexPageFailed();
 
-//		indexingStart(singleSiteList);
-
 		return indexResponse.successfully();
 	}
 
@@ -232,8 +209,7 @@ public class IndexServiceImpl implements IndexService {
 		}
 	}
 
-	@Override
-	public Boolean isAllowed() {
+	public boolean isAllowed() {
 		return allowed;
 	}
 
@@ -269,12 +245,7 @@ public class IndexServiceImpl implements IndexService {
 		indexGenerationService.indexCollect();
 	}
 
-//	public void setIsRanOnce(boolean value) {
-//		isRanOnce = value;
-//	}
-
 	public void test(Long id){
-
 
 		pageRepository.deleteAllInBatch(pageRepository.findAllBySiteEntity(siteRepository.getReferenceById(id)));
 //		pageRepository.deleteById(id);

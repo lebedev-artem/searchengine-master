@@ -31,7 +31,7 @@ jsoup-setting:
   jsoup:
     userAgent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:25.0) Gecko/20100101 Firefox/25.0
     referrer: http://www:google.com
-    timeout: 10000
+    timeout: 1_000
     ignoreHttpErrors: true
     followRedirects: false
 
@@ -57,13 +57,15 @@ indexing-settings:
 #      name: Et_Cetera_4_mobile_52_pages
 #    - url: https://www.lutherancathedral.ru/
 #      name: Lutheran_cathedral_BIG_842_pages
-#    - url: https://dombulgakova.ru/
-#      name: Дом_Булгакова_529_pages
+    - url: https://dombulgakova.ru/
+      name: Дом_Булгакова_529_pages
 #    - url: https://www.svetlovka.ru/
 #      name: Светловка_231_pages
 #    - url: http://cimus.biz/
 #      name: cimus.biz_19_pages
-    - url: https://xakep.ru/
-      name: xaker_big
+#    - url: https://xakep.ru/
+#      name: xakep_big
+#    - url: https://www.baeldung.com/
+#      name: baeldung
 
 

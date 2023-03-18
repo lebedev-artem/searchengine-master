@@ -1,6 +1,5 @@
-package searchengine.services.interfaces;
+package searchengine.services.indexing;
 import org.springframework.http.ResponseEntity;
-import searchengine.config.SitesList;
 import searchengine.model.SiteEntity;
 
 import javax.servlet.http.HttpServletRequest;
@@ -17,8 +16,7 @@ public interface IndexService{
 	void startLemmasCollector(SiteEntity siteEntity);
 	void startIndexGenerator(SiteEntity siteEntity);
 
-	Boolean isAllowed();
-//	void setIsRanOnce(boolean value);
+	boolean isAllowed();
 	void test(Long id);
 
 }

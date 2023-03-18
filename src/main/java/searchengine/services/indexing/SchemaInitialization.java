@@ -11,13 +11,13 @@ import org.springframework.stereotype.Component;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.model.IndexingStatus;
-import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SearchIndexRepository;
 import searchengine.repositories.SiteRepository;
 
+import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -29,8 +29,9 @@ import java.util.Set;
 @Component
 public class SchemaInitialization {
 
-	private IndexingMode mode;
+//	private IndexingMode mode;
 	private static final Logger rootLogger = LogManager.getRootLogger();
+	Set<SiteEntity> newSiteEntities = new HashSet<>();
 
 	@Autowired
 	SitesList sitesList;
@@ -43,18 +44,19 @@ public class SchemaInitialization {
 	@Autowired
 	SearchIndexRepository searchIndexRepository;
 
-	private void initSchema() {
-		switch (mode) {
-			case FULL -> fullInit();
-			case PARTIAL -> partialInit();
-		}
-	}
+//	public Set<SiteEntity> initSchema(String mode) {
+//		switch (mode) {
+//			case "FULL" -> newSiteEntities = fullInit();
+//			case "PARTIAL" -> newSiteEntities = partialInit();
+//		}
+//		return newSiteEntities;
+//	}
 
 	public @NotNull Set<SiteEntity> fullInit() {
 		List<SiteEntity> existingSiteEntities = siteRepository.findAll();
 		if (sitesList.getSites().size() == 0) return new HashSet<>();
 
-		Set<SiteEntity> newSiteEntities = new HashSet<>();
+		newSiteEntities = new HashSet<>();
 		if (existingSiteEntities.size() == 0) {
 			resetAllIds();
 			sitesList.getSites().forEach(site -> {
@@ -76,14 +78,13 @@ public class SchemaInitialization {
 				}
 			});
 		}
-
-		rootLogger.warn(pageRepository.count() + " pages");
-		rootLogger.warn(lemmaRepository.count() + " lemmas");
-		rootLogger.warn(searchIndexRepository.count() + " index entries");
+		newSiteEntities.forEach(e -> {
+			if (!siteRepository.existsByUrl(e.getUrl())) siteRepository.save(e);
+		});
 		return newSiteEntities;
 	}
 
-	public Set<SiteEntity> partialInit() {
+	public Set<SiteEntity> partialInit(HttpServletRequest request) {
 
 		return new HashSet<>();
 	}

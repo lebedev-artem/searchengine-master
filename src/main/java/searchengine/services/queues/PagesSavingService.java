@@ -5,7 +5,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import searchengine.model.PageEntity;
@@ -16,6 +15,8 @@ import searchengine.repositories.SiteRepository;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static java.lang.Thread.sleep;
 
@@ -27,11 +28,10 @@ public class PagesSavingService {
 	private static final Logger rootLogger = LogManager.getRootLogger();
 	private boolean scrapingIsDone = false;
 	private volatile boolean indexingStopped = false;
-	private final Integer COUNT_TO_SAVE = 50;
 	private BlockingQueue<PageEntity> queue;
 	private BlockingQueue<PageEntity> queueForIndexing;
-	//	private Site site;
 	private SiteEntity siteEntity;
+	private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
 	@Autowired
 	PageRepository pageRepository;
@@ -41,43 +41,31 @@ public class PagesSavingService {
 	public void pagesSaving() {
 		scrapingIsDone = false;
 		long time = System.currentTimeMillis();
-		Set<PageEntity> entities = new HashSet<>();
 
 		while (true) {
 			PageEntity pageEntity = queue.poll();
-			synchronized (PageRepository.class) {
-				if (pageEntity != null) {
-					if (!pageRepository.existsByPathAndSiteEntity(pageEntity.getPath(), siteEntity)) {
-						pageRepository.save(pageEntity);
-						try {
-							queueForIndexing.put(pageEntity);
-						} catch (InterruptedException ex) {
-							throw new RuntimeException(ex);
-						}
-					}
 
-//						entities.add(pageEntity);
-				} else {
+			if (pageEntity != null) {
+				if (!pageRepository.existsByPathAndSiteEntity(pageEntity.getPath(), siteEntity)) {
+					lock.readLock().lock();
+					pageRepository.save(pageEntity);
+					lock.readLock().unlock();
 					try {
-						sleep(100);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
+						queueForIndexing.put(pageEntity);
+					} catch (InterruptedException ex) {
+						throw new RuntimeException(ex);
 					}
+				}
+
+			} else {
+				try {
+					sleep(1000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
 				}
 			}
 
-//			if (entities.size() == COUNT_TO_SAVE) {
-//				pageRepository.saveAll(entities);
-//				dropPageEntitiesToLemmasQueue(entities);
-//				entities.clear();
-//			}
-
-			if (notAllowed() || indexingStopped) {
-//				for (PageEntity pE : entities) {
-//					pageRepository.save(pE);
-//				}
-//				pageRepository.saveAll(entities);
-//				dropPageEntitiesToLemmasQueue(entities);
+			if (previousStepDoneAndQueueEmpty() || indexingStopped) {
 				rootLogger.warn("::: "
 						+ pageRepository.countBySiteEntity(siteEntity)
 						+ " pages saved in DB, site -> " + siteEntity.getName()
@@ -87,17 +75,26 @@ public class PagesSavingService {
 		}
 	}
 
-	private void dropPageEntitiesToLemmasQueue(@NotNull Set<PageEntity> entities) {
-		for (PageEntity e : entities) {
-			try {
-				queueForIndexing.put(e);
-			} catch (InterruptedException ex) {
-				throw new RuntimeException(ex);
-			}
-		}
-	}
-
-	private boolean notAllowed() {
+	private boolean previousStepDoneAndQueueEmpty() {
 		return scrapingIsDone && !queue.iterator().hasNext();
 	}
 }
+
+//	private void dropPageEntitiesToLemmasQueue(@NotNull Set<PageEntity> entities) {
+//		for (PageEntity e : entities) {
+//			try {
+//				queueForIndexing.put(e);
+//			} catch (InterruptedException ex) {
+//				throw new RuntimeException(ex);
+//			}
+//		}
+//	}
+
+
+//			if (entities.size() == COUNT_TO_SAVE) {
+//				pageRepository.saveAll(entities);
+//				dropPageEntitiesToLemmasQueue(entities);
+//				entities.clear();
+//			}
+
+//	Set<PageEntity> entities = new HashSet<>();

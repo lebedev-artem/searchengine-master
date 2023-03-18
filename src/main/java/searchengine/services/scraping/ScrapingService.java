@@ -102,7 +102,6 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 		forkTasksFromSubtasks(subTasks, childLinksOfTask);
 		joinTasksFromSubtasks(subTasks);
 
-		System.gc();
 		return true;
 	}
 
@@ -142,7 +141,6 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 			} catch (StringIndexOutOfBoundsException | MalformedURLException ignored) {
 			}
 		}
-		elements.clear();
 		return newChildLinks;
 	}
 
@@ -176,20 +174,18 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 	}
 
 	private void dropPageToQueue(String urlToDrop) {
-//		synchronized (PageRepository.class) {
+
 		try {
 			String path = new URL(urlToDrop).getPath();
 			lock.writeLock().lock();
 			if (!pageRepository.existsByPathAndSiteEntity(path, siteEntity)) {
-				lock.readLock().lock();
 				queueOfPagesForSaving.put(pageEntity);
-				lock.readLock().unlock();
 			}
 			lock.writeLock().unlock();
 		} catch (InterruptedException | MalformedURLException e) {
 			throw new RuntimeException(e);
 		}
-//		}
+
 		pageEntity = null;
 	}
 

@@ -16,8 +16,8 @@ import searchengine.repositories.SiteRepository;
 import searchengine.services.indexing.IndexResponse;
 import searchengine.services.indexing.IndexingMode;
 import searchengine.services.indexing.SchemaInitialization;
-import searchengine.services.interfaces.IndexService;
-import searchengine.services.interfaces.StatisticsService;
+import searchengine.services.indexing.IndexService;
+import searchengine.services.statistics.StatisticsService;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Set;
@@ -52,27 +52,21 @@ public class ApiController {
 
 	@GetMapping("/startIndexing")
 	public ResponseEntity<?> startIndexing() throws Exception {
-		schemaInitialization.setMode(IndexingMode.FULL);
 		Set<SiteEntity> siteEntities = schemaInitialization.fullInit();
-
-		if (siteEntities.size() == 0)
-			return indexResponse.startFailedEmptySites();
-
-		siteEntities.forEach(e -> {
-			if (!siteRepository.existsByUrl(e.getUrl())) siteRepository.save(e);
-		});
+		if (siteEntities.size() == 0) return indexResponse.startFailedEmptySites();
 
 		return indexService.indexingStart(siteEntities);
 	}
 
 	@GetMapping("/stopIndexing")
 	public ResponseEntity<?> stopIndexing() throws ExecutionException, InterruptedException {
-		schemaInitialization.setMode(IndexingMode.PARTIAL);
+
 		return indexService.indexingStop();
 	}
 
 	@PostMapping("/indexPage")
 	public ResponseEntity<?> indexPage(@NotNull HttpServletRequest request) throws Exception {
+		schemaInitialization.partialInit(request);
 		return indexService.indexingPageStart(request);
 	}
 
