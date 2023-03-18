@@ -50,9 +50,9 @@ public class IndexServiceImpl implements IndexService {
 
 	//	private Integer siteId;
 	public static final StringPool stringPool = new StringPool();
-	private BlockingQueue<PageEntity> queueOfPagesForLemmasCollecting = new LinkedBlockingQueue<>(1_000);
-	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(1_000);
-	private BlockingQueue<SearchIndexEntity> queueOfLemmasForIndexGeneration = new LinkedBlockingQueue<>(3_000);
+	private BlockingQueue<PageEntity> queueOfPagesForLemmasCollecting = new LinkedBlockingQueue<>(100);
+	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(100);
+	private BlockingQueue<SearchIndexEntity> queueOfLemmasForIndexGeneration = new LinkedBlockingQueue<>(1_000);
 
 	@Autowired
 	Site site;
@@ -80,14 +80,14 @@ public class IndexServiceImpl implements IndexService {
 	@Override
 	@Transactional
 	public synchronized ResponseEntity<?> indexingStart(@NotNull Set<SiteEntity> siteEntities) {
-
-		rootLogger.warn("start of indexingStart");
-		for (SiteEntity s : siteRepository.findAll()) {
-			rootLogger.error(s.getName() + " from DB has id = " + s.getId());
-		}
-		for (SiteEntity sE : siteEntities) {
-			rootLogger.error("id of " + sE.getName() + "from entities = " + sE.getId());
-		}
+//
+//		rootLogger.warn("start of indexingStart");
+//		for (SiteEntity s : siteRepository.findAll()) {
+//			rootLogger.error(s.getName() + " from DB has id = " + s.getId());
+//		}
+//		for (SiteEntity sE : siteEntities) {
+//			rootLogger.error("id of " + sE.getName() + "from entities = " + sE.getId());
+//		}
 
 
 		long time = System.currentTimeMillis();
@@ -111,7 +111,12 @@ public class IndexServiceImpl implements IndexService {
 						startScrapingOfSite(rootScrapTask, fjpPool, siteEntity);
 						latch.countDown();
 						pagesSavingService.setScrapingIsDone(true);
-						StaticVault.pages.clear();
+						rootLogger.warn("string pool paths size = " + scrapingService.getStringPool().pathsSize());
+						rootLogger.warn("string pool added paths size = " + scrapingService.getStringPool().addedPathsToQueue.size());
+						scrapingService.getStringPool().paths.clear();
+						scrapingService.getStringPool().addedPathsToQueue.clear();
+						System.gc();
+//						StaticVault.pages.clear();
 						rootLogger.info(": Scraping of " + siteEntity.getName() + " finished in " + (System.currentTimeMillis() - timeMain) + " ms");
 						rootLogger.info("::: scraping-thread finished, latch =  " + latch.getCount());
 					}, "scrap-thread");
@@ -120,6 +125,7 @@ public class IndexServiceImpl implements IndexService {
 						startPagesSaver(siteEntity);
 						latch.countDown();
 						lemmasCollectingService.setSavingPagesIsDone(true);
+//						StaticVault.pages.clear();
 						rootLogger.info("::: saving-pages-thread finished, latch =  " + latch.getCount());
 					}, "saving-thread");
 

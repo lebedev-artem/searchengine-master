@@ -30,7 +30,7 @@ public class PagesSavingService {
 	private final Integer COUNT_TO_SAVE = 50;
 	private BlockingQueue<PageEntity> queue;
 	private BlockingQueue<PageEntity> queueForIndexing;
-//	private Site site;
+	//	private Site site;
 	private SiteEntity siteEntity;
 
 	@Autowired
@@ -45,29 +45,39 @@ public class PagesSavingService {
 
 		while (true) {
 			PageEntity pageEntity = queue.poll();
-			if (pageEntity != null) {
-				if (!pageRepository.existsByPathAndSiteEntity(pageEntity.getPath(), siteEntity))
-					entities.add(pageEntity);
-			} else {
-				try {
-					sleep(100);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
+			synchronized (PageRepository.class) {
+				if (pageEntity != null) {
+					if (!pageRepository.existsByPathAndSiteEntity(pageEntity.getPath(), siteEntity)) {
+						pageRepository.save(pageEntity);
+						try {
+							queueForIndexing.put(pageEntity);
+						} catch (InterruptedException ex) {
+							throw new RuntimeException(ex);
+						}
+					}
+
+//						entities.add(pageEntity);
+				} else {
+					try {
+						sleep(100);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
 				}
 			}
 
-			if (entities.size() == COUNT_TO_SAVE) {
-				pageRepository.saveAll(entities);
-				dropPageEntitiesToLemmasQueue(entities);
-				entities.clear();
-			}
+//			if (entities.size() == COUNT_TO_SAVE) {
+//				pageRepository.saveAll(entities);
+//				dropPageEntitiesToLemmasQueue(entities);
+//				entities.clear();
+//			}
 
 			if (notAllowed() || indexingStopped) {
-				for (PageEntity pE: entities) {
-					pageRepository.save(pE);
-				}
+//				for (PageEntity pE : entities) {
+//					pageRepository.save(pE);
+//				}
 //				pageRepository.saveAll(entities);
-				dropPageEntitiesToLemmasQueue(entities);
+//				dropPageEntitiesToLemmasQueue(entities);
 				rootLogger.warn("::: "
 						+ pageRepository.countBySiteEntity(siteEntity)
 						+ " pages saved in DB, site -> " + siteEntity.getName()

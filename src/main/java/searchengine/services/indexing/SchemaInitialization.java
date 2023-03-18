@@ -71,16 +71,15 @@ public class SchemaInitialization {
 
 					//Delete all pages, lemmas By SitEntity, index entries by PageEntities in one Query. CASCADE
 
-
-					rootLogger.warn(pageRepository.count() + " pages");
-					rootLogger.warn(lemmaRepository.count() + " lemmas");
-					rootLogger.warn(searchIndexRepository.count() + " index entries");
-
 				} else {
 					newSiteEntities.add(initSiteRow(n));
 				}
 			});
 		}
+
+		rootLogger.warn(pageRepository.count() + " pages");
+		rootLogger.warn(lemmaRepository.count() + " lemmas");
+		rootLogger.warn(searchIndexRepository.count() + " index entries");
 		return newSiteEntities;
 	}
 

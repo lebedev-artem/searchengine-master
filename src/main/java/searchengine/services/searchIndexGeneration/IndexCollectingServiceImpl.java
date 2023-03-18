@@ -56,11 +56,14 @@ public class IndexCollectingServiceImpl {
 				for (SearchIndexEntity s: searchIndexEntitiesStaticMap) {
 					s.setLemmaEntity(lemmaEntitiesStaticMap.get(s.getLemmaEntity().getLemma()));
 				}
+
+				System.gc();
 				System.out.println("updated");
 				System.out.println(" lemmas size " + lemmaEntitiesStaticMap.size());
 				int count = 0;
 				lemmaRepository.saveAll(lemmaEntitiesStaticMap.values());
 				System.out.println(lemmaRepository.countBySiteEntity(siteEntity) + " saved");
+				StaticVault.lemmaEntitiesMap.clear();
 				System.out.println("start saving index");
 				int beforasavin = (int) searchIndexRepository.count();
 				searchIndexRepository.saveAll(searchIndexEntitiesStaticMap);

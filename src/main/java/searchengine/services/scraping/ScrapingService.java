@@ -24,9 +24,12 @@ import searchengine.services.stuff.StringPool;
 import searchengine.services.stuff.StaticVault;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static searchengine.services.stuff.Regex.*;
 
@@ -40,7 +43,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 	private static final Logger logger = LogManager.getLogger(ScrapingService.class);
 	public static volatile boolean allowed = true;
 	private ScrapTask parentTask;
-//	private final ReadWriteLock lock = new ReentrantReadWriteLock();
+	private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
 	private Connection.Response jsoupResponse;
 	private Document document;
@@ -51,7 +54,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 	private String parentPath;
 	private String parentUrl;
 	private Site site;
-	private Long siteId;
+	private Integer siteId;
 	private SiteEntity siteEntity;
 	private PageEntity pageEntity;
 
@@ -88,7 +91,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 
 		Connection.Response responseSinglePage = getResponseFromUrl(urlOfTask);
 		if (responseSinglePage != null) {
-			dropPageToQueue();
+			dropPageToQueue(urlOfTask);
 		} else return true;
 
 		if (jsoupResponse == null)
@@ -111,22 +114,32 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 
 		for (Element element : elements) {
 			String href = getHrefFromElement(element);
-
 			try {
-				if (url.matches(URL_IS_VALID) && href.startsWith(StaticVault.siteUrl) && !newChildLinks.containsKey(href) && !href.equals(url)) {
+				if (pageRepository.existsByPathAndSiteEntity(new URL(href).getPath(), siteEntity)) continue;
+
+				//можно добавить проверку чтоб на уровень вниз не уходить, цикличность
+				if (url.matches(URL_IS_VALID)
+						&& href.startsWith(StaticVault.siteUrl)
+						&& !href.contains("#")
+						&& !href.equals(url)
+						&& !newChildLinks.containsKey(href)) {
 					if (((HTML_EXT.stream().anyMatch(href.substring(href.length() - 4)::contains) || !href.matches(URL_IS_FILE_LINK)))) {
 
-						String elementPath = href.substring(url.length() - 1);
-						synchronized (StringPool.class) {
-							if (!stringPool.getPaths().containsKey(elementPath)) {
-								stringPool.internPath(elementPath);
-								newChildLinks.put(href, parentStatusCode);
-							}
-						}
-
+//						synchronized (StringPool.class) {
+						//Здесь можно еще добавить проверку по репозиторию
+//						lock.writeLock().lock();
+//						if (!pageRepository.existsByPathAndSiteEntity(new URL(href).getPath(), siteEntity)) {
+						newChildLinks.put(href, parentStatusCode);
+//						}
+//						lock.writeLock().unlock();
+//							if (!stringPool.getPaths().containsKey(href)) {
+//								stringPool.internPath(href);
+//								newChildLinks.put(href, parentStatusCode);
+//							}
+//						}
 					}
 				}
-			} catch (StringIndexOutOfBoundsException ignored) {
+			} catch (StringIndexOutOfBoundsException | MalformedURLException ignored) {
 			}
 		}
 		elements.clear();
@@ -136,6 +149,8 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 	@ConfigurationProperties(prefix = "jsoup-setting")
 	private Connection.@Nullable Response getResponseFromUrl(String url) {
 		try {
+			if (pageRepository.existsByPathAndSiteEntity(new URL(url).getPath(), siteEntity)) return null;
+
 			jsoupResponse = Jsoup.connect(url).execute();
 			parentUrl = jsoupResponse.url().toString();
 			jsoupResponse.bufferUp();
@@ -160,30 +175,36 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 		return jsoupResponse;
 	}
 
-	private void dropPageToQueue() {
-		synchronized (stringPool.getAddedPathsToQueue()) {
-			if (!stringPool.getAddedPathsToQueue().containsKey(pageEntity.getPath())) {
-				try {
-					stringPool.internAddedPathToQueue(parentPath);
-					queueOfPagesForSaving.put(pageEntity);
-				} catch (InterruptedException e) {
-					throw new RuntimeException(e);
-				}
+	private void dropPageToQueue(String urlToDrop) {
+//		synchronized (PageRepository.class) {
+		try {
+			String path = new URL(urlToDrop).getPath();
+			lock.writeLock().lock();
+			if (!pageRepository.existsByPathAndSiteEntity(path, siteEntity)) {
+				lock.readLock().lock();
+				queueOfPagesForSaving.put(pageEntity);
+				lock.readLock().unlock();
 			}
-			pageEntity = null;
+			lock.writeLock().unlock();
+		} catch (InterruptedException | MalformedURLException e) {
+			throw new RuntimeException(e);
 		}
+//		}
+		pageEntity = null;
 	}
 
 	private void forkTasksFromSubtasks(List<ScrapingService> subTasks, Map<String, Integer> subLinks) {
 		if ((subLinks == null) || subLinks.isEmpty()) return;
 
-		for (String subLink : subLinks.keySet()) {
-			if (childIsValidToFork(subLink)) {
-				ScrapTask childScrapTask = new ScrapTask(subLink);
+		for (String childLink : subLinks.keySet()) {
+			if (childIsValidToFork(childLink)) {
+				ScrapTask childScrapTask = new ScrapTask(childLink);
 				ScrapingService task = new ScrapingService(childScrapTask, siteEntity, queueOfPagesForSaving, queueOfPagesForIndexing, pageRepository, siteRepository);
 				task.fork();
 				subTasks.add(task);
 				parentTask.addChildTask(childScrapTask);
+			} else {
+				StaticVault.skippedPaths.add(childLink);
 			}
 		}
 	}
@@ -194,8 +215,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 
 	private static boolean childIsValidToFork(@NotNull String subLink) {
 		return (HTML_EXT.stream().anyMatch(subLink.substring(subLink.length() - 4)::contains))
-				| ((!subLink.matches(URL_IS_FILE_LINK))
-				&& (!subLink.contains("#")));
+				| ((!subLink.matches(URL_IS_FILE_LINK)) && (!subLink.contains("#")));
 	}
 
 	private @NotNull Boolean breakScraping(List<ScrapingService> subTasks) {

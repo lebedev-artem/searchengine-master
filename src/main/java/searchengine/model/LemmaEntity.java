@@ -18,11 +18,11 @@ public class LemmaEntity {
 	@Id
 	@Column(nullable = false)
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+	private Integer id;
 
-//	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.MERGE, CascadeType.REFRESH})
+	//	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.MERGE, CascadeType.REFRESH})
 //	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REFRESH})
-	@ManyToOne(fetch = FetchType.EAGER)
+	@ManyToOne(fetch = FetchType.LAZY)
 	@OnDelete(action = OnDeleteAction.NO_ACTION)
 	@JoinColumn(foreignKey = @ForeignKey(name = "lemma_site_FK"), columnDefinition = "Integer",
 			referencedColumnName = "id", name = "site_id", nullable = false, updatable = false)
@@ -34,13 +34,15 @@ public class LemmaEntity {
 	@Column(nullable = false)
 	private int frequency;
 
-	@ManyToMany(cascade = {CascadeType.ALL})
-	@OnDelete(action = OnDeleteAction.CASCADE)
-	@JoinTable(
-			name = "search_index",
-			joinColumns = {@JoinColumn(name = "lemma_id")},
-			inverseJoinColumns = {@JoinColumn(name = "page_id")}
-	)
+	//	@ManyToMany(cascade = {CascadeType.ALL})
+//	@OnDelete(action = OnDeleteAction.CASCADE)
+//	@JoinTable(
+//			name = "search_index",
+//			joinColumns = {@JoinColumn(name = "lemma_id")},
+//			inverseJoinColumns = {@JoinColumn(name = "page_id")}
+//	)
+	@ManyToMany(fetch = FetchType.LAZY, mappedBy = "lemmaEntities", cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
+//	@OnDelete(action = OnDeleteAction.CASCADE)
 	private Set<PageEntity> pageEntities = new HashSet<>();
 
 

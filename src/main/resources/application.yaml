@@ -10,25 +10,18 @@ spring:
   output:
       ansi:
         enabled: always
-  cache:
-    cache-names:
-      - siteEntityCache
-    caches:
-      siteEntityCache:
-        expire-after-write: 600000
-        maximum-size: 1000
 
   jpa:
     properties:
       hibernate:
-        enable_lazy_load_no_trans: true
-        event:
-          merge:
-            entity_copy_observer: allow
+#        enable_lazy_load_no_trans: true
+#        event:
+#          merge:
+#            entity_copy_observer: allow
         dialect: org.hibernate.dialect.MySQL8Dialect
 
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
       show-sql: true
       format_sql: true
       use_sql_comments: true
@@ -44,34 +37,33 @@ jsoup-setting:
 
 indexing-settings:
   sites:
-    - url: http://www.artlebedev.ru/
-      name: ArtLebedev
-#    - url: https://volochek.life/
-#      name: Volochek
-#    - url: https://www.playback.ru/
-#      name: PlayBack.Ru
-    - url: http://radiomv.ru/
-      name: Радио_MV
-    - url: https://ipfran.ru/
-      name: IP_fran
-#    - url: www.bbc.com
-#      name: BBC.com
+#    - url: http://www.artlebedev.ru/
+#      name: ArtLebedev
 #    - url: https://lenta.ru/
 #      name: Lenta
-    - url: https://nikoartgallery.com/
-      name: Niko_Art_Gallery
-    - url: https://et-cetera.ru/mobile/
-      name: Et_Cetera_4_mobile
-    - url: https://www.lutherancathedral.ru/
-      name: Lutheran_cathedral_BIG
-    - url: https://dombulgakova.ru/
-      name: Дом_Булгакова
-    - url: https://www.svetlovka.ru/
-      name: Светловка
-    - url: http://cimus.biz/
-      name: cimus.biz
-    - url: https://exotic-zoo.ru
-      name: EXOTIC Zoo
-
+#    - url: https://volochek.life/
+#      name: Volochek_very_big_string_apporx_3r_links
+#    - url: https://www.playback.ru/
+#      name: PlayBack.Ru
+#    - url: http://radiomv.ru/
+#      name: Радио_MV_13_pages
+#    - url: https://ipfran.ru/
+#      name: IP_fran_1042_pages
+#    - url: www.bbc.com
+#      name: BBC.com
+#    - url: https://nikoartgallery.com/
+#      name: Niko_Art_Gallery_91_pages
+#    - url: https://et-cetera.ru/mobile/
+#      name: Et_Cetera_4_mobile_52_pages
+#    - url: https://www.lutherancathedral.ru/
+#      name: Lutheran_cathedral_BIG_842_pages
+#    - url: https://dombulgakova.ru/
+#      name: Дом_Булгакова_529_pages
+#    - url: https://www.svetlovka.ru/
+#      name: Светловка_231_pages
+#    - url: http://cimus.biz/
+#      name: cimus.biz_19_pages
+    - url: https://xakep.ru/
+      name: xaker_big
 
 

@@ -9,8 +9,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Setter
 @Component
 public class StringPool {
-	private final Map<String, String> addedPathsToQueue;
-	private final Map<String, String> paths;
+	public final Map<String, String> addedPathsToQueue;
+	public final Map<String, String> paths;
 
 
 	public StringPool() {

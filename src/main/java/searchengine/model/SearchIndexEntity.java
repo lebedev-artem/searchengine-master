@@ -16,13 +16,13 @@ public class SearchIndexEntity {
 	@EmbeddedId
 	private SearchIndexId id;
 
-	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
+	@ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH}, optional = false)
 	@OnDelete(action = OnDeleteAction.CASCADE)
 	@MapsId("pageId")
 	@JoinColumn(name = "page_id", updatable = false)
 	private PageEntity pageEntity;
 
-	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
+	@ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH}, optional = false)
 //	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REMOVE, CascadeType.REFRESH})
 	@OnDelete(action = OnDeleteAction.CASCADE)
 	@MapsId("lemmaId")

@@ -9,12 +9,12 @@ import java.io.Serializable;
 public class SearchIndexId implements Serializable {
 
 	@Column(name = "page_id")
-	private Long pageId;
+	private Integer pageId;
 
 	@Column(name = "lemma_id")
-	private Long lemmaId;
+	private Integer lemmaId;
 
-	public SearchIndexId(Long pageId, Long lemmaId) {
+	public SearchIndexId(Integer pageId, Integer lemmaId) {
 		this.pageId = pageId;
 		this.lemmaId = lemmaId;
 	}
