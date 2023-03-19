@@ -57,15 +57,13 @@ indexing-settings:
 #      name: Et_Cetera_4_mobile_52_pages
 #    - url: https://www.lutherancathedral.ru/
 #      name: Lutheran_cathedral_BIG_842_pages
-    - url: https://dombulgakova.ru/
-      name: Дом_Булгакова_529_pages
+#    - url: https://dombulgakova.ru/
+#      name: Дом_Булгакова_529_pages
 #    - url: https://www.svetlovka.ru/
 #      name: Светловка_231_pages
 #    - url: http://cimus.biz/
 #      name: cimus.biz_19_pages
-#    - url: https://xakep.ru/
-#      name: xakep_big
-#    - url: https://www.baeldung.com/
-#      name: baeldung
+    - url: https://xakep.ru/
+      name: xakep_big
 
 

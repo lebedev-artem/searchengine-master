@@ -1,4 +1,4 @@
-package searchengine.services.queues;
+package searchengine.services.savingpages;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -6,14 +6,12 @@ import lombok.Setter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -22,14 +20,15 @@ import static java.lang.Thread.sleep;
 
 @Getter
 @Setter
-@Component
+@Service
 @NoArgsConstructor
-public class PagesSavingService {
+public class SavingPagesServiceImpl implements SavingPagesService {
 	private static final Logger rootLogger = LogManager.getRootLogger();
+	private static final Logger logger = LogManager.getLogger("search_engine");
 	private boolean scrapingIsDone = false;
-	private volatile boolean indexingStopped = false;
-	private BlockingQueue<PageEntity> queue;
-	private BlockingQueue<PageEntity> queueForIndexing;
+	private volatile boolean pressedStop = false;
+	private BlockingQueue<PageEntity> incomeQueue;
+	private BlockingQueue<PageEntity> outcomeQueue;
 	private SiteEntity siteEntity;
 	private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -38,34 +37,40 @@ public class PagesSavingService {
 	@Autowired
 	SiteRepository siteRepository;
 
-	public void pagesSaving() {
+	public void savePages() {
 		scrapingIsDone = false;
 		long time = System.currentTimeMillis();
 
 		while (true) {
-			PageEntity pageEntity = queue.poll();
+			PageEntity pageEntity = incomeQueue.poll();
 
 			if (pageEntity != null) {
 				if (!pageRepository.existsByPathAndSiteEntity(pageEntity.getPath(), siteEntity)) {
 					lock.readLock().lock();
 					pageRepository.save(pageEntity);
+					System.out.println("page queue income = " + incomeQueue.size());
 					lock.readLock().unlock();
 					try {
-						queueForIndexing.put(pageEntity);
+						while (true){
+							if ((outcomeQueue.remainingCapacity() < 10) && (!pressedStop)){
+								Thread.sleep(10_000);
+							} else break;
+						}
+						outcomeQueue.put(pageEntity);
+						System.out.println("lemma out from page queue = " + outcomeQueue.size());
 					} catch (InterruptedException ex) {
-						throw new RuntimeException(ex);
+						rootLogger.error("Can't put pageEntity to outcomeQueue");
 					}
 				}
-
 			} else {
 				try {
 					sleep(1000);
 				} catch (InterruptedException e) {
-					e.printStackTrace();
+					rootLogger.error("Can't sleep after getting null pageEntity");
 				}
 			}
 
-			if (previousStepDoneAndQueueEmpty() || indexingStopped) {
+			if (previousStepDoneAndQueueEmpty() || pressedStop) {
 				rootLogger.warn("::: "
 						+ pageRepository.countBySiteEntity(siteEntity)
 						+ " pages saved in DB, site -> " + siteEntity.getName()
@@ -76,25 +81,6 @@ public class PagesSavingService {
 	}
 
 	private boolean previousStepDoneAndQueueEmpty() {
-		return scrapingIsDone && !queue.iterator().hasNext();
+		return scrapingIsDone && !incomeQueue.iterator().hasNext();
 	}
 }
-
-//	private void dropPageEntitiesToLemmasQueue(@NotNull Set<PageEntity> entities) {
-//		for (PageEntity e : entities) {
-//			try {
-//				queueForIndexing.put(e);
-//			} catch (InterruptedException ex) {
-//				throw new RuntimeException(ex);
-//			}
-//		}
-//	}
-
-
-//			if (entities.size() == COUNT_TO_SAVE) {
-//				pageRepository.saveAll(entities);
-//				dropPageEntitiesToLemmasQueue(entities);
-//				entities.clear();
-//			}
-
-//	Set<PageEntity> entities = new HashSet<>();

@@ -34,7 +34,7 @@
         </Root>
 
         <!-- Logging at TRACE level -->
-        <logger name="searchengine" level="trace" additivity="false">
+        <logger name="search_engine" level="trace" additivity="false">
             <appender-ref ref="LogFile" />
         </logger>
     </Loggers>

@@ -13,7 +13,7 @@ import searchengine.config.SitesList;
 import searchengine.model.*;
 import searchengine.repositories.*;
 import searchengine.services.lemmatization.LemmasCollectingService;
-import searchengine.services.queues.PagesSavingService;
+import searchengine.services.savingpages.SavingPagesService;
 import searchengine.services.searchIndexGeneration.IndexCollectingServiceImpl;
 import searchengine.services.stuff.StringPool;
 import searchengine.services.stuff.StaticVault;
@@ -37,18 +37,15 @@ public class IndexServiceImpl implements IndexService {
 
 	private static final Logger logger = LogManager.getLogger(IndexService.class);
 	private static final Logger rootLogger = LogManager.getRootLogger();
-	//	private final IndexResponse indexResponse;
 	private static final ThreadLocal<Thread> singleTask = new ThreadLocal<>();
 
 	public volatile boolean allowed = true;
 	public volatile boolean isStarted = false;
-//	public static boolean isRanOnce = false;
 
-	//	private Integer siteId;
 	public static final StringPool stringPool = new StringPool();
-	private BlockingQueue<PageEntity> queueOfPagesForLemmasCollecting = new LinkedBlockingQueue<>(10_000);
-	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(1_000);
-	private BlockingQueue<SearchIndexEntity> queueOfLemmasForIndexGeneration = new LinkedBlockingQueue<>(100_000);
+	private BlockingQueue<PageEntity> queueOfPagesForLemmasCollecting = new LinkedBlockingQueue<>(150);
+	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(100);
+	private BlockingQueue<SearchIndexEntity> queueOfLemmasForIndexGeneration = new LinkedBlockingQueue<>(10_000);
 
 	@Autowired
 	Site site;
@@ -65,7 +62,7 @@ public class IndexServiceImpl implements IndexService {
 	@Autowired
 	LemmasCollectingService lemmasCollectingService;
 	@Autowired
-	PagesSavingService pagesSavingService;
+	SavingPagesService pagesSavingService;
 	@Autowired
 	ScrapingService scrapingService;
 	@Autowired
@@ -182,7 +179,7 @@ public class IndexServiceImpl implements IndexService {
 		setStarted(false);
 		setAllowed(false);
 		scrapingService.setAllowed(false);
-		pagesSavingService.setIndexingStopped(true);
+		pagesSavingService.setPressedStop(true);
 		lemmasCollectingService.setIndexingStopped(true);
 		indexGenerationService.setIndexingStopped(true);
 		siteRepository.updateAllStatusStatusTimeError(IndexingStatus.FAILED.status, LocalDateTime.now(), "Индексация остановлена пользователем");
@@ -221,11 +218,11 @@ public class IndexServiceImpl implements IndexService {
 
 	public void startPagesSaver(SiteEntity siteEntity) {
 		pagesSavingService.setScrapingIsDone(false);
-		pagesSavingService.setIndexingStopped(false);
-		pagesSavingService.setQueue(queueOfPagesForSaving);
-		pagesSavingService.setQueueForIndexing(queueOfPagesForLemmasCollecting);
+		pagesSavingService.setPressedStop(false);
+		pagesSavingService.setIncomeQueue(queueOfPagesForSaving);
+		pagesSavingService.setOutcomeQueue(queueOfPagesForLemmasCollecting);
 		pagesSavingService.setSiteEntity(siteEntity);
-		pagesSavingService.pagesSaving();
+		pagesSavingService.savePages();
 	}
 
 	public void startLemmasCollector(SiteEntity siteEntity) {

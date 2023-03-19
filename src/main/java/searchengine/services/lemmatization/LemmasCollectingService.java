@@ -61,6 +61,7 @@ public class LemmasCollectingService {
 		while (true) {
 			pageEntity = queue.poll();
 			if (pageEntity != null) {
+				System.out.println("lemma income queue = " + queue.size());
 				collectedLemmas = collectLemmas(pageEntity.getContent());
 
 				for (String lemma : collectedLemmas.keySet()) {
@@ -98,7 +99,9 @@ public class LemmasCollectingService {
 					} catch (InterruptedException e) {
 						throw new RuntimeException(e);
 					}
+
 				});
+				System.out.println("index outcome queue = " + queueOfSearchIndexEntities.size());
 				lemmaEntities.values().clear();
 				searchIndexEntities.values().clear();
 

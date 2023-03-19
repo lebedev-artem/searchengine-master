@@ -179,7 +179,13 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 			String path = new URL(urlToDrop).getPath();
 			lock.writeLock().lock();
 			if (!pageRepository.existsByPathAndSiteEntity(path, siteEntity)) {
+				while (true){
+					if ((queueOfPagesForSaving.remainingCapacity() < 10) && (allowed)){
+						Thread.sleep(10_000);
+					} else break;
+				}
 				queueOfPagesForSaving.put(pageEntity);
+
 			}
 			lock.writeLock().unlock();
 		} catch (InterruptedException | MalformedURLException e) {
