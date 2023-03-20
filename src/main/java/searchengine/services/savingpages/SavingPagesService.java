@@ -14,7 +14,7 @@ public interface SavingPagesService {
 
 	void setIncomeQueue(BlockingQueue<PageEntity> incomeQueue);
 
-	void setOutcomeQueue(BlockingQueue<PageEntity> outcomeQueue);
+	void setOutcomeQueue(BlockingQueue<Integer> outcomeQueue);
 
 	void setSiteEntity(SiteEntity siteEntity);
 }

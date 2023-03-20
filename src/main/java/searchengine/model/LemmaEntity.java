@@ -41,8 +41,8 @@ public class LemmaEntity {
 //			joinColumns = {@JoinColumn(name = "lemma_id")},
 //			inverseJoinColumns = {@JoinColumn(name = "page_id")}
 //	)
-	@ManyToMany(fetch = FetchType.LAZY, mappedBy = "lemmaEntities", cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
-//	@OnDelete(action = OnDeleteAction.CASCADE)
+	@ManyToMany(fetch = FetchType.LAZY, mappedBy = "lemmaEntities", cascade = {CascadeType.MERGE, CascadeType.REFRESH})
+	@OnDelete(action = OnDeleteAction.NO_ACTION)
 	private Set<PageEntity> pageEntities = new HashSet<>();
 
 

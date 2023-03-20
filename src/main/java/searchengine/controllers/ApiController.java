@@ -71,7 +71,7 @@ public class ApiController {
 	}
 
 	@PostMapping("/testDeleteSiteWithPages")
-	public void test(long request) throws Exception {
+	public void test(Integer request) throws Exception {
 		indexService.test(request);
 	}
 }

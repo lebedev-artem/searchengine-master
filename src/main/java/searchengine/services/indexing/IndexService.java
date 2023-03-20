@@ -17,6 +17,6 @@ public interface IndexService{
 	void startIndexGenerator(SiteEntity siteEntity);
 
 	boolean isAllowed();
-	void test(Long id);
+	void test(Integer id);
 
 }

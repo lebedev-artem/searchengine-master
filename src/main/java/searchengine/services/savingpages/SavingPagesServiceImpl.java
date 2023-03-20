@@ -6,6 +6,7 @@ import lombok.Setter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
@@ -25,12 +26,12 @@ import static java.lang.Thread.sleep;
 public class SavingPagesServiceImpl implements SavingPagesService {
 	private static final Logger rootLogger = LogManager.getRootLogger();
 	private static final Logger logger = LogManager.getLogger("search_engine");
+	private final ReadWriteLock lock = new ReentrantReadWriteLock();
 	private boolean scrapingIsDone = false;
 	private volatile boolean pressedStop = false;
 	private BlockingQueue<PageEntity> incomeQueue;
-	private BlockingQueue<PageEntity> outcomeQueue;
+	private BlockingQueue<Integer> outcomeQueue;
 	private SiteEntity siteEntity;
-	private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
 	@Autowired
 	PageRepository pageRepository;
@@ -45,32 +46,40 @@ public class SavingPagesServiceImpl implements SavingPagesService {
 			PageEntity pageEntity = incomeQueue.poll();
 
 			if (pageEntity != null) {
+				long save = System.currentTimeMillis();
 				if (!pageRepository.existsByPathAndSiteEntity(pageEntity.getPath(), siteEntity)) {
 					lock.readLock().lock();
 					pageRepository.save(pageEntity);
-					System.out.println("page queue income = " + incomeQueue.size());
+
+//					System.out.println("page queue income = " + incomeQueue.size());
 					lock.readLock().unlock();
 					try {
-						while (true){
-							if ((outcomeQueue.remainingCapacity() < 10) && (!pressedStop)){
-								Thread.sleep(10_000);
-							} else break;
-						}
-						outcomeQueue.put(pageEntity);
-						System.out.println("lemma out from page queue = " + outcomeQueue.size());
+//						while (true){
+//							if ((outcomeQueue.remainingCapacity() < 10) && (!pressedStop)){
+//								Thread.sleep(5_000);
+//							} else break;
+//						}
+						outcomeQueue.put(pageEntity.getId());
+						System.out.println("---page saved in " + (System.currentTimeMillis() - save) + " ms");
+						System.out.println("income queue " + incomeQueue.size());
+						System.out.println("outcome queue " + outcomeQueue.size());
+
+//						System.out.println("lemma out from page queue = " + outcomeQueue.size());
 					} catch (InterruptedException ex) {
 						rootLogger.error("Can't put pageEntity to outcomeQueue");
 					}
 				}
 			} else {
 				try {
-					sleep(1000);
+					sleep(10);
 				} catch (InterruptedException e) {
 					rootLogger.error("Can't sleep after getting null pageEntity");
 				}
 			}
 
 			if (previousStepDoneAndQueueEmpty() || pressedStop) {
+				outcomeQueue.clear();
+				incomeQueue.clear();
 				rootLogger.warn("::: "
 						+ pageRepository.countBySiteEntity(siteEntity)
 						+ " pages saved in DB, site -> " + siteEntity.getName()

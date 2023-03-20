@@ -57,4 +57,6 @@ public interface PageRepository extends JpaRepository<PageEntity, Long> {
 	Integer countAllPages();
 
 
+	PageEntity getReferenceById(Integer id);
+
 }

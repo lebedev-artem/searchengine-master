@@ -44,6 +44,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 	public static volatile boolean allowed = true;
 	private ScrapTask parentTask;
 	private final ReadWriteLock lock = new ReentrantReadWriteLock();
+	long timeStart;
 
 	private Connection.Response jsoupResponse;
 	private Document document;
@@ -59,7 +60,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 	private PageEntity pageEntity;
 
 	private BlockingQueue<PageEntity> queueOfPagesForSaving;
-	private BlockingQueue<PageEntity> queueOfPagesForIndexing;
+	private BlockingQueue<Integer> queueOfPagesForIndexing;
 
 	private PageRepository pageRepository;
 	private SiteRepository siteRepository;
@@ -68,7 +69,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 	public ScrapingService(ScrapTask scrapTask,
 	                       @NotNull SiteEntity siteEntity,
 	                       BlockingQueue<PageEntity> queueOfPagesForSaving,
-	                       BlockingQueue<PageEntity> queueOfPagesForIndexing,
+	                       BlockingQueue<Integer> queueOfPagesForIndexing,
 	                       PageRepository pageRepository,
 	                       SiteRepository siteRepository) {
 		this.parentTask = scrapTask;
@@ -84,6 +85,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 
 	@Override
 	protected Boolean compute() {
+		timeStart = System.currentTimeMillis();
 		String urlOfTask = parentTask.getUrl();
 		List<ScrapingService> subTasks = new LinkedList<>();
 
@@ -101,98 +103,106 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 
 		forkTasksFromSubtasks(subTasks, childLinksOfTask);
 		joinTasksFromSubtasks(subTasks);
-
+//		System.out.println("method compute - " + (System.currentTimeMillis() - timeStart) + " ms");
 		return true;
 	}
 
 	public synchronized Map<String, Integer> getChildLinks(String url, Document document) {
+		long t = System.currentTimeMillis();
 		Map<String, Integer> newChildLinks = new HashMap<>();
 		if (document == null) return newChildLinks;
 		Elements elements = document.select("a[href]");
 		if (elements.isEmpty()) return newChildLinks;
 
 		for (Element element : elements) {
-			String href = getHrefFromElement(element);
+			String href = getHrefFromElement(element).toLowerCase(Locale.ROOT);
 			try {
 				if (pageRepository.existsByPathAndSiteEntity(new URL(href).getPath(), siteEntity)) continue;
 
+//				if (href.endsWith("jpg")) {
+//					System.out.println("jpg");
+//				}
 				//можно добавить проверку чтоб на уровень вниз не уходить, цикличность
 				if (url.matches(URL_IS_VALID)
 						&& href.startsWith(StaticVault.siteUrl)
 						&& !href.contains("#")
 						&& !href.equals(url)
-						&& !newChildLinks.containsKey(href)) {
-					if (((HTML_EXT.stream().anyMatch(href.substring(href.length() - 4)::contains) || !href.matches(URL_IS_FILE_LINK)))) {
+						&& !newChildLinks.containsKey(href)
+						&& (HTML_EXT.stream().anyMatch(href.substring(href.length() - 4)::contains)
+						|| !href.matches(URL_IS_FILE_LINK))) {
+//					if
+//					{
 
 //						synchronized (StringPool.class) {
-						//Здесь можно еще добавить проверку по репозиторию
+					//Здесь можно еще добавить проверку по репозиторию
 //						lock.writeLock().lock();
-//						if (!pageRepository.existsByPathAndSiteEntity(new URL(href).getPath(), siteEntity)) {
+					if (!pageRepository.existsByPathAndSiteEntity(new URL(href).getPath(), siteEntity)) {
 						newChildLinks.put(href, parentStatusCode);
-//						}
+					}
 //						lock.writeLock().unlock();
 //							if (!stringPool.getPaths().containsKey(href)) {
 //								stringPool.internPath(href);
 //								newChildLinks.put(href, parentStatusCode);
 //							}
 //						}
-					}
+//					}
 				}
 			} catch (StringIndexOutOfBoundsException | MalformedURLException ignored) {
 			}
 		}
+//		System.out.println("method getChildLnks - " + (System.currentTimeMillis() - t) + " ms");
 		return newChildLinks;
 	}
 
 	@ConfigurationProperties(prefix = "jsoup-setting")
 	private Connection.@Nullable Response getResponseFromUrl(String url) {
+		long t = System.currentTimeMillis();
 		try {
-			if (pageRepository.existsByPathAndSiteEntity(new URL(url).getPath(), siteEntity)) return null;
+			if (pageRepository.existsByPathAndSiteEntity(new URL(url).getPath(), siteEntity))
+				return null;
 
 			jsoupResponse = Jsoup.connect(url).execute();
-			parentUrl = jsoupResponse.url().toString();
-			jsoupResponse.bufferUp();
-			if (StaticVault.siteUrl.isEmpty()) StaticVault.siteUrl = parentUrl;
-		} catch (IOException | UncheckedIOException exception) {
-			parentTask.setLastError(exception.getMessage());
-			return null;
-		}
+//			jsoupResponse.bufferUp();
+			if (!ACCEPTABLE_CONTENT_TYPES.contains(jsoupResponse.contentType())) {
+				return null;
 
-		if (!ACCEPTABLE_CONTENT_TYPES.contains(jsoupResponse.contentType())) {
-			return null;
-		} else {
-			try {
+			} else {
+				parentUrl = jsoupResponse.url().toString();
 				document = jsoupResponse.parse();
 				parentPath = new URL(url).getPath();
 				if (parentPath.equals("")) parentPath = "/";
-			} catch (IOException e) {
-				return null;
+				if (StaticVault.siteUrl.equals("")) StaticVault.siteUrl = parentUrl;
+
+				pageEntity = new PageEntity(siteEntity, jsoupResponse.statusCode(), document.html(), parentPath);
 			}
-			pageEntity = new PageEntity(siteEntity, jsoupResponse.statusCode(), document.html(), parentPath);
+		} catch (IOException | UncheckedIOException exception) {
+			logger.error("Can't parse JSOUP Response from URL = " + url);
+			parentTask.setLastError(exception.getMessage());
+			return null;
 		}
 		return jsoupResponse;
 	}
 
 	private void dropPageToQueue(String urlToDrop) {
-
+		long t = System.currentTimeMillis();
 		try {
 			String path = new URL(urlToDrop).getPath();
-			lock.writeLock().lock();
+//			lock.writeLock().lock();
 			if (!pageRepository.existsByPathAndSiteEntity(path, siteEntity)) {
-				while (true){
-					if ((queueOfPagesForSaving.remainingCapacity() < 10) && (allowed)){
-						Thread.sleep(10_000);
+				while (true) {
+					if ((queueOfPagesForSaving.remainingCapacity() < 10) && (allowed)) {
+						Thread.sleep(5_000);
 					} else break;
 				}
 				queueOfPagesForSaving.put(pageEntity);
 
 			}
-			lock.writeLock().unlock();
+//			lock.writeLock().unlock();
 		} catch (InterruptedException | MalformedURLException e) {
 			throw new RuntimeException(e);
 		}
-
 		pageEntity = null;
+//		System.out.println("method dropPage To Queue - " + (System.currentTimeMillis() - t) + " ms");
 	}
 
 	private void forkTasksFromSubtasks(List<ScrapingService> subTasks, Map<String, Integer> subLinks) {
@@ -205,8 +215,6 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 				task.fork();
 				subTasks.add(task);
 				parentTask.addChildTask(childScrapTask);
-			} else {
-				StaticVault.skippedPaths.add(childLink);
 			}
 		}
 	}

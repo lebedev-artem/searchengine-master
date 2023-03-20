@@ -43,9 +43,10 @@ public class IndexServiceImpl implements IndexService {
 	public volatile boolean isStarted = false;
 
 	public static final StringPool stringPool = new StringPool();
-	private BlockingQueue<PageEntity> queueOfPagesForLemmasCollecting = new LinkedBlockingQueue<>(150);
-	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(100);
-	private BlockingQueue<SearchIndexEntity> queueOfLemmasForIndexGeneration = new LinkedBlockingQueue<>(10_000);
+	private BlockingQueue<Integer> queueOfPagesForLemmasCollecting = new LinkedBlockingQueue<>(10_000);
+	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(500);
+	private BlockingQueue<SearchIndexEntity> queueOfLemmasForIndexGeneration = new LinkedBlockingQueue<>(50_000);
+	private BlockingQueue<LemmaEntity> queueOfLemmaEntityToSaveEntities = new LinkedBlockingQueue<>(50_000);
 
 	@Autowired
 	Site site;
@@ -120,6 +121,7 @@ public class IndexServiceImpl implements IndexService {
 						startIndexGenerator(siteEntity);
 						latch.countDown();
 						rootLogger.info(":: index-generation-thread finished, latch =  " + latch.getCount());
+						StaticVault.lemmaEntitiesMap.clear();
 					}, "indexes-thread");
 
 					scrapingThread.start();
@@ -188,6 +190,7 @@ public class IndexServiceImpl implements IndexService {
 
 	private void startScrapingOfSite(ScrapTask rootScrapTask, @NotNull ForkJoinPool fjpPool, @NotNull SiteEntity siteEntity) {
 		scrapingService.setAllowed(true);
+		StaticVault.siteUrl = siteEntity.getUrl();
 		scrapingService = new ScrapingService(rootScrapTask, siteEntity, queueOfPagesForSaving, queueOfPagesForLemmasCollecting, pageRepository, siteRepository);
 		rootLogger.error("---------------------------------------------------------");
 		rootLogger.info("- Start scraping " + siteEntity.getName() + " " + siteEntity.getUrl());
@@ -199,6 +202,7 @@ public class IndexServiceImpl implements IndexService {
 		stringPool.getPaths().clear();
 		stringPool.getAddedPathsToQueue().clear();
 		StaticVault.siteUrl = "";
+
 
 		if (allowed) {
 			siteRepository.updateStatusStatusTimeErrorByUrl(status, LocalDateTime.now(), scrapTask.getLastError(), siteEntity.getUrl());
@@ -229,6 +233,7 @@ public class IndexServiceImpl implements IndexService {
 		lemmasCollectingService.setQueue(queueOfPagesForLemmasCollecting);
 		lemmasCollectingService.setSavingPagesIsDone(false);
 		lemmasCollectingService.setQueueOfSearchIndexEntities(queueOfLemmasForIndexGeneration);
+		lemmasCollectingService.setQueueOfLemmaEntityToSaveEntities(queueOfLemmaEntityToSaveEntities);
 		lemmasCollectingService.setIndexingStopped(false);
 		lemmasCollectingService.setSiteEntity(siteEntity);
 		lemmasCollectingService.lemmasIndexGeneration();
@@ -238,13 +243,14 @@ public class IndexServiceImpl implements IndexService {
 		indexGenerationService.setIndexingStopped(false);
 		indexGenerationService.setLemmasCollectingIsDone(false);
 		indexGenerationService.setQueue(queueOfLemmasForIndexGeneration);
+		indexGenerationService.setQueueOfLemmaEntityToSaveEntities(queueOfLemmaEntityToSaveEntities);
 		indexGenerationService.setSiteEntity(siteEntity);
 		indexGenerationService.indexCollect();
 	}
 
-	public void test(Long id){
-
-		pageRepository.deleteAllInBatch(pageRepository.findAllBySiteEntity(siteRepository.getReferenceById(id)));
+	public void test(Integer id){
+	pageRepository.delete(pageRepository.getReferenceById(id));
+//		pageRepository.deleteAllInBatch(pageRepository.findAllBySiteEntity(siteRepository.getReferenceById(id)));
 //		pageRepository.deleteById(id);
 
 	}

@@ -19,11 +19,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class StaticVault {
 
 	public static String siteUrl = "";
-	public static volatile Integer nowOnMapPages = 0;
+//	public static volatile Integer nowOnMapPages = 0;
 //	public static volatile Set<PageEntity> pages = ConcurrentHashMap.newKeySet(100);
 	public static Map<String, LemmaEntity> lemmaEntitiesMap = new HashMap<>();
-	public static Set<SearchIndexEntity> searchIndexEntitiesMap = new HashSet<>();
-	public static Set<String> skippedPaths = new HashSet<>();
+//	public static Set<SearchIndexEntity> searchIndexEntitiesMap = new HashSet<>();
+//	public static Set<String> skippedPaths = new HashSet<>();
 
 
 //	public static Map<String, Integer> lemmaFreqMap = new HashMap<>();

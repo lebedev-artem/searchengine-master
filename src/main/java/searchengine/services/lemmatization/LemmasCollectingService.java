@@ -44,24 +44,31 @@ public class LemmasCollectingService {
 	private static final String[] PARTICLES_NAMES = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
 	private volatile boolean indexingStopped = false;
 	private LuceneMorphology luceneMorphology;
-	private BlockingQueue<PageEntity> queue;
+	private BlockingQueue<Integer> queue;
 	private BlockingQueue<SearchIndexEntity> queueOfSearchIndexEntities;
+	private BlockingQueue<LemmaEntity> queueOfLemmaEntityToSaveEntities;
 	private boolean savingPagesIsDone = false;
 	private LemmaEntity lemmaEntity;
 	SearchIndexEntity searchIndexEntity;
 	private SiteEntity siteEntity;
 	private PageEntity pageEntity;
-	private Map<String, LemmaEntity> lemmaEntities = new HashMap<>();
-	private Map<String, SearchIndexEntity> searchIndexEntities = new HashMap<>();
+	private Set<LemmaEntity> lemmaEntities = new HashSet<>();
+	private Set<SearchIndexEntity> searchIndexEntities = new HashSet<>();
 	private Map<String, Integer> collectedLemmas = new HashMap<>();
+	public static Map<String, LemmaEntity> lemmaEntitiesStaticMap = StaticVault.lemmaEntitiesMap;
 
 
 	public void lemmasIndexGeneration() {
 		savingPagesIsDone = false;
+
 		while (true) {
-			pageEntity = queue.poll();
+
+			Integer id = queue.poll();
+			pageEntity = pageRepository.getReferenceById(id);
 			if (pageEntity != null) {
-				System.out.println("lemma income queue = " + queue.size());
+				int newLemmas = 0;
+				int oldLemmas = 0;
+//				System.out.println("lemma income queue = " + queue.size());
 				collectedLemmas = collectLemmas(pageEntity.getContent());
 
 				for (String lemma : collectedLemmas.keySet()) {
@@ -70,40 +77,60 @@ public class LemmasCollectingService {
 					int rank = collectedLemmas.get(lemma);
 					lemmaEntity = new LemmaEntity(siteEntity, lemma, INIT_FREQ);
 
+					if (lemmaEntitiesStaticMap.containsKey(lemma)) {
+						int oldFreq = lemmaEntitiesStaticMap.get(lemma).getFrequency();
+						lemmaEntitiesStaticMap.get(lemma).setFrequency(oldFreq + 1);
+						lemmaEntity = lemmaEntitiesStaticMap.get(lemma);
+						oldLemmas++;
+					} else {
+						lemmaEntities.add(lemmaEntity);
+						lemmaEntitiesStaticMap.put(lemma, lemmaEntity);
+						newLemmas++;
+					}
+
 					searchIndexEntity = new SearchIndexEntity
 							(pageEntity, lemmaEntity, rank, new SearchIndexId
 									(pageEntity.getId(), lemmaEntity.getId()));
 
-					if (lemmaRepository.existsByLemmaAndSiteEntity(lemma, siteEntity)) {
-						lemmaEntity = lemmaRepository.getByLemmaAndSiteEntity(lemma, siteEntity);
-						int oldFreq = lemmaEntity.getFrequency();
-						lemmaEntity.setFrequency(oldFreq + 1);
-						//попробовать закомментировать
-//						lemmaRepository.save(lemmaEntity);
-						searchIndexEntity.setLemmaEntity(lemmaEntity);
-					} else {
-						lemmaEntities.put(lemma, lemmaEntity);
-					}
+//					searchIndexEntity.setLemmaEntity(lemmaEntity);
 
-					searchIndexEntities.put(lemma, searchIndexEntity);
+					searchIndexEntities.add(searchIndexEntity);
 
 				}
 
 				//Когда лемматизация страницы закончена, сохраним леммы пачкой и отправим индекс
-				lemmaRepository.saveAll(lemmaEntities.values());
-				searchIndexEntities.forEach((l, searchIndexEntity) -> {
-					if (searchIndexEntity.getLemmaEntity().getId() == null)
-						searchIndexEntity.setLemmaEntity(lemmaEntities.get(l));
+				//зачем тут мап???
+				for (LemmaEntity lE : lemmaEntities) {
 					try {
-						queueOfSearchIndexEntities.put(searchIndexEntity);
+						queueOfLemmaEntityToSaveEntities.put(lE);
 					} catch (InterruptedException e) {
 						throw new RuntimeException(e);
 					}
+				}
 
+				searchIndexEntities.forEach(sIE -> {
+					try {
+						queueOfSearchIndexEntities.put(sIE);
+					} catch (InterruptedException e) {
+						throw new RuntimeException(e);
+					}
 				});
-				System.out.println("index outcome queue = " + queueOfSearchIndexEntities.size());
-				lemmaEntities.values().clear();
-				searchIndexEntities.values().clear();
+//				lemmaRepository.saveAll(lemmaEntities.values());n
+//				searchIndexEntities.forEach((l, searchIndexEntity) -> {
+//					if (searchIndexEntity.getLemmaEntity().getId() == null)
+//						searchIndexEntity.setLemmaEntity(lemmaEntities.get(l));
+//					try {
+//						queueOfSearchIndexEntities.put(searchIndexEntity);
+//					} catch (InterruptedException e) {
+//						throw new RuntimeException(e);
+//					}
+//
+//				});
+				logger.warn("pageEntity id - " + pageEntity.getId());
+				logger.warn("new lemmas - " + newLemmas);
+				logger.warn("old lemmas - " + oldLemmas);
+				lemmaEntities.clear();
+				searchIndexEntities.clear();
 
 			} else {
 				try {
@@ -114,6 +141,9 @@ public class LemmasCollectingService {
 			}
 
 			if (previousStepDoneAndQueueIsEmpty() || indexingStopped) {
+				queue.clear();
+				queueOfSearchIndexEntities.clear();
+				queueOfLemmaEntityToSaveEntities.clear();
 				return;
 			}
 		}

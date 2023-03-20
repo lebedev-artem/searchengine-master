@@ -21,7 +21,7 @@ spring:
         dialect: org.hibernate.dialect.MySQL8Dialect
 
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
       show-sql: true
       format_sql: true
       use_sql_comments: true
@@ -31,7 +31,7 @@ jsoup-setting:
   jsoup:
     userAgent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:25.0) Gecko/20100101 Firefox/25.0
     referrer: http://www:google.com
-    timeout: 1_000
+    timeout: 10
     ignoreHttpErrors: true
     followRedirects: false
 
@@ -45,25 +45,25 @@ indexing-settings:
 #      name: Volochek_very_big_string_apporx_3r_links
 #    - url: https://www.playback.ru/
 #      name: PlayBack.Ru
-#    - url: http://radiomv.ru/
-#      name: Радио_MV_13_pages
-#    - url: https://ipfran.ru/
-#      name: IP_fran_1042_pages
+    - url: http://radiomv.ru/
+      name: Радио_MV_13_pages
+    - url: https://ipfran.ru/
+      name: IP_fran_1042_pages
 #    - url: www.bbc.com
 #      name: BBC.com
-#    - url: https://nikoartgallery.com/
-#      name: Niko_Art_Gallery_91_pages
-#    - url: https://et-cetera.ru/mobile/
-#      name: Et_Cetera_4_mobile_52_pages
-#    - url: https://www.lutherancathedral.ru/
-#      name: Lutheran_cathedral_BIG_842_pages
-#    - url: https://dombulgakova.ru/
-#      name: Дом_Булгакова_529_pages
-#    - url: https://www.svetlovka.ru/
-#      name: Светловка_231_pages
-#    - url: http://cimus.biz/
-#      name: cimus.biz_19_pages
-    - url: https://xakep.ru/
-      name: xakep_big
+    - url: https://nikoartgallery.com/
+      name: Niko_Art_Gallery_91_pages
+    - url: https://et-cetera.ru/mobile/
+      name: Et_Cetera_4_mobile_52_pages
+    - url: https://www.lutherancathedral.ru/
+      name: Lutheran_cathedral_BIG_842_pages
+    - url: https://dombulgakova.ru/
+      name: Дом_Булгакова_529_pages
+    - url: https://www.svetlovka.ru/
+      name: Светловка_231_pages
+    - url: http://cimus.biz/
+      name: cimus.biz_19_pages
+#    - url: https://xakep.ru/
+#      name: xakep_big
 
 
