@@ -58,5 +58,6 @@ public interface PageRepository extends JpaRepository<PageEntity, Long> {
 
 
 	PageEntity getReferenceById(Integer id);
+	PageEntity findById(Integer id);
 
 }

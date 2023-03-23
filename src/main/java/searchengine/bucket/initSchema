@@ -1,7 +1,7 @@
 	@Transactional
 	private void initSchema(@NotNull SitesList siteListToInit) throws MalformedURLException {
 		if (isRanOnce) {
-			searchIndexRepository.deleteAllInBatch();
+			indexRepository.deleteAllInBatch();
 			lemmaRepository.deleteAllInBatch();
 			pageRepository.deleteAllInBatch();
 			for (Site s : siteListToInit.getSites()) {
@@ -30,7 +30,7 @@
 
 		} else {
 			siteRepository.deleteAllInBatch();
-//			searchIndexRepository.resetIdOnIndexTable();
+//			indexRepository.resetIdOnIndexTable();
 //			lemmaRepository.resetIdOnLemmaTable();
 //			pageRepository.resetIdOnPageTable();
 //			siteRepository.resetIdOnSiteTable();

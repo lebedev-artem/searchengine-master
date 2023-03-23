@@ -1,5 +1,6 @@
 package searchengine.services.lemmatization;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -12,9 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import searchengine.bucket.LemmaFinder;
 import searchengine.model.*;
+import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
-import searchengine.repositories.SearchIndexRepository;
 import searchengine.repositories.SiteRepository;
 import searchengine.services.stuff.StaticVault;
 
@@ -32,7 +33,7 @@ public class LemmasCollectingService {
 	@Autowired
 	LemmaRepository lemmaRepository;
 	@Autowired
-	SearchIndexRepository searchIndexRepository;
+	IndexRepository indexRepository;
 	@Autowired
 	PageRepository pageRepository;
 	@Autowired
@@ -44,93 +45,102 @@ public class LemmasCollectingService {
 	private static final String[] PARTICLES_NAMES = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
 	private volatile boolean indexingStopped = false;
 	private LuceneMorphology luceneMorphology;
-	private BlockingQueue<Integer> queue;
-	private BlockingQueue<SearchIndexEntity> queueOfSearchIndexEntities;
+	private BlockingQueue<Integer> incomeQueue;
+	private BlockingQueue<IndexEntity> queueOfSearchIndexEntities;
 	private BlockingQueue<LemmaEntity> queueOfLemmaEntityToSaveEntities;
 	private boolean savingPagesIsDone = false;
 	private LemmaEntity lemmaEntity;
-	SearchIndexEntity searchIndexEntity;
 	private SiteEntity siteEntity;
 	private PageEntity pageEntity;
+	private IndexEntity indexEntity;
 	private Set<LemmaEntity> lemmaEntities = new HashSet<>();
-	private Set<SearchIndexEntity> searchIndexEntities = new HashSet<>();
+	private Set<IndexEntity> indexEntities = new HashSet<>();
 	private Map<String, Integer> collectedLemmas = new HashMap<>();
 	public static Map<String, LemmaEntity> lemmaEntitiesStaticMap = StaticVault.lemmaEntitiesMap;
+	private Map<Map<PageEntity, String>, Integer> idxMap = new HashMap<>();
+	private BlockingQueue<Map.Entry<Map<PageEntity, String>, Integer>> queueIdx;
 
 
 	public void lemmasIndexGeneration() {
 		savingPagesIsDone = false;
 
 		while (true) {
+			Integer id = incomeQueue.poll();
 
-			Integer id = queue.poll();
-			pageEntity = pageRepository.getReferenceById(id);
-			if (pageEntity != null) {
-				int newLemmas = 0;
-				int oldLemmas = 0;
-//				System.out.println("lemma income queue = " + queue.size());
+			if (id != null) {
+				pageEntity = pageRepository.getReferenceById(id);
+
 				collectedLemmas = collectLemmas(pageEntity.getContent());
-
+				long collecting = System.currentTimeMillis();
 				for (String lemma : collectedLemmas.keySet()) {
 					if (indexingStopped) break;
 
 					int rank = collectedLemmas.get(lemma);
 					lemmaEntity = new LemmaEntity(siteEntity, lemma, INIT_FREQ);
 
-					if (lemmaEntitiesStaticMap.containsKey(lemma)) {
-						int oldFreq = lemmaEntitiesStaticMap.get(lemma).getFrequency();
-						lemmaEntitiesStaticMap.get(lemma).setFrequency(oldFreq + 1);
-						lemmaEntity = lemmaEntitiesStaticMap.get(lemma);
-						oldLemmas++;
-					} else {
-						lemmaEntities.add(lemmaEntity);
-						lemmaEntitiesStaticMap.put(lemma, lemmaEntity);
-						newLemmas++;
-					}
+						if (lemmaRepository.existsByLemmaAndSiteEntity(lemma, siteEntity)) {
+							lemmaEntity = lemmaRepository.findByLemmaAndSiteEntity(lemma, siteEntity);
+							int oldFreq = lemmaEntity.getFrequency();
+							lemmaEntity.setFrequency(oldFreq + 1);
+						}
 
-					searchIndexEntity = new SearchIndexEntity
-							(pageEntity, lemmaEntity, rank, new SearchIndexId
-									(pageEntity.getId(), lemmaEntity.getId()));
+//					else {
+//						lemmaEntities.add(lemmaEntity);
+//						lemmaEntitiesStaticMap.put(lemma, lemmaEntity);
+//						newLemmas++;
+//					}
+//					if (lemmaEntitiesStaticMap.containsKey(lemma)) {
+//						int oldFreq = lemmaEntitiesStaticMap.get(lemma).getFrequency();
+//						lemmaEntitiesStaticMap.get(lemma).setFrequency(oldFreq + 1);
+//						lemmaEntity = lemmaEntitiesStaticMap.get(lemma);
+//						oldLemmas++;
+//					} else {
+//						lemmaEntities.add(lemmaEntity);
+//						lemmaEntitiesStaticMap.put(lemma, lemmaEntity);
+//						newLemmas++;
+//					}
 
+//					Map<PageEntity, String> idxId = new HashMap<>();
+//					idxId.put(pageEntity, lemma);
+//					idxMap.put(idxId, rank);
+
+					IndexEntity searchIndexEntity = new IndexEntity (new IndexEntity.Id(), pageEntity, lemmaEntity, rank);
+//					queueOfSearchIndexEntities.add(searchIndexEntity);
 //					searchIndexEntity.setLemmaEntity(lemmaEntity);
-
-					searchIndexEntities.add(searchIndexEntity);
-
+					indexEntities.add(searchIndexEntity);
 				}
 
-				//Когда лемматизация страницы закончена, сохраним леммы пачкой и отправим индекс
-				//зачем тут мап???
-				for (LemmaEntity lE : lemmaEntities) {
-					try {
-						queueOfLemmaEntityToSaveEntities.put(lE);
-					} catch (InterruptedException e) {
-						throw new RuntimeException(e);
-					}
-				}
+				long saving = System.currentTimeMillis();
+				indexRepository.saveAll(indexEntities);
+				logger.warn(
+						indexEntities.size() + " lemmas from page " + pageEntity.getId()
+						+ " collected in " + + (System.currentTimeMillis() - collecting) + " ms"
+						+ " and saved in " + (System.currentTimeMillis() - saving) + " ms");
+				indexEntities.clear();
 
-				searchIndexEntities.forEach(sIE -> {
-					try {
-						queueOfSearchIndexEntities.put(sIE);
-					} catch (InterruptedException e) {
-						throw new RuntimeException(e);
-					}
-				});
-//				lemmaRepository.saveAll(lemmaEntities.values());n
-//				searchIndexEntities.forEach((l, searchIndexEntity) -> {
-//					if (searchIndexEntity.getLemmaEntity().getId() == null)
-//						searchIndexEntity.setLemmaEntity(lemmaEntities.get(l));
+
+//				queueOfLemmaEntityToSaveEntities.addAll(lemmaEntities);
+//				queueOfSearchIndexEntities.addAll(searchIndexEntities.values());
+//				logger.warn(searchIndexEntities.size() + " added to outcome queue");
+//				for (LemmaEntity lE : lemmaEntities) {
 //					try {
-//						queueOfSearchIndexEntities.put(searchIndexEntity);
+//						queueOfLemmaEntityToSaveEntities.put(lE);
 //					} catch (InterruptedException e) {
 //						throw new RuntimeException(e);
 //					}
-//
+//				}
+
+//				searchIndexEntities.forEach(sIE -> {
+//					try {
+//						queueOfSearchIndexEntities.put(sIE);
+//					} catch (InterruptedException e) {
+//						throw new RuntimeException(e);
+//					}
 //				});
-				logger.warn("pageEntity id - " + pageEntity.getId());
-				logger.warn("new lemmas - " + newLemmas);
-				logger.warn("old lemmas - " + oldLemmas);
-				lemmaEntities.clear();
-				searchIndexEntities.clear();
+//
+//				logger.warn("pageEntity id - " + pageEntity.getId() + "| new lemmas - " + newLemmas + "| old lemmas - " + oldLemmas);
+//				lemmaEntities.clear();
+//				searchIndexEntities.clear();
 
 			} else {
 				try {
@@ -141,9 +151,10 @@ public class LemmasCollectingService {
 			}
 
 			if (previousStepDoneAndQueueIsEmpty() || indexingStopped) {
-				queue.clear();
-				queueOfSearchIndexEntities.clear();
-				queueOfLemmaEntityToSaveEntities.clear();
+				indexRepository.saveAll(indexEntities);
+//				queue.clear();
+//				queueOfSearchIndexEntities.clear();
+//				queueOfLemmaEntityToSaveEntities.clear();
 				return;
 			}
 		}
@@ -165,8 +176,28 @@ public class LemmasCollectingService {
 //		});
 //	}
 
+
+	@Override
+	public boolean equals(Object o) {
+		if (o == null || getClass() != o.getClass()) return false;
+		LemmasCollectingService that = (LemmasCollectingService) o;
+		return indexEntity.equals(that.indexEntity)
+				&& indexEntity.getLemmaEntity().equals(that.indexEntity.getLemmaEntity())
+				&& indexEntity.getPageEntity().equals(that.indexEntity.getPageEntity())
+				&& indexEntity.getLemmaEntity().getLemma().equals(that.getLemmaEntity().getLemma());
+	}
+
+	@Override
+	public int hashCode() {
+		if (lemmaEntity == null) {
+			return Objects.hash(pageEntity);
+		} else {
+			return Objects.hash(pageEntity, lemmaEntity.getLemma());
+		}
+	}
+
 	private boolean previousStepDoneAndQueueIsEmpty() {
-		return savingPagesIsDone && !queue.iterator().hasNext();
+		return savingPagesIsDone && !incomeQueue.iterator().hasNext();
 	}
 
 	@Autowired

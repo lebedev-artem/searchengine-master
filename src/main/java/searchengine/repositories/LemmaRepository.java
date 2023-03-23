@@ -26,10 +26,12 @@ public interface LemmaRepository extends JpaRepository<LemmaEntity, Long> {
 	LemmaEntity findFirstByLemmaAndSiteEntity(String lemma, SiteEntity siteEntity);
 	Set<LemmaEntity> findAllByLemmaAndSiteEntity(String lemma, SiteEntity siteEntity);
 	Integer countBySiteEntity(SiteEntity siteEntity);
+	Set<LemmaEntity> findByLemmaIn(Set<String> lemmaEntities);
 
 	Integer getFrequencyByLemma(String lemma);
 	LemmaEntity getByLemma(String lemma);
 	Integer getIdByLemma(String lemma);
 	LemmaEntity getByLemmaAndSiteEntity(String lemma, SiteEntity siteEntity);
+	LemmaEntity getReferenceByLemma(String lemma);
 
 }

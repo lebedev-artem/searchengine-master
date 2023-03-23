@@ -1,17 +1,22 @@
 package searchengine.model;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 import javax.persistence.*;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 @Setter
 @Getter
 @Entity
+@AllArgsConstructor
+@NoArgsConstructor
 @Table(name = "lemma")
 public class LemmaEntity {
 
@@ -52,7 +57,16 @@ public class LemmaEntity {
 		this.frequency = frequency;
 	}
 
-	public LemmaEntity() {
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		LemmaEntity that = (LemmaEntity) o;
+		return frequency == that.frequency && siteEntity.equals(that.siteEntity) && lemma.equals(that.lemma) && pageEntities.equals(that.pageEntities);
 	}
 
+	@Override
+	public int hashCode() {
+		return Objects.hash(siteEntity, lemma, frequency, pageEntities);
+	}
 }

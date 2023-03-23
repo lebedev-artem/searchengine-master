@@ -1,6 +1,7 @@
 package searchengine.model;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
@@ -12,9 +13,8 @@ import java.util.Set;
 @Setter
 @Getter
 @Entity
+@NoArgsConstructor
 @Table(name = "page", indexes = @Index(name = "path_siteId_index", columnList = "path, site_id", unique = true))
-//@Table(name = "page", indexes = @Index(name = "path_site_index", columnList = "site_id", unique = true)) //по ТЗ
-//@Table(name = "page")
 public class PageEntity {
 
 	@Id
@@ -61,10 +61,6 @@ public class PageEntity {
 //	@ManyToMany(fetch = FetchType.LAZY, mappedBy = "pageEntities", cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
 	@OnDelete(action = OnDeleteAction.NO_ACTION)
 	private Set<LemmaEntity> lemmaEntities = new HashSet<>();
-
-
-	public PageEntity() {
-	}
 
 	public PageEntity(SiteEntity siteEntity, int code, String content, String path) {
 		this.siteEntity = siteEntity;

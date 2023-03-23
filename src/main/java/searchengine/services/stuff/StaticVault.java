@@ -4,14 +4,9 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import searchengine.model.LemmaEntity;
-import searchengine.model.PageEntity;
-import searchengine.model.SearchIndexEntity;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Getter
 @Setter
@@ -22,6 +17,7 @@ public class StaticVault {
 //	public static volatile Integer nowOnMapPages = 0;
 //	public static volatile Set<PageEntity> pages = ConcurrentHashMap.newKeySet(100);
 	public static Map<String, LemmaEntity> lemmaEntitiesMap = new HashMap<>();
+//	public static Map<String, LemmaEntity> lemmaEntitiesMap = new HashMap<>();
 //	public static Set<SearchIndexEntity> searchIndexEntitiesMap = new HashSet<>();
 //	public static Set<String> skippedPaths = new HashSet<>();
 

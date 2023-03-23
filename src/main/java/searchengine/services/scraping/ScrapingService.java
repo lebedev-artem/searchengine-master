@@ -191,7 +191,7 @@ public class ScrapingService extends RecursiveTask<Boolean> {
 			if (!pageRepository.existsByPathAndSiteEntity(path, siteEntity)) {
 				while (true) {
 					if ((queueOfPagesForSaving.remainingCapacity() < 10) && (allowed)) {
-						Thread.sleep(5_000);
+						Thread.sleep(10_000);
 					} else break;
 				}
 				queueOfPagesForSaving.put(pageEntity);

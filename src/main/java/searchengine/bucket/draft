@@ -16,7 +16,7 @@ import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
-import searchengine.repositories.SearchIndexRepository;
+import searchengine.repositories.IndexRepository;
 import searchengine.repositories.SiteRepository;
 import searchengine.services.indexing.IndexService;
 import searchengine.services.lemmatization.LemmasCollectingService;
@@ -124,7 +124,7 @@ public class IndexServdiceImpl implements IndexService {
 	private final SiteRepository siteRepository;
 	private final PageRepository pageRepository;
 	private final LemmaRepository lemmaRepository;
-	private final SearchIndexRepository searchIndexRepository;
+	private final SearchIndexRepository indexRepository;
 	private BlockingQueue<PageEntity> queueOfPagesForIndexing = new LinkedBlockingQueue<>(100);
 	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(200);
 

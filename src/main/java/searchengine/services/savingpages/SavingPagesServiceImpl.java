@@ -60,9 +60,9 @@ public class SavingPagesServiceImpl implements SavingPagesService {
 //							} else break;
 //						}
 						outcomeQueue.put(pageEntity.getId());
-						System.out.println("---page saved in " + (System.currentTimeMillis() - save) + " ms");
-						System.out.println("income queue " + incomeQueue.size());
-						System.out.println("outcome queue " + outcomeQueue.size());
+//						System.out.println("---page saved in " + (System.currentTimeMillis() - save) + " ms");
+//						System.out.println("income queue " + incomeQueue.size());
+//						System.out.println("outcome queue " + outcomeQueue.size());
 
 //						System.out.println("lemma out from page queue = " + outcomeQueue.size());
 					} catch (InterruptedException ex) {
@@ -78,8 +78,8 @@ public class SavingPagesServiceImpl implements SavingPagesService {
 			}
 
 			if (previousStepDoneAndQueueEmpty() || pressedStop) {
-				outcomeQueue.clear();
-				incomeQueue.clear();
+//				outcomeQueue.clear();
+//				incomeQueue.clear();
 				rootLogger.warn("::: "
 						+ pageRepository.countBySiteEntity(siteEntity)
 						+ " pages saved in DB, site -> " + siteEntity.getName()

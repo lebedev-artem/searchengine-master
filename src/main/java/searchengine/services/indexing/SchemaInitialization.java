@@ -12,9 +12,9 @@ import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.model.IndexingStatus;
 import searchengine.model.SiteEntity;
+import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
-import searchengine.repositories.SearchIndexRepository;
 import searchengine.repositories.SiteRepository;
 
 import javax.servlet.http.HttpServletRequest;
@@ -42,7 +42,7 @@ public class SchemaInitialization {
 	@Autowired
 	LemmaRepository lemmaRepository;
 	@Autowired
-	SearchIndexRepository searchIndexRepository;
+	IndexRepository indexRepository;
 
 //	public Set<SiteEntity> initSchema(String mode) {
 //		switch (mode) {
@@ -102,7 +102,7 @@ public class SchemaInitialization {
 	private void virginSchema() {
 		siteRepository.deleteAllInBatch();
 		pageRepository.deleteAllInBatch();
-		searchIndexRepository.resetIdOnIndexTable();
+		indexRepository.resetIdOnIndexTable();
 		lemmaRepository.resetIdOnLemmaTable();
 		pageRepository.resetIdOnPageTable();
 		siteRepository.resetIdOnSiteTable();
@@ -110,7 +110,7 @@ public class SchemaInitialization {
 
 	private void resetAllIds() {
 
-		searchIndexRepository.resetIdOnIndexTable();
+		indexRepository.resetIdOnIndexTable();
 		lemmaRepository.resetIdOnLemmaTable();
 		pageRepository.resetIdOnPageTable();
 		siteRepository.resetIdOnSiteTable();

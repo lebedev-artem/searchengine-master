@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.model.IndexingStatus;
 import searchengine.model.LemmaEntity;
+import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 
 import java.time.LocalDateTime;
@@ -37,28 +38,29 @@ public interface SiteRepository extends JpaRepository<SiteEntity, Long> {
 	SiteEntity findByUrl(String url);
 	boolean existsByName(String name);
 	void deleteByUrl(String url);
-//	void deleteById(Integer id);
-	boolean existsByUrl(String url);
-
-	@Modifying(clearAutomatically = true, flushAutomatically = true)
-	@Query("DELETE FROM SiteEntity s WHERE s.url = :url")
-	void removeAllByUrl(@Param("url") String url);
-
-	@Modifying(clearAutomatically = true, flushAutomatically = true)
-	@Query(value = "DELETE from `site` WHERE `name` = :name", nativeQuery = true)
-	void deleteByName(String name);
-
-	@Modifying(clearAutomatically = true, flushAutomatically = true)
-	@Query(value = "DELETE from `site` WHERE `id` = :id", nativeQuery = true)
 	void deleteById(Integer id);
+	boolean existsByUrl(String url);
+	PageEntity getReferenceById(Integer id);
 
-	@Modifying(clearAutomatically = true, flushAutomatically = true)
-	@Query(value = "UPDATE `site` SET `status` = :status WHERE `name`=:name", nativeQuery = true)
-	void updateStatus(String status, String name);
+//	@Modifying(clearAutomatically = true, flushAutomatically = true)
+//	@Query("DELETE FROM SiteEntity s WHERE s.url = :url")
+//	void removeAllByUrl(@Param("url") String url);
+//
+//	@Modifying(clearAutomatically = true, flushAutomatically = true)
+//	@Query(value = "DELETE from `site` WHERE `name` = :name", nativeQuery = true)
+//	void deleteByName(String name);
 
-	@Modifying(clearAutomatically = true, flushAutomatically = true)
-	@Query(value = "INSERT INTO `site` (status, status_time, last_error, url, name) VALUES (:status, :statusTime, :lastError, :url, :name)", nativeQuery = true)
-	void saveSiteEntity(String status, LocalDateTime statusTime, String lastError, String url, String name);
+//	@Modifying(clearAutomatically = true, flushAutomatically = true)
+//	@Query(value = "DELETE from `site` WHERE `id` = :id", nativeQuery = true)
+//	void deleteById(Integer id);
+
+//	@Modifying(clearAutomatically = true, flushAutomatically = true)
+//	@Query(value = "UPDATE `site` SET `status` = :status WHERE `name`=:name", nativeQuery = true)
+//	void updateStatus(String status, String name);
+//
+//	@Modifying(clearAutomatically = true, flushAutomatically = true)
+//	@Query(value = "INSERT INTO `site` (status, status_time, last_error, url, name) VALUES (:status, :statusTime, :lastError, :url, :name)", nativeQuery = true)
+//	void saveSiteEntity(String status, LocalDateTime statusTime, String lastError, String url, String name);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "UPDATE `site` SET `status_time` = :statusTime WHERE `name`=:name", nativeQuery = true)

@@ -10,9 +10,9 @@ import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import searchengine.model.LemmaEntity;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
+import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
-import searchengine.repositories.SearchIndexRepository;
 
 import java.io.IOException;
 import java.util.*;
@@ -29,7 +29,7 @@ public class LemmaFinder implements Runnable {
 	private static final Logger logger = LogManager.getLogger(LemmaFinder.class);
 	private BlockingQueue<PageEntity> queue;
 	private final LemmaRepository lemmaRepository;
-	private final SearchIndexRepository searchIndexRepository;
+	private final IndexRepository indexRepository;
 	private final LuceneMorphology luceneMorphology;
 	private final PageRepository pageRepository;
 	private static final String WORD_TYPE_REGEX = "\\W\\w&&[^а-яА-Я\\s]";
@@ -43,11 +43,11 @@ public class LemmaFinder implements Runnable {
 //		return new LemmaFinder(morphology, getInstance().queue);
 //	}
 
-	public LemmaFinder(BlockingQueue<PageEntity> queue, LemmaRepository lemmaRepository, PageRepository pageRepository, SearchIndexRepository searchIndexRepository, Future<?> future, SiteEntity siteEntity) throws IOException {
+	public LemmaFinder(BlockingQueue<PageEntity> queue, LemmaRepository lemmaRepository, PageRepository pageRepository, IndexRepository indexRepository, Future<?> future, SiteEntity siteEntity) throws IOException {
 		this.luceneMorphology = new RussianLuceneMorphology();
 		this.lemmaRepository = lemmaRepository;
 		this.pageRepository = pageRepository;
-		this.searchIndexRepository = searchIndexRepository;
+		this.indexRepository = indexRepository;
 		this.queue = queue;
 		this.future = future;
 		this.siteEntity = siteEntity;

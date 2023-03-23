@@ -43,10 +43,11 @@ public class IndexServiceImpl implements IndexService {
 	public volatile boolean isStarted = false;
 
 	public static final StringPool stringPool = new StringPool();
-	private BlockingQueue<Integer> queueOfPagesForLemmasCollecting = new LinkedBlockingQueue<>(10_000);
-	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(500);
-	private BlockingQueue<SearchIndexEntity> queueOfLemmasForIndexGeneration = new LinkedBlockingQueue<>(50_000);
-	private BlockingQueue<LemmaEntity> queueOfLemmaEntityToSaveEntities = new LinkedBlockingQueue<>(50_000);
+	private BlockingQueue<Integer> queueOfPagesForLemmasCollecting = new LinkedBlockingQueue<>(1_000);
+	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(100);
+	private BlockingQueue<IndexEntity> queueOfLemmasForIndexGeneration = new LinkedBlockingQueue<>(500_000);
+	private BlockingQueue<LemmaEntity> queueOfLemmaEntityToSaveEntities = new LinkedBlockingQueue<>(500_000);
+	private BlockingQueue<Map.Entry<Map<PageEntity, String>, Integer>> queueIdx = new LinkedBlockingQueue<>(50_000);
 
 	@Autowired
 	Site site;
@@ -59,7 +60,7 @@ public class IndexServiceImpl implements IndexService {
 	@Autowired
 	LemmaRepository lemmaRepository;
 	@Autowired
-	SearchIndexRepository searchIndexRepository;
+	IndexRepository indexRepository;
 	@Autowired
 	LemmasCollectingService lemmasCollectingService;
 	@Autowired
@@ -86,7 +87,7 @@ public class IndexServiceImpl implements IndexService {
 		singleTask.set(new Thread(() -> {
 
 			for (SiteEntity siteEntity : siteEntities) {
-				CountDownLatch latch = new CountDownLatch(4);
+				CountDownLatch latch = new CountDownLatch(3);
 				ScrapTask rootScrapTask = new ScrapTask(siteEntity.getUrl());
 				if (allowed) {
 					Thread scrapingThread = new Thread(() -> {
@@ -127,7 +128,7 @@ public class IndexServiceImpl implements IndexService {
 					scrapingThread.start();
 					pagesSaverThread.start();
 					lemmasCollectorThread.start();
-					indexGeneratorThread.start();
+//					indexGeneratorThread.start();
 
 					try {
 						latch.await();
@@ -151,7 +152,7 @@ public class IndexServiceImpl implements IndexService {
 			rootLogger.warn(siteRepository.count() + " site(s)");
 			rootLogger.warn(pageRepository.count() + " pages");
 			rootLogger.warn(lemmaRepository.count() + " lemmas");
-			rootLogger.warn(searchIndexRepository.count() + " index entries");
+			rootLogger.warn(indexRepository.count() + " index entries");
 			rootLogger.warn("Just in " + (System.currentTimeMillis() - time) + " ms");
 			rootLogger.error("FINISHED. I'm ready to start again and again");
 			System.gc();
@@ -230,12 +231,13 @@ public class IndexServiceImpl implements IndexService {
 	}
 
 	public void startLemmasCollector(SiteEntity siteEntity) {
-		lemmasCollectingService.setQueue(queueOfPagesForLemmasCollecting);
+		lemmasCollectingService.setIncomeQueue(queueOfPagesForLemmasCollecting);
 		lemmasCollectingService.setSavingPagesIsDone(false);
 		lemmasCollectingService.setQueueOfSearchIndexEntities(queueOfLemmasForIndexGeneration);
 		lemmasCollectingService.setQueueOfLemmaEntityToSaveEntities(queueOfLemmaEntityToSaveEntities);
 		lemmasCollectingService.setIndexingStopped(false);
 		lemmasCollectingService.setSiteEntity(siteEntity);
+		lemmasCollectingService.setQueueIdx(queueIdx);
 		lemmasCollectingService.lemmasIndexGeneration();
 	}
 
@@ -245,11 +247,13 @@ public class IndexServiceImpl implements IndexService {
 		indexGenerationService.setQueue(queueOfLemmasForIndexGeneration);
 		indexGenerationService.setQueueOfLemmaEntityToSaveEntities(queueOfLemmaEntityToSaveEntities);
 		indexGenerationService.setSiteEntity(siteEntity);
+		indexGenerationService.setQueueIdx(queueIdx);
 		indexGenerationService.indexCollect();
 	}
 
 	public void test(Integer id){
-	pageRepository.delete(pageRepository.getReferenceById(id));
+//	pageRepository.delete(pageRepository.getReferenceById(id));
+		siteRepository.deleteById(id);
 //		pageRepository.deleteAllInBatch(pageRepository.findAllBySiteEntity(siteRepository.getReferenceById(id)));
 //		pageRepository.deleteById(id);
 
