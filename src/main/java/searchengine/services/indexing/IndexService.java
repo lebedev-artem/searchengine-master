@@ -12,11 +12,7 @@ public interface IndexService{
 	ResponseEntity<?> indexingStop() throws ExecutionException, InterruptedException;
 	ResponseEntity<?> indexingPageStart(HttpServletRequest request) throws Exception;
 
-	void startPagesSaver(SiteEntity siteEntity);
-	void startLemmasCollector(SiteEntity siteEntity);
-	void startIndexGenerator(SiteEntity siteEntity);
-
-	boolean isAllowed();
 	void test(Integer id);
+	void setPressedStop(boolean value);
 
 }

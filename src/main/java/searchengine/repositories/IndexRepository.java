@@ -15,4 +15,9 @@ public interface IndexRepository extends JpaRepository<IndexEntity, Long> {
 	void resetIdOnIndexTable();
 
 
+	@Query(
+			value ="SELECT COUNT(`lemma_id`) FROM `search_index` AS s JOIN `lemma` AS l ON l.id = s.lemma_id WHERE l.site_id = :siteId group by site_id",
+			nativeQuery = true)
+	Integer countBySiteId(Integer siteId);
+
 }

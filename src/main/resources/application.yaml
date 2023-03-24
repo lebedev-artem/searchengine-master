@@ -37,7 +37,7 @@ jsoup-setting:
 
 indexing-settings:
   sites:
-#    - url: http://www.artlebedev.ru/
+#    - url: https://www.artlebedev.ru/
 #      name: ArtLebedev
 #    - url: https://lenta.ru/
 #      name: Lenta
@@ -47,8 +47,8 @@ indexing-settings:
 #      name: PlayBack.Ru
 #    - url: http://radiomv.ru/
 #      name: Радио_MV_13_pages
-    - url: https://ipfran.ru/
-      name: IP_fran_1042_pages
+#    - url: https://ipfran.ru/
+#      name: IP_fran_1042_pages
 #    - url: www.bbc.com
 #      name: BBC.com
 #    - url: https://nikoartgallery.com/
@@ -63,7 +63,7 @@ indexing-settings:
 #      name: Светловка_231_pages
 #    - url: http://cimus.biz/
 #      name: cimus.biz_19_pages
-#    - url: https://xakep.ru/
-#      name: xakep_big
+    - url: https://xakep.ru/
+      name: xakep_big
 
 

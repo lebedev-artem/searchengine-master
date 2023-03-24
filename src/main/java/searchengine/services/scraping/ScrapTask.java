@@ -10,14 +10,14 @@ import java.util.*;
 public class ScrapTask {
 	private final String url;
 	private String lastError;
-	private ArrayList<ScrapTask> childTasks = new ArrayList<>();
+//	private ArrayList<ScrapTask> childTasks = new ArrayList<>();
 
 	public ScrapTask(String url) {
 		this.url = url;
 	}
-
-	public void addChildTask(ScrapTask scrapTask) {
-		childTasks.add(scrapTask);
-	}
+//
+//	public void addChildTask(ScrapTask scrapTask) {
+//		childTasks.add(scrapTask);
+//	}
 }
 

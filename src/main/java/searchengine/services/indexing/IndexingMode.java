@@ -1,7 +1,5 @@
 package searchengine.services.indexing;
 
-import org.springframework.stereotype.Component;
-
 public enum IndexingMode {
 	FULL("FULL"),
 	PARTIAL("PARTIAL");

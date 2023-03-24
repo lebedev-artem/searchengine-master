@@ -5,12 +5,10 @@ import searchengine.model.SiteEntity;
 
 import java.util.concurrent.BlockingQueue;
 
-public interface SavingPagesService {
-	void savePages();
+public interface PagesSavingService {
+	void startSavingPages();
 
 	void setScrapingIsDone(boolean b);
-
-	void setPressedStop(boolean b);
 
 	void setIncomeQueue(BlockingQueue<PageEntity> incomeQueue);
 
