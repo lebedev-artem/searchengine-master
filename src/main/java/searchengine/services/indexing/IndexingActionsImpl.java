@@ -15,9 +15,9 @@ import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
 import searchengine.services.lemmatization.LemmasAndIndexCollectingService;
 import searchengine.services.savingpages.PagesSavingService;
-import searchengine.services.scraping.ScrapTask;
 import searchengine.services.scraping.ScrapingAction;
 import searchengine.services.stuff.StaticVault;
+import searchengine.services.stuff.StringPool;
 
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -44,6 +44,8 @@ public class IndexingActionsImpl implements IndexingActions {
 	private final SiteRepository siteRepository;
 	private final IndexRepository indexRepository;
 	private final LemmaRepository lemmaRepository;
+	public static String siteUrl;
+	private final StringPool stringPool = new StringPool();
 
 
 	@Override
@@ -66,9 +68,9 @@ public class IndexingActionsImpl implements IndexingActions {
 			}
 
 			Thread scrapingThread = new Thread(() -> {
-				ScrapTask rootScrapTask = new ScrapTask(siteEntity.getUrl());
-				StaticVault.siteUrl = siteEntity.getUrl();
-				pool.invoke(new ScrapingAction(rootScrapTask, siteEntity, queueOfPagesForSaving, pageRepository, siteRepository));
+//				ScrapTask rootScrapTask = new ScrapTask(siteEntity.getUrl());
+				siteUrl = siteEntity.getUrl();
+				pool.invoke(new ScrapingAction(siteEntity.getUrl(), siteEntity, queueOfPagesForSaving, pageRepository, siteRepository, stringPool));
 				latch.countDown();
 				log.warn("crawl-thread finished, latch =  " + latch.getCount());
 				pagesSavingService.setScrapingIsDone(true);
@@ -106,13 +108,14 @@ public class IndexingActionsImpl implements IndexingActions {
 			startActionsAfterScraping(siteEntity);
 		}
 		shutDownAction(pool);
-		log.warn(siteRepository.count() + " site(s)");
-		log.warn(pageRepository.count() + " pages");
-		log.warn(lemmaRepository.count() + " lemmas");
-		log.warn(indexRepository.count() + " index entries");
-		log.warn("Just in " + (System.currentTimeMillis() - start) + " ms");
+		log.info(siteRepository.count() + " site(s)");
+		log.info(pageRepository.count() + " pages");
+		log.info(lemmaRepository.count() + " lemmas");
+		log.info(indexRepository.count() + " index entries");
+		log.info("Just in " + (System.currentTimeMillis() - start) + " ms");
 		log.error("FINISHED. I'm ready to start again and again");
 		IndexServiceImpl.pressedStop = false;
+		setIndexingActionsStarted(false);
 		System.gc();
 	}
 
@@ -138,11 +141,9 @@ public class IndexingActionsImpl implements IndexingActions {
 
 	private void startActionsAfterScraping(@NotNull SiteEntity siteEntity) {
 		String status = pageRepository.existsBySiteEntity(siteEntity) ? IndexingStatus.INDEXED.status : IndexingStatus.FAILED.status;
-		StaticVault.siteUrl = "";
-		setIndexingActionsStarted(false);
 		if (!pressedStop()) {
 			siteRepository.updateStatusStatusTimeErrorByUrl(status, LocalDateTime.now(), "", siteEntity.getUrl());
-			log.info("- Status of site " + siteEntity.getName() + " set to " + status);
+			log.warn("Status of site " + siteEntity.getName() + " set to " + status);
 		}
 	}
 

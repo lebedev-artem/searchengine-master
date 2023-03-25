@@ -33,6 +33,7 @@ public interface PageRepository extends JpaRepository<PageEntity, Long> {
 	Set<PageEntity> findAllBySiteEntity(SiteEntity siteEntity);
 	Integer countBySiteEntity(SiteEntity siteEntity);
 	void deleteAllBySiteEntity(SiteEntity siteEntity);
+	void deleteById(Integer id);
 
 
 	@Override

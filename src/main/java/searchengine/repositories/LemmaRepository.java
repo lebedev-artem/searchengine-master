@@ -34,4 +34,9 @@ public interface LemmaRepository extends JpaRepository<LemmaEntity, Long> {
 	LemmaEntity getByLemmaAndSiteEntity(String lemma, SiteEntity siteEntity);
 	LemmaEntity getReferenceByLemma(String lemma);
 
+	@Query(value = "select lemma_id from search_index where page_id = :pageId", nativeQuery = true)
+	Set<Integer> findAllLemmaIdByPageId(Integer pageId);
+	LemmaEntity getReferenceById(Integer id);
+	LemmaEntity findById(Integer id);
+
 }

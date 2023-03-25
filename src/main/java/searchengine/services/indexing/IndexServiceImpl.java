@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import searchengine.model.*;
 import searchengine.repositories.*;
 
+import javax.persistence.criteria.CriteriaBuilder;
 import javax.servlet.http.HttpServletRequest;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -29,6 +30,9 @@ public class IndexServiceImpl implements IndexService {
 	private final IndexResponse indexResponse;
 	private final IndexingActions indexingActions;
 	private final SiteRepository siteRepository;
+	private final PageRepository pageRepository;
+	private final IndexRepository indexRepository;
+	private final LemmaRepository lemmaRepository;
 
 	@Override
 	@Transactional
@@ -71,9 +75,26 @@ public class IndexServiceImpl implements IndexService {
 		return indexResponse.successfully();
 	}
 
-	public void test(Integer id){
+	public void test(Integer id) {
 //	pageRepository.delete(pageRepository.getReferenceById(id));
-		siteRepository.deleteById(id);
+//		siteRepository.deleteById(id);
+//		SiteEntity siteEntity = siteRepository.findById(id);
+		PageEntity pageEntity = pageRepository.findById(id);
+		if (pageEntity != null){
+			Set<Integer> lemmaEntities = lemmaRepository.findAllLemmaIdByPageId(id);
+			pageRepository.deleteById(pageEntity.getId());
+			lemmaEntities.forEach(x -> {
+				LemmaEntity lemmaEntity = lemmaRepository.findById(x);
+				if (lemmaEntity != null) {
+					int oldFreq = lemmaEntity.getFrequency();
+					if (oldFreq == 1) {
+						lemmaRepository.delete(lemmaEntity);
+					} else lemmaEntity.setFrequency(oldFreq - 1);
+				}
+			});
+		}
+
+//		pageRepository.deleteAllBySiteEntity(siteEntity);
 //		pageRepository.deleteAllInBatch(pageRepository.findAllBySiteEntity(siteRepository.getReferenceById(id)));
 //		pageRepository.deleteById(id);
 

@@ -1,11 +1,18 @@
 package searchengine.repositories;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.model.IndexEntity;
+import searchengine.model.LemmaEntity;
+import searchengine.model.PageEntity;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 @Transactional
 @Repository

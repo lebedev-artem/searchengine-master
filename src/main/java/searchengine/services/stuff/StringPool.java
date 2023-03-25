@@ -11,11 +11,13 @@ import java.util.concurrent.ConcurrentHashMap;
 public class StringPool {
 	public final Map<String, String> addedPathsToQueue;
 	public final Map<String, String> paths;
+	public final Map<String, String> pages404;
 
 
 	public StringPool() {
 		paths = new ConcurrentHashMap<>(5000, 1);
 		addedPathsToQueue = new ConcurrentHashMap<>(5000, 1);
+		pages404 = new ConcurrentHashMap<>(5000, 1);
 	}
 
 	public String internAddedPathToQueue(String s){
@@ -25,6 +27,11 @@ public class StringPool {
 
 	public String internPath(String s){
 		String exist = paths.putIfAbsent(s, s);
+		return (exist == null) ? s : exist;
+	}
+
+	public String internPage404(String s){
+		String exist = pages404.putIfAbsent(s, s);
 		return (exist == null) ? s : exist;
 	}
 

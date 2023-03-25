@@ -13,7 +13,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class StaticVault {
 
-	public static String siteUrl = "";
+//	public static String siteUrl = "";
 //	public static volatile Integer nowOnMapPages = 0;
 //	public static volatile Set<PageEntity> pages = ConcurrentHashMap.newKeySet(100);
 	public static Map<String, LemmaEntity> lemmaEntitiesMap = new HashMap<>();

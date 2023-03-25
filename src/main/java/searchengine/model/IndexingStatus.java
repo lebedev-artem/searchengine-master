@@ -1,6 +1,6 @@
 package searchengine.model;
 
-public enum IndexingStatus
+public enum  IndexingStatus
 {
 	INDEXING("INDEXING"),
 	INDEXED("INDEXED"),

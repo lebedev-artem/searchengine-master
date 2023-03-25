@@ -78,6 +78,9 @@ public interface SiteRepository extends JpaRepository<SiteEntity, Long> {
 	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime WHERE `url` = :url", nativeQuery = true)
 	void updateStatusStatusTimeByUrl(String status, LocalDateTime statusTime, String url);
 
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query(value = "UPDATE `site` SET `last_error` = :error, status_time = :statusTime WHERE `url` = :url", nativeQuery = true)
+	void updateErrorStatusTimeByUrl(String error, LocalDateTime statusTime, String url);
 
 
 }

@@ -10,6 +10,7 @@ import org.jsoup.UncheckedIOException;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Service;
 import searchengine.config.Site;
@@ -18,13 +19,16 @@ import searchengine.model.SiteEntity;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
 import searchengine.services.indexing.IndexServiceImpl;
+import searchengine.services.indexing.IndexingActions;
+import searchengine.services.indexing.IndexingActionsImpl;
 import searchengine.services.stuff.AcceptableContentTypes;
-import searchengine.services.stuff.StringPool;
 import searchengine.services.stuff.StaticVault;
+import searchengine.services.stuff.StringPool;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -38,10 +42,10 @@ import static searchengine.services.stuff.Regex.*;
 @Setter
 @Service
 @NoArgsConstructor
-public class ScrapingAction extends RecursiveAction{
+//@RequiredArgsConstructor
+public class ScrapingAction extends RecursiveAction {
 	private static final Integer COUNT_PAGES_TO_DROP = 50;
 	private static final AcceptableContentTypes ACCEPTABLE_CONTENT_TYPES = new AcceptableContentTypes();
-	private ScrapTask parentTask;
 	private final ReadWriteLock lock = new ReentrantReadWriteLock();
 	long timeStart;
 
@@ -53,58 +57,58 @@ public class ScrapingAction extends RecursiveAction{
 	private String parentContent;
 	private String parentPath;
 	private String parentUrl;
-	private Site site;
-	private Integer siteId;
+	private String siteUrl;
 	private SiteEntity siteEntity;
 	private PageEntity pageEntity;
 
-	private BlockingQueue<PageEntity> queueOfPagesForSaving;
+	private BlockingQueue<PageEntity> outcomeQueue;
 	private PageRepository pageRepository;
 	private SiteRepository siteRepository;
-//
-	public ScrapingAction(ScrapTask scrapTask,
+	private StringPool stringPool;
+
+	public ScrapingAction(String parentUrl,
 	                      @NotNull SiteEntity siteEntity,
-	                      BlockingQueue<PageEntity> queueOfPagesForSaving,
+	                      BlockingQueue<PageEntity> outcomeQueue,
 	                      PageRepository pageRepository,
-	                      SiteRepository siteRepository) {
-		this.parentTask = scrapTask;
+	                      SiteRepository siteRepository,
+	                      StringPool stringPool) {
 		this.siteEntity = siteEntity;
-		this.siteId = siteEntity.getId();
-		this.queueOfPagesForSaving = queueOfPagesForSaving;
+		this.outcomeQueue = outcomeQueue;
+		this.parentUrl = parentUrl;
 		this.pageRepository = pageRepository;
 		this.siteRepository = siteRepository;
-		parentUrl = siteEntity.getUrl();
+		this.siteUrl = IndexingActionsImpl.siteUrl;
+		this.stringPool = stringPool;
 	}
 
 	@Override
 	protected void compute() {
 		timeStart = System.currentTimeMillis();
-		String urlOfTask = parentTask.getUrl();
 		List<ScrapingAction> subTasks = new LinkedList<>();
 
-		if (pressedStop()){
+		if (pressedStop()) {
 			joinTasksFromSubtasks(subTasks);
 			subTasks.clear();
 			return;
 		}
 
-		Connection.Response responseSinglePage = getResponseFromUrl(urlOfTask);
+		Connection.Response responseSinglePage = getResponseFromUrl(parentUrl);
 		if (responseSinglePage != null) {
-			dropPageToQueue(urlOfTask);
+			dropPageToQueue();
 		} else return;
 
 		if (jsoupResponse == null)
-			jsoupResponse = getResponseFromUrl(urlOfTask);
+			jsoupResponse = getResponseFromUrl(parentUrl);
 
-		Map<String, Integer> childLinksOfTask = getChildLinks(urlOfTask, document);
+		Set<String> childLinksOfTask = getChildLinks(parentUrl, document);
 
 		forkTasksFromSubtasks(subTasks, childLinksOfTask);
 		joinTasksFromSubtasks(subTasks);
 		System.gc();
 	}
 
-	public synchronized Map<String, Integer> getChildLinks(String url, Document document) {
-		Map<String, Integer> newChildLinks = new HashMap<>();
+	public synchronized Set<String> getChildLinks(String url, Document document) {
+		Set<String> newChildLinks = new HashSet<>();
 		if (document == null) return newChildLinks;
 		Elements elements = document.select("a[href]");
 		if (elements.isEmpty()) return newChildLinks;
@@ -115,27 +119,25 @@ public class ScrapingAction extends RecursiveAction{
 			try {
 //				if (pageRepository.existsByPathAndSiteEntity(new URL(href).getPath(), siteEntity)) continue;
 
-//				if (href.endsWith("jpg")) {
-//					System.out.println("jpg");
-//				}
 				//можно добавить проверку чтоб на уровень вниз не уходить, цикличность
 				if (url.matches(URL_IS_VALID)
-						&& href.startsWith(StaticVault.siteUrl)
+						&& href.startsWith(siteUrl)
 						&& !href.contains("#")
 						&& !href.equals(url)
-						&& !newChildLinks.containsKey(href)
+						&& !newChildLinks.contains(href)
+						&& !stringPool.pages404.containsKey(href)
 						&& (HTML_EXT.stream().anyMatch(href.substring(href.length() - 4)::contains)
-						|| !href.matches(URL_IS_FILE_LINK))) {
+						| !href.matches(URL_IS_FILE_LINK))) {
 //					if
 //					{
 
 //						synchronized (StringPool.class) {
 					//Здесь можно еще добавить проверку по репозиторию
-						lock.writeLock().lock();
+					lock.writeLock().lock();
 					if (!pageRepository.existsByPathAndSiteEntity(new URL(href).getPath(), siteEntity)) {
-						newChildLinks.put(href, parentStatusCode);
+						newChildLinks.add(href);
 					}
-						lock.writeLock().unlock();
+					lock.writeLock().unlock();
 //							if (!stringPool.getPaths().containsKey(href)) {
 //								stringPool.internPath(href);
 //								newChildLinks.put(href, parentStatusCode);
@@ -151,63 +153,62 @@ public class ScrapingAction extends RecursiveAction{
 
 	@ConfigurationProperties(prefix = "jsoup-setting")
 	private Connection.@Nullable Response getResponseFromUrl(String url) {
+
+		if (stringPool.pages404.containsKey(url))
+			return null;
+
 		try {
-			if (pageRepository.existsByPathAndSiteEntity(new URL(url).getPath(), siteEntity))
+			parentPath = new URL(url).getPath();
+			lock.writeLock().lock();
+			if (pageRepository.existsByPathAndSiteEntity(parentPath, siteEntity))
 				return null;
+			lock.writeLock().unlock();
 
 			jsoupResponse = Jsoup.connect(url).execute();
-//			jsoupResponse.bufferUp();
 			if (!ACCEPTABLE_CONTENT_TYPES.contains(jsoupResponse.contentType())) {
 				return null;
-
-			} else {
-//				parentUrl = jsoupResponse.url().toString();
-				document = jsoupResponse.parse();
-				parentPath = new URL(url).getPath();
-				StaticVault.siteUrl = parentUrl;
-				if (parentPath.equals("")) parentPath = "/";
-				if (StaticVault.siteUrl.equals("")) StaticVault.siteUrl = parentUrl;
-
-				pageEntity = new PageEntity(siteEntity, jsoupResponse.statusCode(), document.html(), parentPath);
 			}
+
+			document = jsoupResponse.parse();
+			pageEntity = new PageEntity(siteEntity, jsoupResponse.statusCode(), document.html(), parentPath);
+
 		} catch (IOException | UncheckedIOException exception) {
 			log.error("Can't parse JSOUP Response from URL = " + url);
-			parentTask.setLastError(exception.getMessage());
+			siteRepository.updateErrorStatusTimeByUrl(exception.getMessage(), LocalDateTime.now(), siteEntity.getUrl());
+			stringPool.internPage404(url);
 			return null;
 		}
 		return jsoupResponse;
 	}
 
-	private void dropPageToQueue(String urlToDrop) {
+	private void dropPageToQueue() {
 		try {
-			String path = new URL(urlToDrop).getPath();
+			while (true) {
+				if ((outcomeQueue.remainingCapacity() < 10) && (!pressedStop())) {
+					sleep(20_000);
+				} else break;
+			}
 
 			lock.writeLock().lock();
-			if (!pageRepository.existsByPathAndSiteEntity(path, siteEntity)) {
-				while (true) {
-					if ((queueOfPagesForSaving.remainingCapacity() < 10) && (!pressedStop())) {
-						sleep(20_000);
-					} else break;
-				}
-				queueOfPagesForSaving.put(pageEntity);
-			}
+			if (!pageRepository.existsByPathAndSiteEntity(pageEntity.getPath(), siteEntity))
+				outcomeQueue.put(pageEntity);
 			lock.writeLock().unlock();
-		} catch (InterruptedException | MalformedURLException e) {
-			throw new RuntimeException(e);
+
+		} catch (InterruptedException e) {
+			log.error("Cant drop page to queue");
 		}
 		pageEntity = null;
 	}
 
-	private void forkTasksFromSubtasks(List<ScrapingAction> subTasks, Map<String, Integer> subLinks) {
+	private void forkTasksFromSubtasks(List<ScrapingAction> subTasks, Set<String> subLinks) {
 		if ((subLinks == null) || subLinks.isEmpty()) return;
+		if (pressedStop()) return;
 
-		for (String childLink : subLinks.keySet()) {
+		for (String childLink : subLinks) {
 			if (childIsValidToFork(childLink)) {
-				ScrapTask childScrapTask = new ScrapTask(childLink);
-				ScrapingAction task = new ScrapingAction(childScrapTask, siteEntity, queueOfPagesForSaving, pageRepository, siteRepository);
+				ScrapingAction task = new ScrapingAction(childLink, siteEntity, outcomeQueue, pageRepository, siteRepository, stringPool);
 				task.fork();
 				subTasks.add(task);
-//				parentTask.addChildTask(childScrapTask);
 			}
 		}
 	}
@@ -219,9 +220,8 @@ public class ScrapingAction extends RecursiveAction{
 
 	private static boolean childIsValidToFork(@NotNull String subLink) {
 		return (HTML_EXT.stream().anyMatch(subLink.substring(subLink.length() - 4)::contains))
-				| ((!subLink.matches(URL_IS_FILE_LINK)) && (!subLink.contains("#")));
+				| (!subLink.matches(URL_IS_FILE_LINK));
 	}
-
 
 	public String getHrefFromElement(Element element) {
 		return (element != null) ? element.absUrl("href") : "";

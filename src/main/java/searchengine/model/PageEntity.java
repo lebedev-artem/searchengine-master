@@ -59,7 +59,7 @@ public class PageEntity {
 			joinColumns = {@JoinColumn(name = "page_id")},
 			inverseJoinColumns = {@JoinColumn(name = "lemma_id")})
 //	@ManyToMany(fetch = FetchType.LAZY, mappedBy = "pageEntities", cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
-	@OnDelete(action = OnDeleteAction.NO_ACTION)
+	@OnDelete(action = OnDeleteAction.CASCADE)
 	private Set<LemmaEntity> lemmaEntities = new HashSet<>();
 
 	public PageEntity(SiteEntity siteEntity, int code, String content, String path) {

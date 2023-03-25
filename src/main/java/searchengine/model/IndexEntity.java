@@ -32,7 +32,6 @@ public class IndexEntity {
 	@OnDelete(action = OnDeleteAction.CASCADE)
 	@MapsId(("lemmaId"))
 	@JoinColumn(foreignKey = @ForeignKey(name = "FK_index_lemma_id"), name = "lemma_id", nullable = false)
-
 	public LemmaEntity lemmaEntity;
 
 	@Column(name = "lemma_rank", nullable = false)
