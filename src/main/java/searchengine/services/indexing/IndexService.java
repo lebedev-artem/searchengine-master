@@ -10,7 +10,7 @@ public interface IndexService{
 
 	ResponseEntity<?> indexingStart(Set<SiteEntity> siteEntities) throws Exception;
 	ResponseEntity<?> indexingStop() throws ExecutionException, InterruptedException;
-	ResponseEntity<?> indexingPageStart(HttpServletRequest request) throws Exception;
+	ResponseEntity<?> indexingPageStart(SiteEntity siteEntity) throws Exception;
 
 	void test(Integer id);
 	void setPressedStop(boolean value);

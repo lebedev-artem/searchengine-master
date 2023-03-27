@@ -22,9 +22,12 @@ import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
 
 import javax.servlet.http.HttpServletRequest;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 @Slf4j
 @Getter
@@ -33,10 +36,7 @@ import java.util.Set;
 @Component
 public class SchemaActions {
 
-	//	private IndexingMode mode;
-	private static final Logger rootLogger = LogManager.getRootLogger();
-	Set<SiteEntity> newSiteEntities = new HashSet<>();
-
+	private Set<SiteEntity> newSiteEntities = new HashSet<>();
 	@Autowired
 	SitesList sitesList;
 	@Autowired
@@ -69,7 +69,6 @@ public class SchemaActions {
 
 
 		existingSiteEntities = siteRepository.findAll();
-		//if existing sites is empty - virgin and go
 		newSiteEntities = new HashSet<>();
 		if (existingSiteEntities.size() == 0) {
 			log.info("Table `site` is empty. All sites will be getting from SiteList");
@@ -78,25 +77,16 @@ public class SchemaActions {
 				newSiteEntities.add(initSiteRow(site));
 			});
 		} else {
-			List<SiteEntity> finalExistingSiteEntities = existingSiteEntities;
 			sitesList.getSites().forEach(newSite -> {
-				//Search in DB each site from SiteList
-				if (finalExistingSiteEntities.stream().anyMatch(existsSite -> existsSite.getUrl().equals(newSite.getUrl()))) {
+				SiteEntity existingSiteEntity = siteRepository.findByUrl(newSite.getUrl());
+				if (existingSiteEntity != null) {
 					log.info("Site " + newSite.getName() + " " + newSite.getUrl() + " found in table");
-					//If exists get SiteEntity from DB, change status and time, put to SET of new entities
-					SiteEntity existingSiteEntity = siteRepository.findByUrl(newSite.getUrl());
 					log.warn("Updating " + existingSiteEntity.getName() + " " + existingSiteEntity.getUrl() + " status and time");
-					siteRepository.updateStatusStatusTimeByUrl(IndexingStatus.INDEXING.status, LocalDateTime.now(), existingSiteEntity.getUrl());
-					//get all pages form site
-//					Set<PageEntity> pageEntities = pageRepository.findAllBySiteEntity(existingSiteEntity);
-					//Del all pages by Site
+					siteRepository.updateStatusStatusTimeErrorByUrl("INDEXING", LocalDateTime.now(), "", existingSiteEntity.getUrl());
 					pageRepository.deleteAllBySiteEntity(existingSiteEntity);
 					lemmaRepository.deleteAllBySiteEntity(existingSiteEntity);
-					//decrease freq of lemmas
-//					decreaseLemmasFreqByPage(pageEntities);
 					newSiteEntities.add(existingSiteEntity);
 					log.warn(existingSiteEntity.getName() + " " + existingSiteEntity.getUrl() + " will be indexing again");
-					//Delete all pages, lemmas By SitEntity, index entries by PageEntities in one Query. CASCADE
 				} else {
 					newSiteEntities.add(initSiteRow(newSite));
 					log.warn("NEW site " + newSite.getName() + " " + newSite.getUrl() + " added to indexing set");
@@ -104,20 +94,70 @@ public class SchemaActions {
 			});
 		}
 		newSiteEntities.forEach(e -> {
-			if (!siteRepository.existsByUrl(e.getUrl())) siteRepository.save(e);
+			if (!siteRepository.existsByUrl(e.getUrl())) {
+				siteRepository.save(e);
+				log.warn("SiteEntity name " + e.getName() + " with URL " + e.getUrl() + " saved in table");
+			}
 		});
+
+		if (pageRepository.count() == 0 & lemmaRepository.count() == 0 & indexRepository.count() == 0)
+			resetAllIds();
 		log.info("Schema initialized");
 		return newSiteEntities;
 	}
 
-	public Set<SiteEntity> partialInit(HttpServletRequest request) {
+	public SiteEntity partialInit(@NotNull HttpServletRequest request) {
+		String url = request.getParameter("url");
+		String path = "";
+		try {
+			path = new URL(url).getPath();
+		} catch (MalformedURLException e) {
+			log.error("Can't get path or hostname from request");
+		}
 
-		return new HashSet<>();
+		String hostName = url.substring(0, url.indexOf(path) + 1);
+		Site site = null;
+		for (Site s : sitesList.getSites()) {
+			if (s.getUrl().toLowerCase(Locale.ROOT).equals(hostName.toLowerCase(Locale.ROOT))){
+				site = s;
+			}
+		}
+
+		if (site == null){
+			log.error("SiteList doesn't contains hostname of requested URL");
+			return null;
+		}
+
+		SiteEntity siteEntity = siteRepository.findByUrl(site.getUrl());
+		if (siteEntity == null) {
+			log.warn("Table site doesn't contains entry with requested hostname");
+			return null;
+		}
+
+		if (!pageRepository.existsByPathAndSiteEntity(path, siteEntity)) {
+			log.warn("No pages with requested path contains in table page");
+			log.warn("Will try indexing this URL now");
+			siteEntity.setUrl(url);
+			return siteEntity;
+		}
+
+		Set<String> pagesPaths = pageRepository.findPagesBySiteIdContainingPath(path, siteEntity.getId());
+		Set<PageEntity> pageEntities = new HashSet<>();
+		for (String p : pagesPaths) {
+			pageEntities.add(pageRepository.findByPath(p));
+		}
+
+		log.info("Found " + pageEntities.size() + " entity(ies) in table page by requested path " + path);
+		decreaseLemmasFreqByPage(pageEntities);
+		siteEntity.setUrl(url);
+		log.info(siteEntity.getUrl() + " will be indexing now");
+
+		return siteEntity;
 	}
 
 	private @NotNull SiteEntity initSiteRow(@NotNull Site site) {
 		SiteEntity siteEntity = new SiteEntity();
-		siteEntity.setStatus(IndexingStatus.INDEXING.status);
+		siteEntity.setStatus(IndexingStatus.INDEXING);
 		siteEntity.setStatusTime(LocalDateTime.now());
 		siteEntity.setLastError("");
 		siteEntity.setUrl(site.getUrl());
@@ -140,11 +180,11 @@ public class SchemaActions {
 		indexRepository.resetIdOnIndexTable();
 		lemmaRepository.resetIdOnLemmaTable();
 		pageRepository.resetIdOnPageTable();
-		siteRepository.resetIdOnSiteTable();
+		log.warn("All idx of tables reset now");
 	}
 
-	private void decreaseLemmasFreqByPage(Set<PageEntity> pageEntities) {
-		log.warn("Start decreasing freq of lemmas by deleted pages");
+	private void decreaseLemmasFreqByPage(@NotNull Set<PageEntity> pageEntities) {
+		log.warn("Start decreasing freq of lemmas of deleted pages");
 		pageEntities.forEach(pageEntity -> {
 			Set<Integer> lemmaIdxByPageId = lemmaRepository.findAllLemmaIdByPageId(pageEntity.getId());
 			pageRepository.delete(pageEntity);

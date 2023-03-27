@@ -48,6 +48,9 @@ public interface PageRepository extends JpaRepository<PageEntity, Long> {
 	@Query(value = "DELETE FROM `page` WHERE `path` LIKE %:path% and site_id = :siteId", nativeQuery = true)
 	void deletePagesBySiteIdContainingPath(String path, Integer siteId);
 
+	@Query(value = "SELECT `path` FROM `page` WHERE `path` LIKE %:path% and site_id = :siteId", nativeQuery = true)
+	Set<String> findPagesBySiteIdContainingPath(String path, Integer siteId);
+
 	@Query(value = "SELECT * FROM `page` WHERE `site_id` = :siteId", nativeQuery = true)
 	List<PageEntity> findAllBySiteId(Integer siteId);
 

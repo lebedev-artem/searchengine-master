@@ -17,7 +17,7 @@ public class StringPool {
 	public StringPool() {
 		paths = new ConcurrentHashMap<>(5000, 1);
 		addedPathsToQueue = new ConcurrentHashMap<>(5000, 1);
-		pages404 = new ConcurrentHashMap<>(5000, 1);
+		pages404 = new ConcurrentHashMap<>(100);
 	}
 
 	public String internAddedPathToQueue(String s){

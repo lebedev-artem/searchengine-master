@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
@@ -62,11 +63,11 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 	}
 
 
-	private Boolean allowed() {
+	private @NotNull Boolean allowed() {
 		return !scrapingIsDone | incomeQueue.iterator().hasNext();
 	}
 
-	private String logAboutEachSite(long startTime) {
+	private @NotNull String logAboutEachSite(long startTime) {
 		return pageRepository.countBySiteEntity(siteEntity)
 				+ " pages saved in DB from site url " + siteEntity.getUrl()
 				+ " in " + (System.currentTimeMillis() - startTime) + " ms";

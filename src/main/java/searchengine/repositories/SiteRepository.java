@@ -68,15 +68,15 @@ public interface SiteRepository extends JpaRepository<SiteEntity, Long> {
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime, `last_error` = :error WHERE `status` = \"INDEXING\"", nativeQuery = true)
-	void updateAllStatusStatusTimeError(String status, LocalDateTime statusTime, String error);
+	void updateAllStatusStatusTimeError(String  status, LocalDateTime statusTime, String error);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime, `last_error` = :error WHERE `url` = :url", nativeQuery = true)
-	void updateStatusStatusTimeErrorByUrl(String status, LocalDateTime statusTime, String error, String url);
+	void updateStatusStatusTimeErrorByUrl(String  status, LocalDateTime statusTime, String error, String url);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime WHERE `url` = :url", nativeQuery = true)
-	void updateStatusStatusTimeByUrl(String status, LocalDateTime statusTime, String url);
+	void updateStatusStatusTimeByUrl(String  status, LocalDateTime statusTime, String url);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "UPDATE `site` SET `last_error` = :error, status_time = :statusTime WHERE `url` = :url", nativeQuery = true)

@@ -50,15 +50,16 @@ public class IndexServiceImpl implements IndexService {
 	}
 
 	@Override
-	public ResponseEntity<?> indexingPageStart(@NotNull HttpServletRequest request) throws MalformedURLException {
-//		SingleSiteListCreator singleSiteListCreator = new SingleSiteListCreator(sitesList);
-		String url = request.getParameter("url");
-		String hostName = new URL(url).getHost();
+	public ResponseEntity<?> indexingPageStart(SiteEntity siteEntity) {
 
-//		SitesList singleSiteList = singleSiteListCreator.getSiteList(url, hostName);
+		if (indexingActions.getIndexingActionsStarted())
+			return indexResponse.startFailed();
 
-//		if (singleSiteList == null)
-//			return indexResponse.indexPageFailed();
+		singleTask.set(new Thread(() -> {
+			indexingActions.startPartialIndexing(siteEntity);
+		}, "0day-thread"));
+
+		singleTask.get().start();
 
 		return indexResponse.successfully();
 	}
@@ -71,7 +72,7 @@ public class IndexServiceImpl implements IndexService {
 		setPressedStop(true);
 		indexingActions.setIndexingActionsStarted(false);
 
-		siteRepository.updateAllStatusStatusTimeError(IndexingStatus.FAILED.status, LocalDateTime.now(), "Индексация остановлена пользователем");
+		siteRepository.updateAllStatusStatusTimeError("FAILED", LocalDateTime.now(), "Индексация остановлена пользователем");
 		return indexResponse.successfully();
 	}
 

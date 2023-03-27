@@ -53,16 +53,16 @@ indexing-settings:
 #      name: BBC.com
 #    - url: https://nikoartgallery.com/
 #      name: Niko_Art_Gallery_91_pages
-#    - url: https://et-cetera.ru/mobile/
-#      name: Et_Cetera_4_mobile_52_pages
+    - url: https://et-cetera.ru/mobile/
+      name: Et_Cetera_4_mobile_52_pages
 #    - url: https://www.lutherancathedral.ru/
 #      name: Lutheran_cathedral_BIG_842_pages
 #    - url: https://dombulgakova.ru/
 #      name: Дом_Булгакова_529_pages
-    - url: https://www.svetlovka.ru/
-      name: Светловка_231_pages
-#    - url: http://cimus.biz/
-#      name: cimus.biz_19_pages
+#    - url: https://www.svetlovka.ru/
+#      name: Светловка_231_pages
+    - url: http://cimus.biz/
+      name: cimus.biz_19_pages
 #    - url: https://xakep.ru/
 #      name: xakep_big
 #    - url: https://niasvizh.by/

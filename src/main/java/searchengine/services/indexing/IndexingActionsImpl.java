@@ -16,10 +16,10 @@ import searchengine.repositories.SiteRepository;
 import searchengine.services.lemmatization.LemmasAndIndexCollectingService;
 import searchengine.services.savingpages.PagesSavingService;
 import searchengine.services.scraping.ScrapingAction;
-import searchengine.services.stuff.StaticVault;
 import searchengine.services.stuff.StringPool;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -50,77 +50,100 @@ public class IndexingActionsImpl implements IndexingActions {
 
 	@Override
 	public void startFullIndexing(@NotNull Set<SiteEntity> siteEntities) {
-		setIndexingActionsStarted(true);
 		long start = System.currentTimeMillis();
 		ForkJoinPool pool = new ForkJoinPool();
+		setIndexingActionsStarted(true);
 
 		for (SiteEntity siteEntity : siteEntities) {
 			CountDownLatch latch = new CountDownLatch(3);
-			if (pressedStop()) {
+			if (!pressedStop()) {
+				Thread scrapingThread = new Thread(() -> {
+					scrapActions(pool, latch, siteEntity);
+					latch.countDown();
+					pagesSavingService.setScrapingIsDone(true);
+					log.warn("crawl-thread finished, latch =  " + latch.getCount());
+				}, "crawl-thread");
+
+				Thread pagesSaverThread = new Thread(() -> {
+					pageSavingActions(latch, siteEntity);
+					latch.countDown();
+					lemmasAndIndexCollectingService.setSavingPagesIsDone(true);
+					log.warn("saving-pages-thread finished, latch =  " + latch.getCount());
+				}, "pages-thread");
+
+				Thread lemmasCollectorThread = new Thread(() -> {
+					lemmasCollectingActions(latch, siteEntity);
+					latch.countDown();
+					log.warn("lemmas-finding-thread finished, latch =  " + latch.getCount());
+				}, "lemmas-thread");
+
+				scrapingThread.start();
+				pagesSaverThread.start();
+				lemmasCollectorThread.start();
 				try {
-					Thread.sleep(5_000);
+					latch.await();
 				} catch (InterruptedException e) {
-					log.error("I don't want to sleep");
-				} finally {
-					shutDownAction(pool);
+					log.error("Can't await latch");
 				}
+
+				startActionsAfterIndexing(siteEntity);
+			} else {
+				stopPressedActions(pool);
 				break;
 			}
 
-			Thread scrapingThread = new Thread(() -> {
-//				ScrapTask rootScrapTask = new ScrapTask(siteEntity.getUrl());
-				siteUrl = siteEntity.getUrl();
-				pool.invoke(new ScrapingAction(siteEntity.getUrl(), siteEntity, queueOfPagesForSaving, pageRepository, siteRepository, stringPool));
-				latch.countDown();
-				log.warn("crawl-thread finished, latch =  " + latch.getCount());
-				pagesSavingService.setScrapingIsDone(true);
-			}, "crawl-thread");
-
-			Thread pagesSaverThread = new Thread(() -> {
-				pagesSavingService.setScrapingIsDone(false);
-				pagesSavingService.setIncomeQueue(queueOfPagesForSaving);
-				pagesSavingService.setOutcomeQueue(queueOfPagesForLemmasCollecting);
-				pagesSavingService.setSiteEntity(siteEntity);
-				pagesSavingService.startSavingPages();
-				latch.countDown();
-				lemmasAndIndexCollectingService.setSavingPagesIsDone(true);
-				log.warn("saving-pages-thread finished, latch =  " + latch.getCount());
-			}, "pages-thread");
-
-			Thread lemmasCollectorThread = new Thread(() -> {
-				lemmasAndIndexCollectingService.setIncomeQueue(queueOfPagesForLemmasCollecting);
-				lemmasAndIndexCollectingService.setSavingPagesIsDone(false);
-				lemmasAndIndexCollectingService.setSiteEntity(siteEntity);
-				lemmasAndIndexCollectingService.startCollecting();
-				latch.countDown();
-				log.warn("lemmas-finding-thread finished, latch =  " + latch.getCount());
-			}, "lemmas-thread");
-
-			scrapingThread.start();
-			pagesSaverThread.start();
-			lemmasCollectorThread.start();
-
-			try {
-				latch.await();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-			startActionsAfterScraping(siteEntity);
 		}
 		shutDownAction(pool);
+		writeLogAfterIndexing(start);
+		System.gc();
+	}
+
+	private void writeLogAfterIndexing(long start) {
 		log.info(siteRepository.count() + " site(s)");
 		log.info(pageRepository.count() + " pages");
 		log.info(lemmaRepository.count() + " lemmas");
 		log.info(indexRepository.count() + " index entries");
 		log.info("Just in " + (System.currentTimeMillis() - start) + " ms");
-		log.error("FINISHED. I'm ready to start again and again");
-		IndexServiceImpl.pressedStop = false;
-		setIndexingActionsStarted(false);
-		System.gc();
+		log.info("FINISHED. I'm ready to start again and again");
+	}
+
+	private void lemmasCollectingActions(CountDownLatch latch, SiteEntity siteEntity) {
+		lemmasAndIndexCollectingService.setIncomeQueue(queueOfPagesForLemmasCollecting);
+		lemmasAndIndexCollectingService.setSavingPagesIsDone(false);
+		lemmasAndIndexCollectingService.setSiteEntity(siteEntity);
+		lemmasAndIndexCollectingService.startCollecting();
+	}
+
+	private void pageSavingActions(CountDownLatch latch, SiteEntity siteEntity) {
+		pagesSavingService.setScrapingIsDone(false);
+		pagesSavingService.setIncomeQueue(queueOfPagesForSaving);
+		pagesSavingService.setOutcomeQueue(queueOfPagesForLemmasCollecting);
+		pagesSavingService.setSiteEntity(siteEntity);
+		pagesSavingService.startSavingPages();
+	}
+
+	private void scrapActions(ForkJoinPool pool, CountDownLatch latch, SiteEntity siteEntity) {
+		siteUrl = siteEntity.getUrl();
+		pool.invoke(new ScrapingAction(siteEntity.getUrl(), siteEntity, queueOfPagesForSaving, pageRepository, siteRepository, stringPool));
+	}
+
+	private void stopPressedActions(ForkJoinPool pool) {
+		try {
+			log.warn("STOP pressed by user");
+			Thread.sleep(5_000);
+		} catch (InterruptedException e) {
+			log.error("I don't want to sleep");
+		} finally {
+			shutDownAction(pool);
+		}
 	}
 
 	@Override
-	public void startPartialIndexing() {
+	public void startPartialIndexing(SiteEntity siteEntity) {
+		log.warn("im here");
+		Set<SiteEntity> oneEntitySet = new HashSet<>();
+		oneEntitySet.add(siteEntity);
+		startFullIndexing(oneEntitySet);
 	}
 
 	@Override
@@ -139,12 +162,14 @@ public class IndexingActionsImpl implements IndexingActions {
 		System.gc();
 	}
 
-	private void startActionsAfterScraping(@NotNull SiteEntity siteEntity) {
-		String status = pageRepository.existsBySiteEntity(siteEntity) ? IndexingStatus.INDEXED.status : IndexingStatus.FAILED.status;
+	private void startActionsAfterIndexing(@NotNull SiteEntity siteEntity) {
+		String status = pageRepository.existsBySiteEntity(siteEntity) ? "INDEXED" : "FAILED";
 		if (!pressedStop()) {
-			siteRepository.updateStatusStatusTimeErrorByUrl(status, LocalDateTime.now(), "", siteEntity.getUrl());
+			siteRepository.updateStatusStatusTimeByUrl(status, LocalDateTime.now(), siteEntity.getUrl());
 			log.warn("Status of site " + siteEntity.getName() + " set to " + status);
 		}
+		IndexServiceImpl.pressedStop = false;
+		setIndexingActionsStarted(false);
 	}
 
 	private boolean pressedStop() {

@@ -14,9 +14,7 @@ import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.TotalStatistics;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.SiteRepository;
-import searchengine.services.indexing.IndexResponse;
-import searchengine.services.indexing.IndexService;
-import searchengine.services.indexing.SchemaActions;
+import searchengine.services.indexing.*;
 import searchengine.services.statistics.StatisticsService;
 
 import javax.servlet.http.HttpServletRequest;
@@ -34,31 +32,42 @@ public class ApiController {
 	private final SchemaActions schemaActions;
 	private final IndexResponse indexResponse;
 	private final StatisticsService statisticsService;
+	private final IndexingActions indexingActions;
 	TotalStatistics totalStatistics = new TotalStatistics();
 
 	@GetMapping("/statistics")
 	public ResponseEntity<StatisticsResponse> statistics() {
+		log.warn("Mapping /statistics executed");
 		return ResponseEntity.ok(statisticsService.getStatistics());
 	}
 
 	@GetMapping("/startIndexing")
 	public ResponseEntity<?> startIndexing() throws Exception {
 		log.warn("Mapping /startIndexing executed");
+		if (indexingActions.getIndexingActionsStarted())
+			return indexResponse.startFailed();
 		Set<SiteEntity> siteEntities = schemaActions.fullInit();
 		if (siteEntities.size() == 0) return indexResponse.startFailedEmptySites();
 
 		return indexService.indexingStart(siteEntities);
 	}
 
-	@GetMapping("/stopIndexing")
-	public ResponseEntity<?> stopIndexing() throws ExecutionException, InterruptedException {
-		return indexService.indexingStop();
-	}
-
 	@PostMapping("/indexPage")
 	public ResponseEntity<?> indexPage(@NotNull HttpServletRequest request) throws Exception {
-		schemaActions.partialInit(request);
-		return indexService.indexingPageStart(request);
+		log.warn("Mapping /indexPage executed");
+		if (indexingActions.getIndexingActionsStarted())
+			return indexResponse.startFailed();
+		if (request.getParameter("url") == null)
+			return indexResponse.startFailedEmptySites();
+		SiteEntity siteEntity = schemaActions.partialInit(request);
+		if (siteEntity == null) return indexResponse.indexPageFailed();
+		return indexService.indexingPageStart(siteEntity);
+	}
+
+	@GetMapping("/stopIndexing")
+	public ResponseEntity<?> stopIndexing() throws ExecutionException, InterruptedException {
+		log.warn("Mapping /stopIndexing executed");
+		return indexService.indexingStop();
 	}
 
 	@PostMapping("/testDeleteSiteWithPages")
