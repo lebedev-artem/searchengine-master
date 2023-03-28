@@ -6,7 +6,6 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
-import searchengine.model.IndexingStatus;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.IndexRepository;
@@ -33,6 +32,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 @RequiredArgsConstructor
 public class IndexingActionsImpl implements IndexingActions {
 
+	private final String[] errors = {
+			"Ошибка индексации: главная страница сайта не доступна",
+			"Ошибка индексации: сайт не доступен",
+			""
+	};
 	private SiteEntity siteEntity;
 	private volatile boolean indexingActionsStarted = false;
 	private volatile boolean pressedStop = false;
@@ -50,6 +54,7 @@ public class IndexingActionsImpl implements IndexingActions {
 
 	@Override
 	public void startFullIndexing(@NotNull Set<SiteEntity> siteEntities) {
+		log.warn("Full indexing will be started now");
 		long start = System.currentTimeMillis();
 		ForkJoinPool pool = new ForkJoinPool();
 		setIndexingActionsStarted(true);
@@ -57,6 +62,8 @@ public class IndexingActionsImpl implements IndexingActions {
 		for (SiteEntity siteEntity : siteEntities) {
 			CountDownLatch latch = new CountDownLatch(3);
 			if (!pressedStop()) {
+				log.info(siteEntity.getName() + " with URL " + siteEntity.getUrl() + " started indexing");
+				log.info(pageRepository.count() + " sites, " + lemmaRepository.count() + " lemmas, " + indexRepository.count() + " indexes in table");
 				Thread scrapingThread = new Thread(() -> {
 					scrapActions(pool, latch, siteEntity);
 					latch.countDown();
@@ -95,7 +102,16 @@ public class IndexingActionsImpl implements IndexingActions {
 		}
 		shutDownAction(pool);
 		writeLogAfterIndexing(start);
+		setIndexingActionsStarted(false);
 		System.gc();
+	}
+
+	@Override
+	public void startPartialIndexing(SiteEntity siteEntity) {
+		log.warn("Partial indexing will be started now");
+		Set<SiteEntity> oneEntitySet = new HashSet<>();
+		oneEntitySet.add(siteEntity);
+		startFullIndexing(oneEntitySet);
 	}
 
 	private void writeLogAfterIndexing(long start) {
@@ -128,6 +144,7 @@ public class IndexingActionsImpl implements IndexingActions {
 	}
 
 	private void stopPressedActions(ForkJoinPool pool) {
+
 		try {
 			log.warn("STOP pressed by user");
 			Thread.sleep(5_000);
@@ -135,15 +152,12 @@ public class IndexingActionsImpl implements IndexingActions {
 			log.error("I don't want to sleep");
 		} finally {
 			shutDownAction(pool);
+			IndexServiceImpl.pressedStop = false;
+			setIndexingActionsStarted(false);
+			pageRepository.flush();
+			lemmaRepository.flush();
+			indexRepository.flush();
 		}
-	}
-
-	@Override
-	public void startPartialIndexing(SiteEntity siteEntity) {
-		log.warn("im here");
-		Set<SiteEntity> oneEntitySet = new HashSet<>();
-		oneEntitySet.add(siteEntity);
-		startFullIndexing(oneEntitySet);
 	}
 
 	@Override
@@ -157,19 +171,28 @@ public class IndexingActionsImpl implements IndexingActions {
 	}
 
 	private void shutDownAction(@NotNull ForkJoinPool pool) {
-		indexingActionsStarted = false;
 		pool.shutdownNow();
 		System.gc();
 	}
 
 	private void startActionsAfterIndexing(@NotNull SiteEntity siteEntity) {
-		String status = pageRepository.existsBySiteEntity(siteEntity) ? "INDEXED" : "FAILED";
-		if (!pressedStop()) {
-			siteRepository.updateStatusStatusTimeByUrl(status, LocalDateTime.now(), siteEntity.getUrl());
-			log.warn("Status of site " + siteEntity.getName() + " set to " + status);
+		String status = "INDEXED";
+		String lastError = siteEntity.getLastError();
+		int countPages = pageRepository.countBySiteEntity(siteEntity);
+		switch (countPages) {
+			case 0 -> {
+				status = "FAILED";
+				lastError = errors[1];
+			}
+			case 1 -> {
+				status = "FAILED";
+				lastError = errors[0];
+			}
 		}
-		IndexServiceImpl.pressedStop = false;
-		setIndexingActionsStarted(false);
+		if (!pressedStop()) {
+			siteRepository.updateStatusStatusTimeErrorByUrl(status, LocalDateTime.now(), lastError, siteEntity.getUrl());
+			log.warn("Status of site " + siteEntity.getName() + " set to " + status + ", error set to " + lastError);
+		}
 	}
 
 	private boolean pressedStop() {

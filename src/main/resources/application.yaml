@@ -45,26 +45,26 @@ indexing-settings:
 #      name: Volochek_very_big_string_apporx_3r_links
 #    - url: https://www.playback.ru/
 #      name: PlayBack.Ru
-#    - url: http://radiomv.ru/
-#      name: Радио_MV_13_pages
+    - url: http://radiomv.ru/
+      name: Радио MV 13
 #    - url: https://ipfran.ru/
-#      name: IP_fran_1042_pages
+#      name: ИПФ РАН 1042
 #    - url: www.bbc.com
 #      name: BBC.com
-#    - url: https://nikoartgallery.com/
-#      name: Niko_Art_Gallery_91_pages
+    - url: https://nikoartgallery.com/
+      name: Niko Art 91
     - url: https://et-cetera.ru/mobile/
-      name: Et_Cetera_4_mobile_52_pages
+      name: Et Cet-era 52
 #    - url: https://www.lutherancathedral.ru/
-#      name: Lutheran_cathedral_BIG_842_pages
+#      name: Lutheran cathedral 842
 #    - url: https://dombulgakova.ru/
-#      name: Дом_Булгакова_529_pages
-#    - url: https://www.svetlovka.ru/
-#      name: Светловка_231_pages
+#      name: Дом Булгакова 529
+    - url: https://www.svetlovka.ru/
+      name: Светловка 231
     - url: http://cimus.biz/
-      name: cimus.biz_19_pages
+      name: Cimus 19
 #    - url: https://xakep.ru/
-#      name: xakep_big
+#      name: xakep
 #    - url: https://niasvizh.by/
 #      name: Несвиж
 #    - url: https://habr.com/ru/hub/java/

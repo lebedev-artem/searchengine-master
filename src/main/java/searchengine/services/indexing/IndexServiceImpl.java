@@ -70,6 +70,7 @@ public class IndexServiceImpl implements IndexService {
 			return indexResponse.stopFailed();
 
 		setPressedStop(true);
+		indexingActions.setPressedStop(true);
 		indexingActions.setIndexingActionsStarted(false);
 
 		siteRepository.updateAllStatusStatusTimeError("FAILED", LocalDateTime.now(), "Индексация остановлена пользователем");

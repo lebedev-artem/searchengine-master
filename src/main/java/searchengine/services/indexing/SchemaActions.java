@@ -36,7 +36,6 @@ import java.util.Set;
 @Component
 public class SchemaActions {
 
-	private Set<SiteEntity> newSiteEntities = new HashSet<>();
 	@Autowired
 	SitesList sitesList;
 	@Autowired
@@ -57,43 +56,43 @@ public class SchemaActions {
 //	}
 
 	public @NotNull Set<SiteEntity> fullInit() {
-		List<SiteEntity> existingSiteEntities = siteRepository.findAll();
+		//eSEx - existing in the database SiteEntities
+		List<SiteEntity> eSEx = siteRepository.findAll();
 		if (sitesList.getSites().size() == 0) return new HashSet<>();
 
-		existingSiteEntities.forEach(siteEntity -> {
+		eSEx.forEach(siteEntity -> {
 			if (sitesList.getSites().stream().noneMatch(s -> s.getUrl().equals(siteEntity.getUrl()))){
 				siteRepository.deleteById(siteEntity.getId());
-				log.warn(siteEntity.getName() + " " + siteEntity.getUrl() + " deleted from table");
+				log.warn(siteEntity.getName() + " " + siteEntity.getUrl() + " deleted from table, because site not exist in SiteList");
 			}
 		});
 
-
-		existingSiteEntities = siteRepository.findAll();
-		newSiteEntities = new HashSet<>();
-		if (existingSiteEntities.size() == 0) {
+		//nSEx - Set of newly created entities of Site
+		Set<SiteEntity> nSEx  = new HashSet<>();
+		if (eSEx.size() == 0) {
 			log.info("Table `site` is empty. All sites will be getting from SiteList");
 			virginSchema();
-			sitesList.getSites().forEach(site -> {
-				newSiteEntities.add(initSiteRow(site));
-			});
+			sitesList.getSites().forEach(site -> nSEx.add(initSiteRow(site)));
 		} else {
 			sitesList.getSites().forEach(newSite -> {
 				SiteEntity existingSiteEntity = siteRepository.findByUrl(newSite.getUrl());
 				if (existingSiteEntity != null) {
 					log.info("Site " + newSite.getName() + " " + newSite.getUrl() + " found in table");
 					log.warn("Updating " + existingSiteEntity.getName() + " " + existingSiteEntity.getUrl() + " status and time");
-					siteRepository.updateStatusStatusTimeErrorByUrl("INDEXING", LocalDateTime.now(), "", existingSiteEntity.getUrl());
+					siteRepository.updateStatusStatusTimeErrorByUrl("INDEXING", LocalDateTime.now(), " ", existingSiteEntity.getUrl());
 					pageRepository.deleteAllBySiteEntity(existingSiteEntity);
+					if (indexRepository.countBySiteId(existingSiteEntity.getId()) != null)
+						deleteDetachedIndex(existingSiteEntity.getId());
 					lemmaRepository.deleteAllBySiteEntity(existingSiteEntity);
-					newSiteEntities.add(existingSiteEntity);
-					log.warn(existingSiteEntity.getName() + " " + existingSiteEntity.getUrl() + " will be indexing again");
+					nSEx.add(existingSiteEntity);
+					log.info(existingSiteEntity.getName() + " " + existingSiteEntity.getUrl() + " will be indexing again");
 				} else {
-					newSiteEntities.add(initSiteRow(newSite));
+					nSEx.add(initSiteRow(newSite));
 					log.warn("NEW site " + newSite.getName() + " " + newSite.getUrl() + " added to indexing set");
 				}
 			});
 		}
-		newSiteEntities.forEach(e -> {
+		nSEx.forEach(e -> {
 			if (!siteRepository.existsByUrl(e.getUrl())) {
 				siteRepository.save(e);
 				log.warn("SiteEntity name " + e.getName() + " with URL " + e.getUrl() + " saved in table");
@@ -102,8 +101,8 @@ public class SchemaActions {
 
 		if (pageRepository.count() == 0 & lemmaRepository.count() == 0 & indexRepository.count() == 0)
 			resetAllIds();
-		log.info("Schema initialized");
-		return newSiteEntities;
+		log.info("Schema initialized!");
+		return nSEx;
 	}
 
 	public SiteEntity partialInit(@NotNull HttpServletRequest request) {
@@ -197,5 +196,9 @@ public class SchemaActions {
 				}
 			});
 		});
+	}
+
+	private void deleteDetachedIndex(Integer siteId){
+		indexRepository.deleteBySiteId(siteId);
 	}
 }

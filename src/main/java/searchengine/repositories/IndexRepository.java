@@ -23,8 +23,13 @@ public interface IndexRepository extends JpaRepository<IndexEntity, Long> {
 
 
 	@Query(
-			value ="SELECT COUNT(`lemma_id`) FROM `search_index` AS s JOIN `lemma` AS l ON l.id = s.lemma_id WHERE l.site_id = :siteId group by site_id",
+			value = "SELECT COUNT(`lemma_id`) FROM `search_index` AS s JOIN `lemma` AS l ON l.id = s.lemma_id WHERE l.site_id = :siteId group by site_id",
 			nativeQuery = true)
 	Integer countBySiteId(Integer siteId);
+
+	@Modifying
+	@Query(value = "DELETE `search_index` from `search_index` JOIN `lemma` AS l on l.id = search_index.lemma_id WHERE l.site_id = :siteId",
+			nativeQuery = true)
+	void deleteBySiteId(Integer siteId);
 
 }

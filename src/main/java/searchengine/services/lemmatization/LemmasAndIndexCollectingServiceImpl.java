@@ -72,7 +72,7 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 				try {
 					sleep(10);
 				} catch (InterruptedException e) {
-					e.printStackTrace();
+					log.error("Error sleeping while waiting for an item in line");
 				}
 			}
 		}
@@ -99,7 +99,8 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 	private @NotNull String logAboutPage(Integer pageId, long eachPageTime) {
 		return indexEntities.size()
 				+ " lemmas from page " + pageId
-				+ " collected and saved in " + +(System.currentTimeMillis() - eachPageTime) + " ms";
+				+ " collected and saved in " + +(System.currentTimeMillis() - eachPageTime) + " ms"
+				+ " incomeQueue has " + incomeQueue.size() + " pages idx";
 	}
 
 	private String logAboutEachSite(long startTime) {

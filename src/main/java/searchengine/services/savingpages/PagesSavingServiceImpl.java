@@ -44,9 +44,10 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 
 			pageEntity = incomeQueue.poll();
 			if (pageEntity != null) {
-				if (!pageRepository.existsByPathAndSiteEntity(pageEntity.getPath(), siteEntity)) {
+				PageEntity ePE = pageRepository.findByPathAndSiteEntity(pageEntity.getPath(), siteEntity);
+				if (ePE == null) {
 					lock.readLock().lock();
-					pageRepository.save(pageEntity);
+					pageRepository.saveAndFlush(pageEntity);
 					lock.readLock().unlock();
 					tryPutPageIdToOutcomeQueue();
 					log.warn(pageEntity.getId() + " saved. queue has " + incomeQueue.size());

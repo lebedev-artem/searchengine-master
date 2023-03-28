@@ -33,7 +33,7 @@ public class ApiController {
 	private final IndexResponse indexResponse;
 	private final StatisticsService statisticsService;
 	private final IndexingActions indexingActions;
-	TotalStatistics totalStatistics = new TotalStatistics();
+//	TotalStatistics totalStatistics = new TotalStatistics();
 
 	@GetMapping("/statistics")
 	public ResponseEntity<StatisticsResponse> statistics() {
