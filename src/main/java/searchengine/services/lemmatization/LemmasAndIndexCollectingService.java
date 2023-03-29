@@ -1,9 +1,6 @@
 package searchengine.services.lemmatization;
-
-import lombok.Getter;
 import searchengine.model.LemmaEntity;
 import searchengine.model.SiteEntity;
-import searchengine.services.indexing.IndexServiceImpl;
 
 import java.util.concurrent.BlockingQueue;
 

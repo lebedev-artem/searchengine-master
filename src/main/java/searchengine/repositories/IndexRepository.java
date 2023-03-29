@@ -32,4 +32,6 @@ public interface IndexRepository extends JpaRepository<IndexEntity, Long> {
 			nativeQuery = true)
 	void deleteBySiteId(Integer siteId);
 
+	Set<IndexEntity> findAllByLemmaEntity(LemmaEntity lemmaEntity);
+
 }

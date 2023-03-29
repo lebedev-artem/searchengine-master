@@ -1,6 +1,9 @@
 # example values
 server:
   port: 8080
+  error:
+      include-message: always
+
 
 spring:
   datasource:
@@ -57,10 +60,10 @@ indexing-settings:
       name: Et Cet-era 52
 #    - url: https://www.lutherancathedral.ru/
 #      name: Lutheran cathedral 842
-#    - url: https://dombulgakova.ru/
-#      name: Дом Булгакова 529
-    - url: https://www.svetlovka.ru/
-      name: Светловка 231
+    - url: https://dombulgakova.ru/
+      name: Дом Булгакова 529
+#    - url: https://www.svetlovka.ru/
+#      name: Светловка 231
     - url: http://cimus.biz/
       name: Cimus 19
 #    - url: https://xakep.ru/

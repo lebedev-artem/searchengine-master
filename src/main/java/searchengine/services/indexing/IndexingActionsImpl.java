@@ -39,7 +39,6 @@ public class IndexingActionsImpl implements IndexingActions {
 	};
 	private SiteEntity siteEntity;
 	private volatile boolean indexingActionsStarted = false;
-	private volatile boolean pressedStop = false;
 	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(500);
 	private BlockingQueue<Integer> queueOfPagesForLemmasCollecting = new LinkedBlockingQueue<>(100_000);
 	private final PagesSavingService pagesSavingService;
@@ -65,21 +64,21 @@ public class IndexingActionsImpl implements IndexingActions {
 				log.info(siteEntity.getName() + " with URL " + siteEntity.getUrl() + " started indexing");
 				log.info(pageRepository.count() + " sites, " + lemmaRepository.count() + " lemmas, " + indexRepository.count() + " indexes in table");
 				Thread scrapingThread = new Thread(() -> {
-					scrapActions(pool, latch, siteEntity);
+					scrapActions(pool, siteEntity);
 					latch.countDown();
 					pagesSavingService.setScrapingIsDone(true);
 					log.warn("crawl-thread finished, latch =  " + latch.getCount());
 				}, "crawl-thread");
 
 				Thread pagesSaverThread = new Thread(() -> {
-					pageSavingActions(latch, siteEntity);
+					pageSavingActions(siteEntity);
 					latch.countDown();
 					lemmasAndIndexCollectingService.setSavingPagesIsDone(true);
 					log.warn("saving-pages-thread finished, latch =  " + latch.getCount());
 				}, "pages-thread");
 
 				Thread lemmasCollectorThread = new Thread(() -> {
-					lemmasCollectingActions(latch, siteEntity);
+					lemmasCollectingActions(siteEntity);
 					latch.countDown();
 					log.warn("lemmas-finding-thread finished, latch =  " + latch.getCount());
 				}, "lemmas-thread");
@@ -114,23 +113,14 @@ public class IndexingActionsImpl implements IndexingActions {
 		startFullIndexing(oneEntitySet);
 	}
 
-	private void writeLogAfterIndexing(long start) {
-		log.info(siteRepository.count() + " site(s)");
-		log.info(pageRepository.count() + " pages");
-		log.info(lemmaRepository.count() + " lemmas");
-		log.info(indexRepository.count() + " index entries");
-		log.info("Just in " + (System.currentTimeMillis() - start) + " ms");
-		log.info("FINISHED. I'm ready to start again and again");
-	}
-
-	private void lemmasCollectingActions(CountDownLatch latch, SiteEntity siteEntity) {
+	private void lemmasCollectingActions(SiteEntity siteEntity) {
 		lemmasAndIndexCollectingService.setIncomeQueue(queueOfPagesForLemmasCollecting);
 		lemmasAndIndexCollectingService.setSavingPagesIsDone(false);
 		lemmasAndIndexCollectingService.setSiteEntity(siteEntity);
 		lemmasAndIndexCollectingService.startCollecting();
 	}
 
-	private void pageSavingActions(CountDownLatch latch, SiteEntity siteEntity) {
+	private void pageSavingActions(SiteEntity siteEntity) {
 		pagesSavingService.setScrapingIsDone(false);
 		pagesSavingService.setIncomeQueue(queueOfPagesForSaving);
 		pagesSavingService.setOutcomeQueue(queueOfPagesForLemmasCollecting);
@@ -138,7 +128,7 @@ public class IndexingActionsImpl implements IndexingActions {
 		pagesSavingService.startSavingPages();
 	}
 
-	private void scrapActions(ForkJoinPool pool, CountDownLatch latch, SiteEntity siteEntity) {
+	private void scrapActions(ForkJoinPool pool, SiteEntity siteEntity) {
 		siteUrl = siteEntity.getUrl();
 		pool.invoke(new ScrapingAction(siteEntity.getUrl(), siteEntity, queueOfPagesForSaving, pageRepository, siteRepository, stringPool));
 	}
@@ -158,11 +148,6 @@ public class IndexingActionsImpl implements IndexingActions {
 			lemmaRepository.flush();
 			indexRepository.flush();
 		}
-	}
-
-	@Override
-	public void setPressedStop(boolean value) {
-		pressedStop = value;
 	}
 
 	@Override
@@ -193,6 +178,15 @@ public class IndexingActionsImpl implements IndexingActions {
 			siteRepository.updateStatusStatusTimeErrorByUrl(status, LocalDateTime.now(), lastError, siteEntity.getUrl());
 			log.warn("Status of site " + siteEntity.getName() + " set to " + status + ", error set to " + lastError);
 		}
+	}
+
+	private void writeLogAfterIndexing(long start) {
+		log.info(siteRepository.count() + " site(s)");
+		log.info(pageRepository.count() + " pages");
+		log.info(lemmaRepository.count() + " lemmas");
+		log.info(indexRepository.count() + " index entries");
+		log.info("Just in " + (System.currentTimeMillis() - start) + " ms");
+		log.info("FINISHED. I'm ready to start again and again");
 	}
 
 	private boolean pressedStop() {

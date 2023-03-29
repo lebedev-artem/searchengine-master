@@ -6,10 +6,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.model.LemmaEntity;
-import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 
-import java.util.Optional;
 import java.util.Set;
 
 @Transactional
@@ -21,12 +19,19 @@ public interface LemmaRepository extends JpaRepository<LemmaEntity, Long> {
 	void resetIdOnLemmaTable();
 
 	boolean existsByLemmaAndSiteEntity(String lemma, SiteEntity siteEntity);
+	boolean existsByLemma(String lemma);
 	void deleteAllBySiteEntity(SiteEntity siteEntity);
 	LemmaEntity findByLemmaAndSiteEntity(String lemma, SiteEntity siteEntity);
 	LemmaEntity findFirstByLemmaAndSiteEntity(String lemma, SiteEntity siteEntity);
 	Set<LemmaEntity> findAllByLemmaAndSiteEntity(String lemma, SiteEntity siteEntity);
 	Integer countBySiteEntity(SiteEntity siteEntity);
 	Set<LemmaEntity> findByLemmaIn(Set<String> lemmaEntities);
+	LemmaEntity findByLemma(String lemma);
+	LemmaEntity findFirstByOrderByFrequencyAsc();
+	LemmaEntity findTopByOrderByFrequencyAsc();
+	LemmaEntity findTopByOrderByFrequencyDesc();
+	LemmaEntity findFirstByLemmaOrderByFrequencyDesc(String lemma);
+	LemmaEntity findFirstByLemmaAndSiteEntityOrderByFrequencyAsc(String lemma, SiteEntity siteEntity);
 
 	Integer getFrequencyByLemma(String lemma);
 	LemmaEntity getByLemma(String lemma);

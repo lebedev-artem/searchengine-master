@@ -9,7 +9,6 @@ public interface IndexingActions {
 
 	void startFullIndexing(Set<SiteEntity> siteEntities);
 	void startPartialIndexing(SiteEntity siteEntity);
-	void setPressedStop(boolean value);
 	boolean getIndexingActionsStarted();
 	void setIndexingActionsStarted(boolean value);
 

@@ -2,6 +2,7 @@ package searchengine.repositories;
 
 import org.jetbrains.annotations.NotNull;
 import org.springframework.data.domain.Example;
+import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -34,6 +35,7 @@ public interface PageRepository extends JpaRepository<PageEntity, Long> {
 	Integer countBySiteEntity(SiteEntity siteEntity);
 	void deleteAllBySiteEntity(SiteEntity siteEntity);
 	void deleteById(Integer id);
+	PageEntity findByIdAndSiteEntity(Integer id, SiteEntity siteEntity);
 
 
 	@Override
