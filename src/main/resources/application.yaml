@@ -54,14 +54,14 @@ indexing-settings:
 #      name: ИПФ РАН 1042
 #    - url: www.bbc.com
 #      name: BBC.com
-    - url: https://nikoartgallery.com/
-      name: Niko Art 91
-    - url: https://et-cetera.ru/mobile/
-      name: Et Cet-era 52
+#    - url: https://nikoartgallery.com/
+#      name: Niko Art 91
+#    - url: https://et-cetera.ru/mobile/
+#      name: Et Cet-era 52
 #    - url: https://www.lutherancathedral.ru/
 #      name: Lutheran cathedral 842
-    - url: https://dombulgakova.ru/
-      name: Дом Булгакова 529
+#    - url: https://dombulgakova.ru/
+#      name: Дом Булгакова 529
 #    - url: https://www.svetlovka.ru/
 #      name: Светловка 231
     - url: http://cimus.biz/

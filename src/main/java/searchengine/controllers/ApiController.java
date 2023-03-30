@@ -40,7 +40,6 @@ public class ApiController {
 	private final StatisticsService statisticsService;
 	private final IndexingActions indexingActions;
 	private final SearchService searchService;
-	private final SearchResponse searchResponse = new SearchResponse();
 
 	@GetMapping("/statistics")
 	public ResponseEntity<StatisticsResponse> statistics() {

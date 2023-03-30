@@ -62,6 +62,8 @@ public class SchemaActions {
 
 		eSEx.forEach(siteEntity -> {
 			if (sitesList.getSites().stream().noneMatch(s -> s.getUrl().equals(siteEntity.getUrl()))){
+				indexRepository.deleteAllInBatch();
+				lemmaRepository.deleteAllInBatch();
 				siteRepository.deleteById(siteEntity.getId());
 				log.warn(siteEntity.getName() + " " + siteEntity.getUrl() + " deleted from table, because site not exist in SiteList");
 			}

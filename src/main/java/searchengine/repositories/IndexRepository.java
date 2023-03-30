@@ -33,5 +33,7 @@ public interface IndexRepository extends JpaRepository<IndexEntity, Long> {
 	void deleteBySiteId(Integer siteId);
 
 	Set<IndexEntity> findAllByLemmaEntity(LemmaEntity lemmaEntity);
+	Set<IndexEntity> findAllByPageEntity(PageEntity pageEntity);
+	IndexEntity findByLemmaEntityAndPageEntity(LemmaEntity lemmaEntity, PageEntity pageEntity);
 
 }
