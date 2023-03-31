@@ -48,28 +48,35 @@ indexing-settings:
 #      name: Volochek_very_big_string_apporx_3r_links
 #    - url: https://www.playback.ru/
 #      name: PlayBack.Ru
-    - url: http://radiomv.ru/
-      name: Радио MV 13
+#    - url: http://radiomv.ru/
+#      name: Радио MV 13
+#      1024
 #    - url: https://ipfran.ru/
-#      name: ИПФ РАН 1042
+#      name: ИПФ РАН
 #    - url: www.bbc.com
 #      name: BBC.com
-#    - url: https://nikoartgallery.com/
-#      name: Niko Art 91
-#    - url: https://et-cetera.ru/mobile/
-#      name: Et Cet-era 52
-#    - url: https://www.lutherancathedral.ru/
-#      name: Lutheran cathedral 842
-#    - url: https://dombulgakova.ru/
-#      name: Дом Булгакова 529
-#    - url: https://www.svetlovka.ru/
-#      name: Светловка 231
-    - url: http://cimus.biz/
-      name: Cimus 19
+#    - 91
+    - url: https://nikoartgallery.com/
+      name: Niko Art
+#      52
+    - url: https://et-cetera.ru/mobile/
+      name: Et Cet-era
+#      842
+    - url: https://www.lutherancathedral.ru/
+      name: Lutheran Cathedral
+#      529
+    - url: https://dombulgakova.ru/
+      name: Дом Булгакова
+#      231
+    - url: https://www.svetlovka.ru/
+      name: Svetlovka
+#      19
+#    - url: http://cimus.biz/
+#      name: Cimus
 #    - url: https://xakep.ru/
 #      name: xakep
-#    - url: https://niasvizh.by/
-#      name: Несвиж
+    - url: https://niasvizh.by/
+      name: Несвиж
 #    - url: https://habr.com/ru/hub/java/
 #      name: JAVA_Hub Habr
 

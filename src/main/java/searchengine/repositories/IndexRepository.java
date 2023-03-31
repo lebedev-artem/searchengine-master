@@ -9,31 +9,26 @@ import org.springframework.transaction.annotation.Transactional;
 import searchengine.model.IndexEntity;
 import searchengine.model.LemmaEntity;
 import searchengine.model.PageEntity;
-
-import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 @Transactional
 @Repository
 public interface IndexRepository extends JpaRepository<IndexEntity, Long> {
+
+	Set<IndexEntity> findAllByLemmaEntity(LemmaEntity lemmaEntity);
+	IndexEntity findByLemmaEntityAndPageEntity(LemmaEntity lemmaEntity, PageEntity pageEntity);
+
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "ALTER TABLE `search_index` AUTO_INCREMENT = 1", nativeQuery = true)
 	void resetIdOnIndexTable();
-
-
-	@Query(
-			value = "SELECT COUNT(`lemma_id`) FROM `search_index` AS s JOIN `lemma` AS l ON l.id = s.lemma_id WHERE l.site_id = :siteId group by site_id",
-			nativeQuery = true)
-	Integer countBySiteId(Integer siteId);
 
 	@Modifying
 	@Query(value = "DELETE `search_index` from `search_index` JOIN `lemma` AS l on l.id = search_index.lemma_id WHERE l.site_id = :siteId",
 			nativeQuery = true)
 	void deleteBySiteId(Integer siteId);
 
-	Set<IndexEntity> findAllByLemmaEntity(LemmaEntity lemmaEntity);
-	Set<IndexEntity> findAllByPageEntity(PageEntity pageEntity);
-	IndexEntity findByLemmaEntityAndPageEntity(LemmaEntity lemmaEntity, PageEntity pageEntity);
-
+	@Query(
+			value = "SELECT COUNT(`lemma_id`) FROM `search_index` AS s JOIN `lemma` AS l ON l.id = s.lemma_id WHERE l.site_id = :siteId group by site_id",
+			nativeQuery = true)
+	Integer countBySiteId(Integer siteId);
 }

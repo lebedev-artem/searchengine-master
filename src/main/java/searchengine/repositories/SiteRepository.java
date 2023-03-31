@@ -17,70 +17,43 @@ import java.util.List;
 @Repository
 public interface SiteRepository extends JpaRepository<SiteEntity, Long> {
 
+	void deleteById(Integer id);
+	boolean existsByUrl(String url);
+	SiteEntity findByUrl(String url);
+
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "ALTER TABLE `site` AUTO_INCREMENT = 1", nativeQuery = true)
 	void resetIdOnSiteTable();
 
-	@Query("SELECT COUNT(*) FROM SiteEntity")
-	int findCount();
-
-	@Query("SELECT s FROM SiteEntity s WHERE s.status = :status")
-	Iterable<SiteEntity> findByStatus(@Param("status") IndexingStatus indexingStatus);
-
-	@Query("SELECT s FROM SiteEntity s")
-	List<SiteEntity> findAllSites();
-
-//	@Query("SELECT s FROM SiteEntity s WHERE s.url = :url")
-
-	Integer findIdByName(String name);
-	SiteEntity findByName(String name);
-	SiteEntity findById(Integer id);
-	SiteEntity findByUrl(String url);
-	boolean existsByName(String name);
-	void deleteByUrl(String url);
-	void deleteById(Integer id);
-	boolean existsByUrl(String url);
-	PageEntity getReferenceById(Integer id);
-
-//	@Modifying(clearAutomatically = true, flushAutomatically = true)
-//	@Query("DELETE FROM SiteEntity s WHERE s.url = :url")
-//	void removeAllByUrl(@Param("url") String url);
-//
-//	@Modifying(clearAutomatically = true, flushAutomatically = true)
-//	@Query(value = "DELETE from `site` WHERE `name` = :name", nativeQuery = true)
-//	void deleteByName(String name);
-
-//	@Modifying(clearAutomatically = true, flushAutomatically = true)
-//	@Query(value = "DELETE from `site` WHERE `id` = :id", nativeQuery = true)
-//	void deleteById(Integer id);
-
-//	@Modifying(clearAutomatically = true, flushAutomatically = true)
-//	@Query(value = "UPDATE `site` SET `status` = :status WHERE `name`=:name", nativeQuery = true)
-//	void updateStatus(String status, String name);
-//
-//	@Modifying(clearAutomatically = true, flushAutomatically = true)
-//	@Query(value = "INSERT INTO `site` (status, status_time, last_error, url, name) VALUES (:status, :statusTime, :lastError, :url, :name)", nativeQuery = true)
-//	void saveSiteEntity(String status, LocalDateTime statusTime, String lastError, String url, String name);
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime WHERE `url` = :url",
+			nativeQuery = true)
+	void updateStatusStatusTimeByUrl(String  status, LocalDateTime statusTime, String url);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "UPDATE `site` SET `status_time` = :statusTime WHERE `name`=:name", nativeQuery = true)
 	void updateStatusTime(String name, LocalDateTime statusTime);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
-	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime, `last_error` = :error WHERE `status` = \"INDEXING\"", nativeQuery = true)
-	void updateAllStatusStatusTimeError(String  status, LocalDateTime statusTime, String error);
+	@Query(value = "UPDATE `site` SET `last_error` = :error, status_time = :statusTime WHERE `url` = :url",
+			nativeQuery = true)
+	void updateErrorStatusTimeByUrl(String error, LocalDateTime statusTime, String url);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
-	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime, `last_error` = :error WHERE `url` = :url", nativeQuery = true)
+	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime, `last_error` = :error WHERE `url` = :url",
+			nativeQuery = true)
 	void updateStatusStatusTimeErrorByUrl(String  status, LocalDateTime statusTime, String error, String url);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
-	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime WHERE `url` = :url", nativeQuery = true)
-	void updateStatusStatusTimeByUrl(String  status, LocalDateTime statusTime, String url);
+	@Query(value = "UPDATE `site` SET `status` = :status, status_time = :statusTime, `last_error` = :error WHERE `status` = \"INDEXING\"",
+			nativeQuery = true)
+	void updateAllStatusStatusTimeError(String  status, LocalDateTime statusTime, String error);
 
-	@Modifying(clearAutomatically = true, flushAutomatically = true)
-	@Query(value = "UPDATE `site` SET `last_error` = :error, status_time = :statusTime WHERE `url` = :url", nativeQuery = true)
-	void updateErrorStatusTimeByUrl(String error, LocalDateTime statusTime, String url);
+
+
+
+
+
 
 
 }

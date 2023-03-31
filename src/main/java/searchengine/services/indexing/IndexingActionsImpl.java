@@ -15,6 +15,7 @@ import searchengine.repositories.SiteRepository;
 import searchengine.services.lemmatization.LemmasAndIndexCollectingService;
 import searchengine.services.savingpages.PagesSavingService;
 import searchengine.services.scraping.ScrapingAction;
+import searchengine.services.stuff.StaticVault;
 import searchengine.services.stuff.StringPool;
 
 import java.time.LocalDateTime;
@@ -114,6 +115,8 @@ public class IndexingActionsImpl implements IndexingActions {
 	}
 
 	private void lemmasCollectingActions(SiteEntity siteEntity) {
+		StaticVault.indexEntitiesMap.clear();
+		StaticVault.lemmaEntitiesMap.clear();
 		lemmasAndIndexCollectingService.setIncomeQueue(queueOfPagesForLemmasCollecting);
 		lemmasAndIndexCollectingService.setSavingPagesIsDone(false);
 		lemmasAndIndexCollectingService.setSiteEntity(siteEntity);
