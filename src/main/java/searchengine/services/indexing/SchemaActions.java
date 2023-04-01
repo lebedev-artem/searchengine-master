@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+
 @Slf4j
 @Getter
 @Setter
@@ -61,7 +62,7 @@ public class SchemaActions {
 		if (sitesList.getSites().size() == 0) return new HashSet<>();
 
 		eSEx.forEach(siteEntity -> {
-			if (sitesList.getSites().stream().noneMatch(s -> s.getUrl().equals(siteEntity.getUrl()))){
+			if (sitesList.getSites().stream().noneMatch(s -> s.getUrl().equals(siteEntity.getUrl()))) {
 				indexRepository.deleteAllInBatch();
 				lemmaRepository.deleteAllInBatch();
 				siteRepository.deleteById(siteEntity.getId());
@@ -70,7 +71,7 @@ public class SchemaActions {
 		});
 
 		//nSEx - Set of newly created entities of Site
-		Set<SiteEntity> nSEx  = new HashSet<>();
+		Set<SiteEntity> nSEx = new HashSet<>();
 		if (eSEx.size() == 0) {
 			log.info("Table `site` is empty. All sites will be getting from SiteList");
 			virginSchema();
@@ -104,6 +105,7 @@ public class SchemaActions {
 		if (pageRepository.count() == 0 & lemmaRepository.count() == 0 & indexRepository.count() == 0)
 			resetAllIds();
 		log.info("Schema initialized!");
+		System.gc();
 		return nSEx;
 	}
 
@@ -115,16 +117,21 @@ public class SchemaActions {
 		} catch (MalformedURLException e) {
 			log.error("Can't get path or hostname from request");
 		}
+		String hostName;
+		if (path.equals("/")) {
+			hostName = url.substring(0, url.lastIndexOf(path) + 1);
+		} else {
+			hostName = url.substring(0, url.indexOf(path) + 1);
+		}
 
-		String hostName = url.substring(0, url.indexOf(path) + 1);
 		Site site = null;
 		for (Site s : sitesList.getSites()) {
-			if (s.getUrl().toLowerCase(Locale.ROOT).equals(hostName.toLowerCase(Locale.ROOT))){
+			if (s.getUrl().toLowerCase(Locale.ROOT).equals(hostName.toLowerCase(Locale.ROOT))) {
 				site = s;
 			}
 		}
 
-		if (site == null){
+		if (site == null) {
 			log.error("SiteList doesn't contains hostname of requested URL");
 			return null;
 		}
@@ -200,7 +207,7 @@ public class SchemaActions {
 		});
 	}
 
-	private void deleteDetachedIndex(Integer siteId){
+	private void deleteDetachedIndex(Integer siteId) {
 		indexRepository.deleteBySiteId(siteId);
 	}
 }

@@ -10,12 +10,12 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class StringPool {
 	public final Map<String, String> addedPathsToQueue;
-	public final Map<String, String> paths;
+	public final Map<String, String> savedPaths;
 	public final Map<String, String> pages404;
 
 
 	public StringPool() {
-		paths = new ConcurrentHashMap<>(5000, 1);
+		savedPaths = new ConcurrentHashMap<>(5000, 1);
 		addedPathsToQueue = new ConcurrentHashMap<>(5000, 1);
 		pages404 = new ConcurrentHashMap<>(100);
 	}
@@ -25,8 +25,8 @@ public class StringPool {
 		return (exist == null) ? s : exist;
 	}
 
-	public String internPath(String s){
-		String exist = paths.putIfAbsent(s, s);
+	public String internSavedPath(String s){
+		String exist = savedPaths.putIfAbsent(s, s);
 		return (exist == null) ? s : exist;
 	}
 
@@ -40,6 +40,6 @@ public class StringPool {
 	}
 
 	public int pathsSize() {
-		return paths.size();
+		return savedPaths.size();
 	}
 }

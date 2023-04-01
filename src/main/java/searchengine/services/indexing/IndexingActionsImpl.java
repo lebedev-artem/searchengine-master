@@ -40,7 +40,7 @@ public class IndexingActionsImpl implements IndexingActions {
 	};
 	private SiteEntity siteEntity;
 	private volatile boolean indexingActionsStarted = false;
-	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(500);
+	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(100);
 	private BlockingQueue<Integer> queueOfPagesForLemmasCollecting = new LinkedBlockingQueue<>(100_000);
 	private final PagesSavingService pagesSavingService;
 	private final LemmasAndIndexCollectingService lemmasAndIndexCollectingService;
@@ -49,6 +49,7 @@ public class IndexingActionsImpl implements IndexingActions {
 	private final IndexRepository indexRepository;
 	private final LemmaRepository lemmaRepository;
 	public static String siteUrl;
+	public static Integer counterActions = 0;
 	private final StringPool stringPool = new StringPool();
 
 
@@ -56,14 +57,14 @@ public class IndexingActionsImpl implements IndexingActions {
 	public void startFullIndexing(@NotNull Set<SiteEntity> siteEntities) {
 		log.warn("Full indexing will be started now");
 		long start = System.currentTimeMillis();
-		ForkJoinPool pool = new ForkJoinPool();
+		ForkJoinPool pool = new ForkJoinPool(6);
 		setIndexingActionsStarted(true);
 
 		for (SiteEntity siteEntity : siteEntities) {
 			CountDownLatch latch = new CountDownLatch(3);
 			if (!pressedStop()) {
 				log.info(siteEntity.getName() + " with URL " + siteEntity.getUrl() + " started indexing");
-				log.info(pageRepository.count() + " sites, " + lemmaRepository.count() + " lemmas, " + indexRepository.count() + " indexes in table");
+				log.info(pageRepository.count() + " pages, " + lemmaRepository.count() + " lemmas, " + indexRepository.count() + " indexes in table");
 				Thread scrapingThread = new Thread(() -> {
 					scrapActions(pool, siteEntity);
 					latch.countDown();
@@ -128,12 +129,16 @@ public class IndexingActionsImpl implements IndexingActions {
 		pagesSavingService.setIncomeQueue(queueOfPagesForSaving);
 		pagesSavingService.setOutcomeQueue(queueOfPagesForLemmasCollecting);
 		pagesSavingService.setSiteEntity(siteEntity);
+		pagesSavingService.setStringPool(stringPool);
 		pagesSavingService.startSavingPages();
+
 	}
 
 	private void scrapActions(ForkJoinPool pool, SiteEntity siteEntity) {
 		siteUrl = siteEntity.getUrl();
-		pool.invoke(new ScrapingAction(siteEntity.getUrl(), siteEntity, queueOfPagesForSaving, pageRepository, siteRepository, stringPool));
+		ScrapingAction action = new ScrapingAction(siteEntity.getUrl(), siteEntity, queueOfPagesForSaving, pageRepository, siteRepository);
+		action.setStringPool(stringPool);
+		pool.invoke(action);
 	}
 
 	private void stopPressedActions(ForkJoinPool pool) {
@@ -181,6 +186,8 @@ public class IndexingActionsImpl implements IndexingActions {
 			siteRepository.updateStatusStatusTimeErrorByUrl(status, LocalDateTime.now(), lastError, siteEntity.getUrl());
 			log.warn("Status of site " + siteEntity.getName() + " set to " + status + ", error set to " + lastError);
 		}
+		stringPool.savedPaths.clear();
+		stringPool.pages404.clear();
 	}
 
 	private void writeLogAfterIndexing(long start) {

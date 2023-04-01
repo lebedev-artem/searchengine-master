@@ -40,7 +40,6 @@ public class IndexEntity {
 //	@PrePersist
 //	public void assignLemmaId() {
 //		this.getId().setLemmaId(this.lemmaEntity.getId());
-//		this.getId().setPageId(this.pageEntity.getId());
 //	}
 
 	@Embeddable

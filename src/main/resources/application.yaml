@@ -9,6 +9,11 @@ spring:
   datasource:
     username: root
     password: password
+    hikari:
+      connectionTimeout: 30000
+      idleTimeout: 600000
+      maxLifetime: 1800000
+      maximumPoolSize: 30
     url: jdbc:mysql://localhost:3306/search_engine?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true
   output:
       ansi:
@@ -21,7 +26,7 @@ spring:
 #        event:
 #          merge:
 #            entity_copy_observer: allow
-        dialect: org.hibernate.dialect.MySQL8Dialect
+
 
     hibernate:
       ddl-auto: update
@@ -30,6 +35,7 @@ spring:
       use_sql_comments: true
       useUnicode: true
       characterEncoding: utf-8
+      dialect: org.hibernate.dialect.MySQL8Dialect
 jsoup-setting:
   jsoup:
     userAgent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:25.0) Gecko/20100101 Firefox/25.0
@@ -40,6 +46,7 @@ jsoup-setting:
 
 indexing-settings:
   sites:
+#    >15000
 #    - url: https://www.artlebedev.ru/
 #      name: ArtLebedev
 #    - url: https://lenta.ru/
@@ -59,25 +66,34 @@ indexing-settings:
     - url: https://nikoartgallery.com/
       name: Niko Art
 #      52
-    - url: https://et-cetera.ru/mobile/
+    - url: https://et-cetera.ru/
       name: Et Cet-era
 #      842
     - url: https://www.lutherancathedral.ru/
       name: Lutheran Cathedral
 #      529
-    - url: https://dombulgakova.ru/
-      name: Дом Булгакова
+#    - url: https://dombulgakova.ru/
+#      name: Дом Булгакова
 #      231
-    - url: https://www.svetlovka.ru/
-      name: Svetlovka
+#    - url: https://www.svetlovka.ru/
+#      name: Svetlovka
 #      19
+    - url: https://www.tretyakovgallery.ru/
+      name: Третьяковская галерея
+#    - url: https://www.film.ru/
+#      name: Film.ru - Рецензии на фильмы
+#    - url: https://www.metro.ru
+#      name: Московское метро
+#    over heap
+#    - url: https://zanauku.mipt.ru/
+#      name: Журнал "За науку"
 #    - url: http://cimus.biz/
 #      name: Cimus
 #    - url: https://xakep.ru/
 #      name: xakep
-    - url: https://niasvizh.by/
-      name: Несвиж
-#    - url: https://habr.com/ru/hub/java/
+#    - url: https://niasvizh.by/
+#      name: Несвиж
+#    - url: https://habr.com/ru/
 #      name: JAVA_Hub Habr
 
 

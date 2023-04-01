@@ -1,8 +1,6 @@
 package searchengine.services.savingpages;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
@@ -10,7 +8,10 @@ import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.PageRepository;
 import searchengine.services.indexing.IndexServiceImpl;
+import searchengine.services.stuff.CheckHeapSize;
+import searchengine.services.stuff.StringPool;
 
+import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -24,12 +25,15 @@ import static java.lang.Thread.sleep;
 @RequiredArgsConstructor
 public class PagesSavingServiceImpl implements PagesSavingService {
 	private final ReadWriteLock lock = new ReentrantReadWriteLock();
-	private volatile boolean scrapingIsDone;                                     //previous step of indexing
-	private BlockingQueue<PageEntity> incomeQueue;                      //from scraping
-	private BlockingQueue<Integer> outcomeQueue;                        //to lemmas and index collecting
+	private volatile boolean scrapingIsDone;
+	private BlockingQueue<PageEntity> incomeQueue;
+	private BlockingQueue<Integer> outcomeQueue;
 	private SiteEntity siteEntity;
 	private PageEntity pageEntity;
 	private final PageRepository pageRepository;
+	private StringPool stringPool;
+	private Integer counter = 0;
+	private final CheckHeapSize checkHeapSize;
 
 	public void startSavingPages() {
 		scrapingIsDone = false;                                         //нужно устанавливать в потоке scraping
@@ -44,13 +48,17 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 
 			pageEntity = incomeQueue.poll();
 			if (pageEntity != null) {
-				PageEntity ePE = pageRepository.findByPathAndSiteEntity(pageEntity.getPath(), siteEntity);
-				if (ePE == null) {
-					lock.readLock().lock();
-					pageRepository.saveAndFlush(pageEntity);
-					lock.readLock().unlock();
+				if (!stringPool.savedPaths.containsKey(pageEntity.getPath())) {
+					pageRepository.save(pageEntity);
+					stringPool.internSavedPath(pageEntity.getPath());
 					tryPutPageIdToOutcomeQueue();
-					log.warn(pageEntity.getId() + " saved. queue has " + incomeQueue.size());
+//					log.warn(pageEntity.getId() + " saved. queue has " + incomeQueue.size());
+					counter++;
+					if (counter > getRandom()){
+						log.warn("Another " + counter + " pages saved to the database. " + pageRepository.countBySiteEntity(siteEntity) + " total saved. IncomeQueue has " + incomeQueue.size() + " objects");
+						log.info("Used heap size - " + checkHeapSize.getHeap() + ". Free - " + checkHeapSize.getFreeHeap());
+						counter = 0;
+					}
 				}
 			} else {
 				try {
@@ -100,5 +108,13 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 
 	private boolean pressedStop() {
 		return IndexServiceImpl.pressedStop;
+	}
+
+	private Integer getRandom(){
+		Random r = new Random();
+		int low = 240;
+		int high = 260;
+		int result = r.nextInt(high-low) + low;
+		return result;
 	}
 }

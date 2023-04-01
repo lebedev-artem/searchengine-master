@@ -41,16 +41,23 @@ public class SearchServiceImpl implements SearchService {
 	Map<Integer, PageEntity> rarestPages = new HashMap<>();
 	Map<PageEntity, List<String>> pagesLemma = new HashMap<>();
 	SearchResponse response = new SearchResponse();
-	;
+	Map<String, String> lemmaQueryKV = new HashMap<>();
 
 	@Override
 	public SearchResponse getSearchResults(@NotNull String query, String siteUrl, Integer offset, Integer limit) {
 		if (query.isEmpty()) return emptyQuery();
 		Map<PageEntity, Float> totalPagesWithRelevance = new HashMap<>();
 
+		//Разделяем строку на части
+		test(query);
+
+
 		//получаем леммы из запроса
-		Map<String, Integer> queryLemmasMap = lemmaFinder.collectLemmas(query);
-		Set<String> queryLemmas = new HashSet<>(queryLemmasMap.keySet());
+		Set<String> queryLemmas = lemmaFinder.getLemmaSet(query);
+
+		lemmaQueryKV = getWordsMap(query, queryLemmas);
+
+
 
 		List<SiteEntity> siteEntities = new ArrayList<>();
 		if (siteUrl != null) {
@@ -118,6 +125,44 @@ public class SearchServiceImpl implements SearchService {
 		pagesLemma.clear();
 
 		return response;
+	}
+
+	private Map<String, String> getWordsMap(@NotNull String query, Set<String> queryLemmas) {
+		Map<String, String> result = new HashMap<>();
+		List<String> splitQuery = new ArrayList<>(Arrays.stream(query.split(" ")).toList());
+		Collections.reverse(splitQuery);
+		for (String lemma : queryLemmas) {
+			result.put(lemma, splitQuery.remove(0));
+		}
+		return result;
+	}
+
+	private void test(String ss){
+		// Исходный запрос
+
+		// Лемматизированный список из базы данных
+		Set<String> lemmatizedList = lemmaFinder.getLemmaSet(ss);
+		List<String> s = lemmatizedList.stream().toList();
+
+
+		// Создаем словарь с частотами слов из запроса в списке
+		Map<String, Integer> freqMap = new HashMap<>();
+		for (String word : ss.split(" ")) {
+			freqMap.put(word, Collections.frequency(s, word));
+		}
+
+		// Создаем новый список, отсортированный по частоте в лемматизированном списке
+		List<String> sortedList = new ArrayList<>(Arrays.asList(ss.split(" ")));
+		sortedList.sort(Comparator.comparing(freqMap::get).reversed());
+
+		// Создаем новый список слов из исходного запроса в том же порядке, но используя значения из словаря в качестве ключей
+		List<String> sortedWords = new ArrayList<>();
+		for (String word : sortedList) {
+			sortedWords.add(word);
+			freqMap.remove(word);
+		}
+
+		System.out.println(sortedWords);
 	}
 
 	private String getSnippet(PageEntity page){
@@ -226,6 +271,7 @@ public class SearchServiceImpl implements SearchService {
 				if (idx != null) {
 					absRelPage += idx.getLemmaRank();
 					value.add(l.getLemma());
+					value.add(lemmaQueryKV.get(l.getLemma()));
 				}
 			}
 			pagesLemma.put(p, value);
