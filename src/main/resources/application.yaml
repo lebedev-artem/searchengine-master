@@ -80,6 +80,8 @@ indexing-settings:
 #      19
     - url: https://www.tretyakovgallery.ru/
       name: Третьяковская галерея
+    - url: http://kulinarya.ru/
+      name: Кулинария.Ру
 #    - url: https://www.film.ru/
 #      name: Film.ru - Рецензии на фильмы
 #    - url: https://www.metro.ru

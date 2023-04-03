@@ -7,6 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,7 +16,9 @@ import searchengine.dto.search.SearchResponse;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.TotalStatistics;
 import searchengine.exceptionhandler.EmptyQueryException;
+import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
+import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
 import searchengine.services.indexing.*;
 import searchengine.services.search.SearchService;
@@ -40,6 +43,7 @@ public class ApiController {
 	private final StatisticsService statisticsService;
 	private final IndexingActions indexingActions;
 	private final SearchService searchService;
+	private final PageRepository pageRepository;
 
 	@GetMapping("/statistics")
 	public ResponseEntity<StatisticsResponse> statistics() {
@@ -78,7 +82,7 @@ public class ApiController {
 
 	@PostMapping("/testDeleteSiteWithPages")
 	public void test(Integer request) throws Exception {
-		indexService.test(request);
+//		Page<PageEntity> page = pageRepository.findByIdAndSiteEntity()
 	}
 
 	@GetMapping("/search")

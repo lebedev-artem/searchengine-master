@@ -1,8 +1,10 @@
 package searchengine.dto.search;
 
+import lombok.Builder;
 import lombok.Data;
 
 @Data
+@Builder
 public class SearchData {
 
 	private String site;

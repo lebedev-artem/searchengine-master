@@ -22,7 +22,7 @@ public class SnippetGenerator {
 	//	private final LuceneMorphology luceneMorphology = new RussianLuceneMorphology();
 	private final LemmaFinder lemmaFinder;
 	private final Integer SNIPPET_LENGTH = 100;
-	private final Integer MAX_FULL_SNIPPET_LENGTH = 800;
+	private final Integer MAX_FULL_SNIPPET_LENGTH = 550;
 
 	public void setText(String text) {
 		this.text = Jsoup.clean(text, Safelist.simpleText()).replaceAll("[^А-Яа-яЁё\\d\\s]+", "");
@@ -117,11 +117,13 @@ public class SnippetGenerator {
 					if (matcher.find()) {
 						sentenceStart = matcher.end();
 					}
+					sb.append("&#8195");
 					sb.append(prevSnippet); //жлюавляем в СБ старую строку. Потом ...
-					sb.append("...").append("<br><br>");
+					sb.append("&#8195 . . .").append("<br><br>");
 					start = Math.max(pos - SNIPPET_LENGTH / 2, 0);
 					end = Math.min(pos + dirtyForms.get(pos).length() + SNIPPET_LENGTH / 2, text.length());
 					String snippet = text.substring(sentenceStart, end);
+					sb.append("&#8195");
 					sb.append(snippet); //добавляем новую строку
 					prevSnippet = "";
 				}

@@ -3,6 +3,7 @@ package searchengine.repositories;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 
+import javax.persistence.criteria.CriteriaBuilder;
 import java.util.List;
 import java.util.Set;
 
@@ -28,6 +30,10 @@ public interface PageRepository extends JpaRepository<PageEntity, Long> {
 	PageEntity findByPath(String path);
 	PageEntity getReferenceById(Integer id);
 	PageEntity findByIdAndSiteEntity(Integer id, SiteEntity siteEntity);
+//	Page<PageEntity> findAllByIdIn(List<Integer> ids);
+	List<PageEntity> findAllByIdIn(List<Integer> ids);
+	List<PageEntity> findAllByIdIn(List<Integer> pageIds, Pageable pageable);
+
 	PageEntity findByPathAndSiteEntity(String path, SiteEntity siteEntity);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)

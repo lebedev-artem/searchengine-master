@@ -1,0 +1,19 @@
+//					List<PageEntity> pages = pageRepository.findAllByIdIn(pageIds, pageable);
+//					List<PageEntity> pageEntities = firstPage.getContent();
+
+	private @NotNull Map<String, LemmaEntity> getFinalLemmasMap(String rarestLemma, Map<String, LemmaEntity> source) {
+		Map<String, LemmaEntity> result = new HashMap<>(source);
+		if (rarestLemma != null) {
+			result.remove(rarestLemma);
+			return sortByFrequency(result);
+		}
+		return new HashMap<>();
+	}
+
+	private Map<String, LemmaEntity> sortByFrequency(@NotNull Map<String, LemmaEntity> lemmaEntities) {
+		List<Map.Entry<String, LemmaEntity>> list = new ArrayList<>(lemmaEntities.entrySet());
+		list.sort((o1, o2) -> o1.getValue().getFrequency() - o2.getValue().getFrequency());
+		return list.stream()
+				.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+						(oldValue, newValue) -> oldValue, LinkedHashMap::new));
+	}
