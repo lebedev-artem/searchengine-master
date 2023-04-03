@@ -6,6 +6,7 @@ import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import searchengine.morphology.RussianMorphologyComponent;
 
 import java.io.IOException;
 import java.util.*;
@@ -15,20 +16,15 @@ import java.util.*;
 public class LemmaFinder {
 	private static final String WORD_TYPE_REGEX = "\\W\\w&&[^а-яА-Я\\s]";
 	private static final String[] PARTICLES_NAMES = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
-	private LuceneMorphology luceneMorphology;
+	private final LuceneMorphology luceneMorphology = new RussianLuceneMorphology();
 
-	@Autowired
-	public void setLuceneMorphology() {
-		try {
-			this.luceneMorphology = new RussianLuceneMorphology();
-		} catch (IOException e) {
-			log.error("Can't create RussianLuceneMorphology");
-		}
+	public LemmaFinder() throws IOException {
 	}
 
 	public Map<String, Integer> collectLemmas(String text) {
 		String[] words = arrayContainsRussianWords(text);
 		HashMap<String, Integer> lemmas = new HashMap<>();
+
 		for (String word : words) {
 			if (word.isBlank() | ((word.length() == 1) && (!word.toLowerCase(Locale.ROOT).equals("я")))) {
 				continue;
@@ -99,4 +95,13 @@ public class LemmaFinder {
 		}
 		return true;
 	}
+//
+//	@Autowired
+//	public void setLuceneMorphology() {
+//		try {
+//			this.luceneMorphology = new RussianLuceneMorphology();
+//		} catch (IOException e) {
+//			log.error("Can't create RussianLuceneMorphology");
+//		}
+//	}
 }

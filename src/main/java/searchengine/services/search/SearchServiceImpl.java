@@ -27,13 +27,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SearchServiceImpl implements SearchService {
 
-	public static final double ratio = 1.85;
+	public static final double ratio = 1.95;
 	private final SiteRepository siteRepository;
 	private final PageRepository pageRepository;
 	private final LemmaRepository lemmaRepository;
 	private final IndexRepository indexRepository;
 	private final LemmaFinder lemmaFinder;
-	private final SnippetGenerator snippetGenerator;
 
 	Map<String, LemmaEntity> retrievedLemmas = new TreeMap<>();
 	Map<String, LemmaEntity> finalLemmas = new TreeMap<>();
@@ -42,20 +41,18 @@ public class SearchServiceImpl implements SearchService {
 	Map<PageEntity, List<String>> pagesLemma = new HashMap<>();
 	SearchResponse response = new SearchResponse();
 	Map<String, String> lemmaQueryKV = new HashMap<>();
+	private final SnippetGenerator snippetGenerator;
 
 	@Override
 	public SearchResponse getSearchResults(@NotNull String query, String siteUrl, Integer offset, Integer limit) {
 		if (query.isEmpty()) return emptyQuery();
 		Map<PageEntity, Float> totalPagesWithRelevance = new HashMap<>();
 
-		//Разделяем строку на части
-		test(query);
-
-
+//		queryList = Arrays.asList(query.split("\\s+"));
 		//получаем леммы из запроса
 		Set<String> queryLemmas = lemmaFinder.getLemmaSet(query);
-
-		lemmaQueryKV = getWordsMap(query, queryLemmas);
+		List<String> queryList = new ArrayList<>(queryLemmas);
+//		lemmaQueryKV = getWordsMap(query, queryLemmas);
 
 
 
@@ -82,7 +79,7 @@ public class SearchServiceImpl implements SearchService {
 				rarestLemma = retrievedLemmas.keySet().stream().findFirst().orElse(null);
 				if (rarestLemma != null)
 					rarestPages = getPageEntitiesLemma(site, rarestLemma);
-				printRarestLemma(site, rarestLemma, rarestPages);
+				printRarestLemma(site, rarestLemma, new HashSet<>(rarestPages.values()));
 			}
 
 			//Продолжаем искать оставшиеся леммы на этих страницах
@@ -100,11 +97,15 @@ public class SearchServiceImpl implements SearchService {
 			//Итоговый Мап
 			Map<PageEntity, Float> pagesRelativeMap = getPagesWithRelevance(resultPages);
 
-			printResultPages("results pages", resultPages);
+			printResultPages("results pages", totalPagesWithRelevance.keySet());
 			totalPagesWithRelevance.putAll(pagesRelativeMap);
 			clearAllGlobalVariable();
 		}
 
+		System.out.println("Final lemmas");
+		for (String l: finalLemmas.keySet()){
+			System.out.println(l + " freq - " + finalLemmas.get(l).getFrequency() + "total pages - " + finalLemmas.get(l).getPageEntities().size());
+		}
 		totalPagesWithRelevance = sortByRank(totalPagesWithRelevance);
 		List<SearchData> totalData = new ArrayList<>();
 		for (PageEntity page : totalPagesWithRelevance.keySet()) {
@@ -112,7 +113,8 @@ public class SearchServiceImpl implements SearchService {
 			searchData.setSiteName(page.getSiteEntity().getName());
 			searchData.setSite(page.getSiteEntity().getUrl().replaceFirst("/$", ""));
 			searchData.setUri(page.getPath());
-			searchData.setSnippet(getSnippet(page));
+			searchData.setSnippet(getSnippet(page, queryList));
+
 			searchData.setRelevance(totalPagesWithRelevance.get(page));
 			searchData.setTitle(getTitle(page.getContent()));
 			totalData.add(searchData);
@@ -137,44 +139,12 @@ public class SearchServiceImpl implements SearchService {
 		return result;
 	}
 
-	private void test(String ss){
-		// Исходный запрос
+	private String getSnippet(PageEntity page, List<String> lemmas){
+		snippetGenerator.setText(page.getContent());
 
-		// Лемматизированный список из базы данных
-		Set<String> lemmatizedList = lemmaFinder.getLemmaSet(ss);
-		List<String> s = lemmatizedList.stream().toList();
+		snippetGenerator.setQueryWords(lemmas);
 
-
-		// Создаем словарь с частотами слов из запроса в списке
-		Map<String, Integer> freqMap = new HashMap<>();
-		for (String word : ss.split(" ")) {
-			freqMap.put(word, Collections.frequency(s, word));
-		}
-
-		// Создаем новый список, отсортированный по частоте в лемматизированном списке
-		List<String> sortedList = new ArrayList<>(Arrays.asList(ss.split(" ")));
-		sortedList.sort(Comparator.comparing(freqMap::get).reversed());
-
-		// Создаем новый список слов из исходного запроса в том же порядке, но используя значения из словаря в качестве ключей
-		List<String> sortedWords = new ArrayList<>();
-		for (String word : sortedList) {
-			sortedWords.add(word);
-			freqMap.remove(word);
-		}
-
-		System.out.println(sortedWords);
-	}
-
-	private String getSnippet(PageEntity page){
-		String snippet = "...";
-		List<String> snippets = snippetGenerator.generateSnippets(page.getContent(), pagesLemma.get(page));
-		if (snippets != null){
-			for (String s:snippets) {
-				snippet = snippet.concat(s);
-				snippet.concat("...");
-			}
-		}
-		return snippet;
+		return snippetGenerator.generateSnippets();
 	}
 
 	private Map<PageEntity, Float> getPagesWithRelevance(Map<Integer, PageEntity> source) {
@@ -187,8 +157,7 @@ public class SearchServiceImpl implements SearchService {
 		return new HashMap<>();
 	}
 
-	@NotNull
-	private Map<Integer, PageEntity> getRetainedPages(SiteEntity site, Map<Integer, PageEntity> rarestPages, Map<Integer, PageEntity> finalPages, String lemma) {
+	private @NotNull Map<Integer, PageEntity> getRetainedPages(SiteEntity site, Map<Integer, PageEntity> rarestPages, Map<Integer, PageEntity> finalPages, String lemma) {
 		LemmaEntity lemmaEntity = lemmaRepository.findByLemmaAndSiteEntity(lemma, site);
 		Set<IndexEntity> indexSet = indexRepository.findAllByLemmaEntity(lemmaEntity);
 		Map<Integer, IndexEntity> pageIdIndex = createPageIdIndexMap(indexSet);
@@ -204,10 +173,10 @@ public class SearchServiceImpl implements SearchService {
 		return eachIterationPages;
 	}
 
-	private void printResultPages(String results_pages, Map<Integer, PageEntity> resultPages) {
+	private void printResultPages(String results_pages, Set<PageEntity> resultPages) {
 		System.out.println(results_pages);
-		resultPages.keySet().forEach(x -> {
-			System.out.println(x + " " + resultPages.get(x).getPath());
+		resultPages.forEach(x -> {
+			System.out.println(x + " " + x.getPath());
 		});
 		System.out.println("-----------------------------------------------------------");
 	}
@@ -220,7 +189,7 @@ public class SearchServiceImpl implements SearchService {
 		System.out.println("-----------------------------------------------------------");
 	}
 
-	private void printRarestLemma(SiteEntity site, String rarestLemma, Map<Integer, PageEntity> rarestPages) {
+	private void printRarestLemma(SiteEntity site, String rarestLemma, Set<PageEntity> rarestPages) {
 		if (rarestLemma != null && rarestPages != null) {
 			System.out.println("Rarest lemma - " + rarestLemma + " freq - " + lemmaRepository.getByLemmaAndSiteEntity(rarestLemma, site).getFrequency());
 			printResultPages("pages by rarest lemma", rarestPages);
@@ -271,7 +240,7 @@ public class SearchServiceImpl implements SearchService {
 				if (idx != null) {
 					absRelPage += idx.getLemmaRank();
 					value.add(l.getLemma());
-					value.add(lemmaQueryKV.get(l.getLemma()));
+//					value.add(lemmaQueryKV.get(l.getLemma()));
 				}
 			}
 			pagesLemma.put(p, value);

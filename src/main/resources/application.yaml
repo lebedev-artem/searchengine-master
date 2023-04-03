@@ -1,6 +1,6 @@
 # example values
 server:
-  port: 8080
+  port: 8088
   error:
       include-message: always
 
