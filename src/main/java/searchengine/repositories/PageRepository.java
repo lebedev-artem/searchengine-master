@@ -25,16 +25,9 @@ public interface PageRepository extends JpaRepository<PageEntity, Long> {
 	boolean existsByPathAndSiteEntity(String path, SiteEntity siteEntity);
 
 	Integer countBySiteEntity(SiteEntity siteEntity);
-
-	PageEntity findById(Integer id);
 	PageEntity findByPath(String path);
 	PageEntity getReferenceById(Integer id);
-	PageEntity findByIdAndSiteEntity(Integer id, SiteEntity siteEntity);
-//	Page<PageEntity> findAllByIdIn(List<Integer> ids);
 	List<PageEntity> findAllByIdIn(List<Integer> ids);
-	List<PageEntity> findAllByIdIn(List<Integer> pageIds, Pageable pageable);
-
-	PageEntity findByPathAndSiteEntity(String path, SiteEntity siteEntity);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = "ALTER TABLE `page` AUTO_INCREMENT = 1", nativeQuery = true)

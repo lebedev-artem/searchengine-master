@@ -4,9 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import searchengine.morphology.RussianMorphologyComponent;
 
 import java.io.IOException;
 import java.util.*;
@@ -95,13 +93,5 @@ public class LemmaFinder {
 		}
 		return true;
 	}
-//
-//	@Autowired
-//	public void setLuceneMorphology() {
-//		try {
-//			this.luceneMorphology = new RussianLuceneMorphology();
-//		} catch (IOException e) {
-//			log.error("Can't create RussianLuceneMorphology");
-//		}
-//	}
+
 }

@@ -9,37 +9,30 @@ import java.util.concurrent.ConcurrentHashMap;
 @Setter
 @Component
 public class StringPool {
-	public final Map<String, String> addedPathsToQueue;
-	public final Map<String, String> savedPaths;
-	public final Map<String, String> pages404;
+	public static Map<String, String> visitedLinks;
+	public static Map<String, String> savedPaths = null;
+	public static Map<String, String> pages404;
 
 
 	public StringPool() {
-		savedPaths = new ConcurrentHashMap<>(5000, 1);
-		addedPathsToQueue = new ConcurrentHashMap<>(5000, 1);
+		savedPaths = new ConcurrentHashMap<>(3000);
+		visitedLinks = new ConcurrentHashMap<>(5000, 1);
 		pages404 = new ConcurrentHashMap<>(100);
 	}
 
-	public String internAddedPathToQueue(String s){
-		String exist = addedPathsToQueue.putIfAbsent(s, s);
+	public static String internVisitedLinks(String s){
+		String exist = visitedLinks.putIfAbsent(s, s);
 		return (exist == null) ? s : exist;
 	}
 
-	public String internSavedPath(String s){
+	public static String internSavedPath(String s){
 		String exist = savedPaths.putIfAbsent(s, s);
 		return (exist == null) ? s : exist;
 	}
 
-	public String internPage404(String s){
+	public static String internPage404(String s){
 		String exist = pages404.putIfAbsent(s, s);
 		return (exist == null) ? s : exist;
 	}
 
-	public int AddedPathToQueueSize() {
-		return addedPathsToQueue.size();
-	}
-
-	public int pathsSize() {
-		return savedPaths.size();
-	}
 }

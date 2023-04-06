@@ -1,5 +1,6 @@
 package searchengine.services.lemmatization;
 
+import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -12,7 +13,6 @@ import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.services.indexing.IndexServiceImpl;
-import searchengine.services.stuff.StaticVault;
 
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -56,7 +56,7 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 						(Jsoup.parse(pageEntity
 								.getContent()).body().text());
 
-				long startPageTime = System.currentTimeMillis();
+//				long startPageTime = System.currentTimeMillis();
 				for (String lemma : collectedLemmas.keySet()) {
 
 					int rank = collectedLemmas.get(lemma);
@@ -83,11 +83,7 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 		}
 		log.warn("saving lemmas with " + (System.currentTimeMillis() - lemmaSave) + " ms");
 		long idxSave = System.currentTimeMillis();
-//		for (IndexEntity idx : indexEntities) {
-//
-//				idx.getId().setLemmaId(lemmaEntities.get(idx.getLemmaEntity().getLemma()).getId());
-//
-//		}
+
 		indexRepository.saveAll(indexEntities);
 		try {
 			sleep(200);
@@ -110,35 +106,11 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 			lemmaObj = new LemmaEntity(siteEntity, lemma, INIT_FREQ);
 			lemmaEntities.put(lemma, lemmaObj);
 		}
-
-//		synchronized (LemmaRepository.class) {
-//			if (lemmaRepository.existsByLemmaAndSiteEntity(lemma, siteEntity)) {
-//				lemmaObj = increaseLemmaFrequency(lemma);
-//			} else if (lemmaBuffer.containsKey(lemma)) {
-//				lemmaObj = lemmaBuffer.get(lemma);
-//			} else {
-//				lemmaObj = new LemmaEntity(siteEntity, lemma, INIT_FREQ);
-//			}
-//		}
-
 		return lemmaObj;
 	}
 
-	public LemmaEntity increaseLemmaFrequency(String lemma) {
-		LemmaEntity lemmaObj = lemmaRepository.findByLemmaAndSiteEntity(lemma, siteEntity);
-		int oldFreq = lemmaObj.getFrequency();
-		lemmaObj.setFrequency(oldFreq + 1);
-		return lemmaObj;
-	}
 
-	private @NotNull String logAboutPage(Integer pageId, long eachPageTime) {
-		return lemmaEntities.size()
-				+ " lemmas from " + countPages + " pages"
-				+ " collected and saved in " + +(System.currentTimeMillis() - eachPageTime) + " ms"
-				+ " incomeQueue has " + incomeQueue.size() + " pages idx";
-	}
-
-	private String logAboutEachSite(long startTime) {
+	private @NotNull String logAboutEachSite(long startTime) {
 		return lemmaRepository.countBySiteEntity(siteEntity)
 				+ " lemmas and "
 				+ indexRepository.countBySiteId(siteEntity.getId()) + " indexes saved"

@@ -1,14 +1,10 @@
 package searchengine.services.indexing;
 
 import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import lombok.extern.java.Log;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
@@ -33,28 +29,15 @@ import java.util.Set;
 @Slf4j
 @Getter
 @Setter
-@NoArgsConstructor
+@RequiredArgsConstructor
 @Component
 public class SchemaActions {
 
-	@Autowired
-	SitesList sitesList;
-	@Autowired
-	SiteRepository siteRepository;
-	@Autowired
-	PageRepository pageRepository;
-	@Autowired
-	LemmaRepository lemmaRepository;
-	@Autowired
-	IndexRepository indexRepository;
-
-//	public Set<SiteEntity> initSchema(String mode) {
-//		switch (mode) {
-//			case "FULL" -> newSiteEntities = fullInit();
-//			case "PARTIAL" -> newSiteEntities = partialInit();
-//		}
-//		return newSiteEntities;
-//	}
+	private final SitesList sitesList;
+	private final SiteRepository siteRepository;
+	private final PageRepository pageRepository;
+	private final LemmaRepository lemmaRepository;
+	private final IndexRepository indexRepository;
 
 	public @NotNull Set<SiteEntity> fullInit() {
 		//eSEx - existing in the database SiteEntities

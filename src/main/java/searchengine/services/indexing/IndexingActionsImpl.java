@@ -50,14 +50,14 @@ public class IndexingActionsImpl implements IndexingActions {
 	private final LemmaRepository lemmaRepository;
 	public static String siteUrl;
 	public static Integer counterActions = 0;
-	private final StringPool stringPool = new StringPool();
+//	private final StringPool stringPool = new StringPool();
 
 
 	@Override
 	public void startFullIndexing(@NotNull Set<SiteEntity> siteEntities) {
 		log.warn("Full indexing will be started now");
 		long start = System.currentTimeMillis();
-		ForkJoinPool pool = new ForkJoinPool(6);
+		ForkJoinPool pool = new ForkJoinPool();
 		setIndexingActionsStarted(true);
 
 		for (SiteEntity siteEntity : siteEntities) {
@@ -116,28 +116,28 @@ public class IndexingActionsImpl implements IndexingActions {
 	}
 
 	private void lemmasCollectingActions(SiteEntity siteEntity) {
-		StaticVault.indexEntitiesMap.clear();
-		StaticVault.lemmaEntitiesMap.clear();
 		lemmasAndIndexCollectingService.setIncomeQueue(queueOfPagesForLemmasCollecting);
 		lemmasAndIndexCollectingService.setSavingPagesIsDone(false);
 		lemmasAndIndexCollectingService.setSiteEntity(siteEntity);
 		lemmasAndIndexCollectingService.startCollecting();
+		StaticVault.indexEntitiesMap.clear();
+		StaticVault.lemmaEntitiesMap.clear();
 	}
 
 	private void pageSavingActions(SiteEntity siteEntity) {
-		pagesSavingService.setScrapingIsDone(false);
-		pagesSavingService.setIncomeQueue(queueOfPagesForSaving);
 		pagesSavingService.setOutcomeQueue(queueOfPagesForLemmasCollecting);
+		pagesSavingService.setIncomeQueue(queueOfPagesForSaving);
+		pagesSavingService.setScrapingIsDone(false);
 		pagesSavingService.setSiteEntity(siteEntity);
-		pagesSavingService.setStringPool(stringPool);
+//		pagesSavingService.setStringPool(stringPool);
 		pagesSavingService.startSavingPages();
 
 	}
 
-	private void scrapActions(ForkJoinPool pool, SiteEntity siteEntity) {
-		siteUrl = siteEntity.getUrl();
+	private void scrapActions(@NotNull ForkJoinPool pool, SiteEntity siteEntity) {
 		ScrapingAction action = new ScrapingAction(siteEntity.getUrl(), siteEntity, queueOfPagesForSaving, pageRepository, siteRepository);
-		action.setStringPool(stringPool);
+		siteUrl = siteEntity.getUrl();
+//		action.setStringPool(stringPool);
 		pool.invoke(action);
 	}
 
@@ -186,8 +186,8 @@ public class IndexingActionsImpl implements IndexingActions {
 			siteRepository.updateStatusStatusTimeErrorByUrl(status, LocalDateTime.now(), lastError, siteEntity.getUrl());
 			log.warn("Status of site " + siteEntity.getName() + " set to " + status + ", error set to " + lastError);
 		}
-		stringPool.savedPaths.clear();
-		stringPool.pages404.clear();
+		StringPool.savedPaths.clear();
+		StringPool.pages404.clear();
 	}
 
 	private void writeLogAfterIndexing(long start) {

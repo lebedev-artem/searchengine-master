@@ -6,15 +6,13 @@ import java.util.concurrent.BlockingQueue;
 
 public interface LemmasAndIndexCollectingService {
 
+	void setIncomeQueue(BlockingQueue<Integer> queueOfPagesForLemmasCollecting);
+	void setSiteEntity(SiteEntity siteEntity);
+	void setSavingPagesIsDone(boolean b);
 	void startCollecting();
+	boolean pressedStop();
 	LemmaEntity createLemmaEntity(String lemma);
 	Boolean allowed();
-	LemmaEntity increaseLemmaFrequency(String lemma);
-
-	void setIncomeQueue(BlockingQueue<Integer> queueOfPagesForLemmasCollecting);
-	void setSavingPagesIsDone(boolean b);
-	void setSiteEntity(SiteEntity siteEntity);
-	boolean pressedStop();
 }
 
 

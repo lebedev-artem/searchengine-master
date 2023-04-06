@@ -1,11 +1,15 @@
 # example values
 server:
-  port: 8088
+  port: 8080
   error:
       include-message: always
 
 
 spring:
+#  banner:
+#    charset: UTF-8
+#    location:
+#    classpath: banner.txt
   datasource:
     username: root
     password: password
@@ -26,8 +30,6 @@ spring:
 #        event:
 #          merge:
 #            entity_copy_observer: allow
-
-
     hibernate:
       ddl-auto: update
       show-sql: true
@@ -39,7 +41,7 @@ spring:
 jsoup-setting:
   jsoup:
     userAgent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:25.0) Gecko/20100101 Firefox/25.0
-    referrer: http://www:google.com
+    referrer: http://www.google.com
     timeout: 5_000
     ignoreHttpErrors: true
     followRedirects: false
@@ -63,25 +65,38 @@ indexing-settings:
 #    - url: www.bbc.com
 #      name: BBC.com
 #    - 91
-    - url: https://nikoartgallery.com/
-      name: Niko Art
+#    - url: https://nikoartgallery.com/
+#      name: Niko Art
 #      52
-    - url: https://et-cetera.ru/
-      name: Et Cet-era
+#    - url: https://et-cetera.ru/
+#      name: Et Cet-era
 #      842
     - url: https://www.lutherancathedral.ru/
       name: Lutheran Cathedral
 #      529
-#    - url: https://dombulgakova.ru/
-#      name: Дом Булгакова
+    - url: https://dombulgakova.ru/
+      name: Дом Булгакова
 #      231
 #    - url: https://www.svetlovka.ru/
 #      name: Svetlovka
 #      19
+    - url: https://um.mos.ru/personalities
+      name: Узнай Москву - Личности
     - url: https://www.tretyakovgallery.ru/
       name: Третьяковская галерея
-    - url: http://kulinarya.ru/
-      name: Кулинария.Ру
+    - url: https://www.rusimp.su/ru/collection
+      name: Коллекция Музея Русского Империализма
+    - url: https://biographe.ru/category/politiki/
+      name: Биограф - Личности
+#    - url: https://www.artlebedev.ru/technogrette/
+#      name: Техногрет Студии Лебедева
+#    - url: https://www.kostyor.ru/
+#      name: Журнал Костер
+#    - url: https://historyrussia.org/
+#      name: История России
+#       heap
+#    - url: https://www.vokrugsveta.ru/
+#      name: Журнал Вокруг Света
 #    - url: https://www.film.ru/
 #      name: Film.ru - Рецензии на фильмы
 #    - url: https://www.metro.ru

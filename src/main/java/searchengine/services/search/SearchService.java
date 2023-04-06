@@ -1,6 +1,4 @@
 package searchengine.services.search;
-
-import org.springframework.stereotype.Controller;
 import searchengine.dto.search.SearchResponse;
 
 public interface SearchService {

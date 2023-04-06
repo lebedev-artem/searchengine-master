@@ -48,11 +48,18 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 
 			pageEntity = incomeQueue.poll();
 			if (pageEntity != null) {
-				if (!stringPool.savedPaths.containsKey(pageEntity.getPath())) {
+//				String fullLink = pageEntity.getSiteEntity().getUrl().concat(pageEntity.getPath().substring(1));
+
+				if (!StringPool.savedPaths.containsKey(pageEntity.getPath())) {
+
 					pageRepository.save(pageEntity);
-					stringPool.internSavedPath(pageEntity.getPath());
+
+					lock.readLock().lock();
+					StringPool.internSavedPath(pageEntity.getPath());
+					lock.readLock().unlock();
+
 					tryPutPageIdToOutcomeQueue();
-//					log.warn(pageEntity.getId() + " saved. queue has " + incomeQueue.size());
+					log.warn(pageEntity.getPath() + " saved. queue has " + incomeQueue.size());
 					counter++;
 					if (counter > getRandom()){
 						log.warn("Another " + counter + " pages saved to the database. " + pageRepository.countBySiteEntity(siteEntity) + " total saved. IncomeQueue has " + incomeQueue.size() + " objects");
@@ -94,27 +101,14 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 		}
 	}
 
-	private PageEntity tryPollPage() {
-		pageEntity = incomeQueue.poll();
-		if (pageEntity == null) {
-			try {
-				sleep(1_000);
-			} catch (InterruptedException e) {
-				log.error("Can't sleep after getting null pageEntity");
-			}
-		} else return pageEntity;
-		return null;
-	}
-
 	private boolean pressedStop() {
 		return IndexServiceImpl.pressedStop;
 	}
 
-	private Integer getRandom(){
+	private @NotNull Integer getRandom(){
 		Random r = new Random();
 		int low = 240;
 		int high = 260;
-		int result = r.nextInt(high-low) + low;
-		return result;
-	}
+		return r.nextInt(high-low) + low;
+		}
 }

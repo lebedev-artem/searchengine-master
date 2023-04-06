@@ -9,24 +9,20 @@ import org.jsoup.Jsoup;
 import org.jsoup.UncheckedIOException;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.safety.Cleaner;
+import org.jsoup.safety.Safelist;
 import org.jsoup.select.Elements;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Service;
-import searchengine.config.Site;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
 import searchengine.services.indexing.IndexServiceImpl;
-import searchengine.services.indexing.IndexingActions;
 import searchengine.services.indexing.IndexingActionsImpl;
 import searchengine.services.stuff.AcceptableContentTypes;
-import searchengine.services.stuff.StaticVault;
 import searchengine.services.stuff.StringPool;
-
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -42,7 +38,6 @@ import static searchengine.services.stuff.Regex.*;
 @Setter
 @Service
 @NoArgsConstructor
-//@RequiredArgsConstructor
 public class ScrapingAction extends RecursiveAction {
 	private static final Integer COUNT_PAGES_TO_DROP = 50;
 	private static final AcceptableContentTypes ACCEPTABLE_CONTENT_TYPES = new AcceptableContentTypes();
@@ -64,7 +59,7 @@ public class ScrapingAction extends RecursiveAction {
 	private BlockingQueue<PageEntity> outcomeQueue;
 	private PageRepository pageRepository;
 	private SiteRepository siteRepository;
-	private StringPool stringPool;
+//	private StringPool stringPool;
 
 	public ScrapingAction(String parentUrl,
 	                      @NotNull SiteEntity siteEntity,
@@ -95,40 +90,52 @@ public class ScrapingAction extends RecursiveAction {
 			dropPageToQueue();
 		} else return;
 
-		if (jsoupResponse == null)
+		lock.readLock().lock();
+		if (jsoupResponse == null
+				& StringPool.visitedLinks.containsKey(parentUrl)
+				& StringPool.pages404.containsKey(parentUrl))
 			jsoupResponse = getResponseFromUrl(parentUrl);
+		lock.readLock().unlock();
 
 		Set<String> childLinksOfTask = getChildLinks(parentUrl, document);
-
-		forkTasksFromSubtasks(subTasks, childLinksOfTask);
-		joinTasksFromSubtasks(subTasks);
+		if (childLinksOfTask.size() != 0) {
+			forkTasksFromSubtasks(subTasks, childLinksOfTask);
+			joinTasksFromSubtasks(subTasks);
+		}
 	}
 
-	public synchronized Set<String> getChildLinks(String url, Document document) {
+	public Set<String> getChildLinks(String url, Document document) {
 		Set<String> newChildLinks = new HashSet<>();
 		if (document == null) return newChildLinks;
+
 		Elements elements = document.select("a[href]");
-		if (elements.isEmpty()) return newChildLinks;
-		if (pressedStop()) return newChildLinks;
+		if (elements.isEmpty() || pressedStop()) return newChildLinks;
 
 		for (Element element : elements) {
 			String href = getHrefFromElement(element).toLowerCase(Locale.ROOT);
+
+			lock.readLock().lock();
+			if (StringPool.visitedLinks.containsKey(href)) continue;
+			lock.readLock().unlock();
+
 			try {
-				if (stringPool.pages404.containsKey(href) | stringPool.savedPaths.containsKey(new URL(href).getPath()))
-					continue;
-				//можно добавить проверку чтоб на уровень вниз не уходить, цикличность
 				if (url.matches(URL_IS_VALID)
+//						&& !pageRepository.existsByPathAndSiteEntity(new URL(href).getPath(), siteEntity)
 						&& href.startsWith(siteUrl)
+//						&& !StringPool.pages404.containsKey(href)
+//						&& !StringPool.savedPaths.containsKey(href)
 						&& !href.contains("#")
 						&& !href.equals(url)
 						&& !newChildLinks.contains(href)
-						&& !stringPool.pages404.containsKey(href)
 						&& (HTML_EXT.stream().anyMatch(href.substring(href.length() - 4)::contains)
 						| !href.matches(URL_IS_FILE_LINK))) {
 
-					newChildLinks.add(href);
+					lock.readLock().lock();
+					if (!StringPool.visitedLinks.containsKey(href))
+						newChildLinks.add(href);
+					lock.readLock().unlock();
 				}
-			} catch (StringIndexOutOfBoundsException | MalformedURLException ignored) {
+			} catch (StringIndexOutOfBoundsException ignored) {
 			}
 		}
 		return newChildLinks;
@@ -137,13 +144,12 @@ public class ScrapingAction extends RecursiveAction {
 	@ConfigurationProperties(prefix = "jsoup-setting")
 	private Connection.@Nullable Response getResponseFromUrl(String url) {
 
-		if (stringPool.pages404.containsKey(url))
-			return null;
-
 		try {
 			parentPath = new URL(url).getPath();
 
-			if (stringPool.savedPaths.containsKey(parentPath))
+			if (StringPool.visitedLinks.containsKey(url)
+					| StringPool.savedPaths.containsKey(parentPath)
+					| StringPool.pages404.containsKey(url))
 				return null;
 
 			jsoupResponse = Jsoup.connect(url).execute();
@@ -154,12 +160,24 @@ public class ScrapingAction extends RecursiveAction {
 			document = jsoupResponse.parse();
 			pageEntity = new PageEntity(siteEntity, jsoupResponse.statusCode(), document.html(), parentPath);
 
+			Safelist safelist = Safelist.relaxed().preserveRelativeLinks(true);
+			Cleaner cleaner = new Cleaner(safelist);
+			boolean isValid = cleaner.isValid(document);
+			if (isValid)
+				document = cleaner.clean(document);
+
 		} catch (IOException | UncheckedIOException exception) {
 			siteRepository.updateErrorStatusTimeByUrl(exception.getMessage(), LocalDateTime.now(), siteEntity.getUrl());
-			stringPool.internPage404(url);
-			log.error("Something went wrong 404. " + url + " Pages404 vault contains " + stringPool.pages404.size() + " url");
+			StringPool.internPage404(url);
+			log.error("Something went wrong 404. " + url + " Pages404 vault contains " + StringPool.pages404.size() + " url");
 			return null;
 		}
+
+		lock.writeLock().lock();
+		StringPool.internVisitedLinks(url);
+		lock.writeLock().unlock();
+
+		log.info("Response from " + url + " got successfully");
 		return jsoupResponse;
 	}
 
@@ -170,9 +188,11 @@ public class ScrapingAction extends RecursiveAction {
 					sleep(20_000);
 				} else break;
 			}
-			if (!stringPool.savedPaths.containsKey(pageEntity.getPath())){
+			lock.readLock().lock();
+			if (!StringPool.savedPaths.containsKey(parentPath)) {
 				outcomeQueue.put(pageEntity);
 			}
+			lock.readLock().unlock();
 
 		} catch (InterruptedException e) {
 			log.error("Cant drop page to queue");
@@ -180,17 +200,16 @@ public class ScrapingAction extends RecursiveAction {
 	}
 
 	private void forkTasksFromSubtasks(List<ScrapingAction> subTasks, Set<String> subLinks) {
-		if ((subLinks == null) || subLinks.isEmpty()) return;
 		if (pressedStop()) return;
 
 		for (String childLink : subLinks) {
-			if (childIsValidToFork(childLink) & !stringPool.pages404.containsKey(childLink)) {
+			if (childIsValidToFork(childLink) && !StringPool.pages404.containsKey(childLink) && !StringPool.visitedLinks.containsKey(childLink)) {
 				ScrapingAction action = new ScrapingAction(childLink, siteEntity, outcomeQueue, pageRepository, siteRepository);
-				action.setStringPool(stringPool);
 				action.fork();
 				subTasks.add(action);
 			}
 		}
+//		log.info(Objects.requireNonNull(subLinks).size() + " new tasks forked");
 	}
 
 	private void joinTasksFromSubtasks(List<ScrapingAction> childTasks) {
@@ -198,12 +217,13 @@ public class ScrapingAction extends RecursiveAction {
 			for (ScrapingAction task : childTasks) {
 				task.join();
 			}
+//		log.info(Objects.requireNonNull(childTasks).size() + " new tasks wait join");
 		System.gc();
 	}
 
-	private static boolean childIsValidToFork(@NotNull String subLink) {
-		return (HTML_EXT.stream().anyMatch(subLink.substring(subLink.length() - 4)::contains))
-				| (!subLink.matches(URL_IS_FILE_LINK));
+	private boolean childIsValidToFork(@NotNull String subLink) {
+		return ((HTML_EXT.stream().anyMatch(subLink.substring(subLink.length() - 4)::contains))
+				| (!subLink.matches(URL_IS_FILE_LINK)));
 	}
 
 	public String getHrefFromElement(Element element) {
@@ -214,11 +234,4 @@ public class ScrapingAction extends RecursiveAction {
 		return IndexServiceImpl.pressedStop;
 	}
 
-	private Integer getRandom(){
-		Random r = new Random();
-		int low = 100;
-		int high = 110;
-		int result = r.nextInt(high-low) + low;
-		return result;
-	}
 }

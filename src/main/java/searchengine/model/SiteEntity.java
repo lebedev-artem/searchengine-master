@@ -1,4 +1,5 @@
 package searchengine.model;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -10,6 +11,7 @@ import java.util.Set;
 @Getter
 @Entity(name = "SiteEntity")
 @Table(name = "site")
+
 public class SiteEntity {
 
 	public SiteEntity(IndexingStatus status, LocalDateTime statusTime, String lastError, String url, String name) {
