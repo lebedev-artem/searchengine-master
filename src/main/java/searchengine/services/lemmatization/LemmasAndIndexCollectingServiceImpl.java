@@ -1,6 +1,5 @@
 package searchengine.services.lemmatization;
 
-import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -32,7 +31,7 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 	private final LemmaFinder lemmaFinder;
 	private static final Integer INIT_FREQ = 1;
 	private volatile boolean savingPagesIsDone;
-	private BlockingQueue<Integer> incomeQueue;                                         //idx of pages from saving thread
+	private BlockingQueue<Integer> incomeQueue;
 	private SiteEntity siteEntity;
 	private IndexEntity indexEntity;
 	private Set<IndexEntity> indexEntities = new HashSet<>();
@@ -42,7 +41,6 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 
 
 	public void startCollecting() {
-		long startSiteTime = System.currentTimeMillis();
 		while (allowed()) {
 			if (pressedStop()) {
 				incomeQueue.clear();
@@ -81,7 +79,7 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 		} catch (InterruptedException e) {
 			log.error("Error sleeping after saving lemmas");
 		}
-		log.warn("saving lemmas with " + (System.currentTimeMillis() - lemmaSave) + " ms");
+		log.warn("Saving lemmas:" + (System.currentTimeMillis() - lemmaSave) + " ms");
 		long idxSave = System.currentTimeMillis();
 
 		indexRepository.saveAll(indexEntities);
@@ -90,8 +88,8 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 		} catch (InterruptedException e) {
 			log.error("Error sleeping after saving lemmas");
 		}
-		log.warn("saving index: " + (System.currentTimeMillis() - idxSave) + " ms");
-		log.warn(logAboutEachSite(startSiteTime));
+		log.warn("Saving index: " + (System.currentTimeMillis() - idxSave) + " ms");
+		log.warn(logAboutEachSite());
 		indexEntities.clear();
 		lemmaEntities.clear();
 	}
@@ -110,12 +108,11 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 	}
 
 
-	private @NotNull String logAboutEachSite(long startTime) {
+	private @NotNull String logAboutEachSite() {
 		return lemmaRepository.countBySiteEntity(siteEntity)
 				+ " lemmas and "
 				+ indexRepository.countBySiteId(siteEntity.getId()) + " indexes saved"
-				+ " from DB from site url " + siteEntity.getUrl()
-				+ " saved in " + (System.currentTimeMillis() - startTime) + " ms";
+				+ " from DB from site url " + siteEntity.getUrl();
 	}
 
 	public Boolean allowed() {

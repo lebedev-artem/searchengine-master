@@ -3,8 +3,6 @@ server:
   port: 8080
   error:
       include-message: always
-
-
 spring:
 #  banner:
 #    charset: UTF-8
@@ -48,70 +46,12 @@ jsoup-setting:
 
 indexing-settings:
   sites:
-#    >15000
-#    - url: https://www.artlebedev.ru/
-#      name: ArtLebedev
-#    - url: https://lenta.ru/
-#      name: Lenta
-#    - url: https://volochek.life/
-#      name: Volochek_very_big_string_apporx_3r_links
-#    - url: https://www.playback.ru/
-#      name: PlayBack.Ru
-#    - url: http://radiomv.ru/
-#      name: Радио MV 13
-#      1024
-#    - url: https://ipfran.ru/
-#      name: ИПФ РАН
-#    - url: www.bbc.com
-#      name: BBC.com
-#    - 91
-#    - url: https://nikoartgallery.com/
-#      name: Niko Art
-#      52
-#    - url: https://et-cetera.ru/
-#      name: Et Cet-era
-#      842
-    - url: https://www.lutherancathedral.ru/
-      name: Lutheran Cathedral
-#      529
     - url: https://dombulgakova.ru/
       name: Дом Булгакова
-#      231
-#    - url: https://www.svetlovka.ru/
-#      name: Svetlovka
-#      19
-    - url: https://um.mos.ru/personalities
-      name: Узнай Москву - Личности
     - url: https://www.tretyakovgallery.ru/
       name: Третьяковская галерея
-    - url: https://www.rusimp.su/ru/collection
-      name: Коллекция Музея Русского Империализма
-    - url: https://biographe.ru/category/politiki/
-      name: Биограф - Личности
-#    - url: https://www.artlebedev.ru/technogrette/
-#      name: Техногрет Студии Лебедева
-#    - url: https://www.kostyor.ru/
-#      name: Журнал Костер
-#    - url: https://historyrussia.org/
-#      name: История России
-#       heap
-#    - url: https://www.vokrugsveta.ru/
-#      name: Журнал Вокруг Света
-#    - url: https://www.film.ru/
-#      name: Film.ru - Рецензии на фильмы
-#    - url: https://www.metro.ru
-#      name: Московское метро
-#    over heap
-#    - url: https://zanauku.mipt.ru/
-#      name: Журнал "За науку"
-#    - url: http://cimus.biz/
-#      name: Cimus
-#    - url: https://xakep.ru/
-#      name: xakep
-#    - url: https://niasvizh.by/
-#      name: Несвиж
-#    - url: https://habr.com/ru/
-#      name: JAVA_Hub Habr
-
-
+    - url: https://gallery.tverreg.ru/
+      name: Тверская Картинная галерея
+    - url: https://shm.ru/
+      name: Исторический музей
 

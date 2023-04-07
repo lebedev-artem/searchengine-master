@@ -57,7 +57,7 @@ public class IndexingActionsImpl implements IndexingActions {
 	public void startFullIndexing(@NotNull Set<SiteEntity> siteEntities) {
 		log.warn("Full indexing will be started now");
 		long start = System.currentTimeMillis();
-		ForkJoinPool pool = new ForkJoinPool();
+		ForkJoinPool pool = new ForkJoinPool(16);
 		setIndexingActionsStarted(true);
 
 		for (SiteEntity siteEntity : siteEntities) {
@@ -135,8 +135,8 @@ public class IndexingActionsImpl implements IndexingActions {
 	}
 
 	private void scrapActions(@NotNull ForkJoinPool pool, SiteEntity siteEntity) {
-		ScrapingAction action = new ScrapingAction(siteEntity.getUrl(), siteEntity, queueOfPagesForSaving, pageRepository, siteRepository);
 		siteUrl = siteEntity.getUrl();
+		ScrapingAction action = new ScrapingAction(siteEntity.getUrl(), siteEntity, queueOfPagesForSaving, pageRepository, siteRepository);
 //		action.setStringPool(stringPool);
 		pool.invoke(action);
 	}
@@ -170,7 +170,7 @@ public class IndexingActionsImpl implements IndexingActions {
 
 	private void startActionsAfterIndexing(@NotNull SiteEntity siteEntity) {
 		String status = "INDEXED";
-		String lastError = siteEntity.getLastError();
+		String lastError = "";
 		int countPages = pageRepository.countBySiteEntity(siteEntity);
 		switch (countPages) {
 			case 0 -> {

@@ -7,7 +7,7 @@
 
 ## Описание
 
-Весь проект условно можно разделить на две части:
+Весь проект условно можно разделить на три части:
 - рутина: парсинг ссылок, поиск лемм, и создание поискового индекса;
 - статистика содержимого базы данных
 - поиск: алгоритм выборки данных и создание сниппетов, которые будут отражать суть поискового запроса.
@@ -98,6 +98,14 @@
 + Дальше **уменьшается** частота лемм, которые найдены были на этих страницах
 + Удаляется индекс по этим страницам
 
-![Индексация страницы](C:\java\searchengine-master\src\main\resources\img\addpage.png "Индексация страницы")
-![Записи в базе](C:\java\searchengine-master\src\main\resources\img\addpageDB.png "Записи в базе по искомой странице")
+![Индексация страницы](.\src\main\resources\img\addpage.png "Индексация страницы")
+![Записи в базе](.\src\main\resources\img\addpageDB.png "Записи в базе по искомой странице")
 ![Результат индексации отдельной страницы](C:\java\searchengine-master\src\main\resources\img\addpagelog.png "Результат работы")
+
+
+__Скомпилированный JAR__
+[SearchEngine-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1Ix-REOGKriUceqOuCcyuuUIEmZmJXTL3/view?usp=share_link)
+
+__Наполненная тестовая MySQL база__ [Dump20230408.sql](https://drive.google.com/file/d/13oxJ9fZp58k-86gjssxagq5iBGyEIdYv/view?usp=share_link)
+
+__Она же в zip__ [Dump20230408.zip](https://drive.google.com/file/d/10nUuGUdqzlMFRGiL6itzhcIyPAjGFCHs/view?usp=share_link)

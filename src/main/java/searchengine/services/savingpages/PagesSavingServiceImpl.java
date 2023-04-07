@@ -75,7 +75,7 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 				}
 			}
 		}
-		log.info(logAboutEachSite(startTime));
+		log.warn(logAboutEachSite(startTime));
 	}
 
 

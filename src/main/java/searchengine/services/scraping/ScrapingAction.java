@@ -22,6 +22,7 @@ import searchengine.services.indexing.IndexServiceImpl;
 import searchengine.services.indexing.IndexingActionsImpl;
 import searchengine.services.stuff.AcceptableContentTypes;
 import searchengine.services.stuff.StringPool;
+
 import java.io.IOException;
 import java.net.URL;
 import java.time.LocalDateTime;
@@ -85,17 +86,12 @@ public class ScrapingAction extends RecursiveAction {
 			return;
 		}
 
-		Connection.Response responseSinglePage = getResponseFromUrl(parentUrl);
-		if (responseSinglePage != null) {
-			dropPageToQueue();
-		} else return;
+//		Connection.Response responseSinglePage = getResponseFromUrl(parentUrl);
+		jsoupResponse = getResponseFromUrl(parentUrl);
+		if (jsoupResponse != null) dropPageToQueue();
+		else return;
 
-		lock.readLock().lock();
-		if (jsoupResponse == null
-				& StringPool.visitedLinks.containsKey(parentUrl)
-				& StringPool.pages404.containsKey(parentUrl))
-			jsoupResponse = getResponseFromUrl(parentUrl);
-		lock.readLock().unlock();
+//		if (jsoupResponse == null) jsoupResponse = getResponseFromUrl(parentUrl);
 
 		Set<String> childLinksOfTask = getChildLinks(parentUrl, document);
 		if (childLinksOfTask.size() != 0) {
@@ -120,10 +116,7 @@ public class ScrapingAction extends RecursiveAction {
 
 			try {
 				if (url.matches(URL_IS_VALID)
-//						&& !pageRepository.existsByPathAndSiteEntity(new URL(href).getPath(), siteEntity)
 						&& href.startsWith(siteUrl)
-//						&& !StringPool.pages404.containsKey(href)
-//						&& !StringPool.savedPaths.containsKey(href)
 						&& !href.contains("#")
 						&& !href.equals(url)
 						&& !newChildLinks.contains(href)
@@ -131,9 +124,13 @@ public class ScrapingAction extends RecursiveAction {
 						| !href.matches(URL_IS_FILE_LINK))) {
 
 					lock.readLock().lock();
-					if (!StringPool.visitedLinks.containsKey(href))
+					if (!StringPool.visitedLinks.containsKey(href)
+							&& !StringPool.pages404.containsKey(href)
+							&& !StringPool.savedPaths.containsKey(href)) {
 						newChildLinks.add(href);
+					}
 					lock.readLock().unlock();
+
 				}
 			} catch (StringIndexOutOfBoundsException ignored) {
 			}
@@ -147,10 +144,13 @@ public class ScrapingAction extends RecursiveAction {
 		try {
 			parentPath = new URL(url).getPath();
 
-			if (StringPool.visitedLinks.containsKey(url)
-					| StringPool.savedPaths.containsKey(parentPath)
-					| StringPool.pages404.containsKey(url))
+			lock.readLock().lock();
+			if (!StringPool.visitedLinks.containsKey(url)) {
+				StringPool.internVisitedLinks(url);
+			} else {
 				return null;
+			}
+			lock.readLock().unlock();
 
 			jsoupResponse = Jsoup.connect(url).execute();
 			if (!ACCEPTABLE_CONTENT_TYPES.contains(jsoupResponse.contentType())) {
@@ -173,10 +173,6 @@ public class ScrapingAction extends RecursiveAction {
 			return null;
 		}
 
-		lock.writeLock().lock();
-		StringPool.internVisitedLinks(url);
-		lock.writeLock().unlock();
-
 		log.info("Response from " + url + " got successfully");
 		return jsoupResponse;
 	}
@@ -189,9 +185,7 @@ public class ScrapingAction extends RecursiveAction {
 				} else break;
 			}
 			lock.readLock().lock();
-			if (!StringPool.savedPaths.containsKey(parentPath)) {
-				outcomeQueue.put(pageEntity);
-			}
+			if (!StringPool.savedPaths.containsKey(parentPath)) outcomeQueue.put(pageEntity);
 			lock.readLock().unlock();
 
 		} catch (InterruptedException e) {
@@ -222,8 +216,8 @@ public class ScrapingAction extends RecursiveAction {
 	}
 
 	private boolean childIsValidToFork(@NotNull String subLink) {
-		return ((HTML_EXT.stream().anyMatch(subLink.substring(subLink.length() - 4)::contains))
-				| (!subLink.matches(URL_IS_FILE_LINK)));
+		String ext = subLink.substring(subLink.length() - 4);
+		return ((HTML_EXT.stream().anyMatch(ext::contains)) | (!subLink.matches(URL_IS_FILE_LINK)));
 	}
 
 	public String getHrefFromElement(Element element) {
