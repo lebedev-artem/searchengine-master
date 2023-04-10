@@ -44,6 +44,8 @@ public class SchemaActions {
 		List<SiteEntity> eSEx = siteRepository.findAll();
 		if (sitesList.getSites().size() == 0) return new HashSet<>();
 
+		//Checking existing Site from DB on SiteList
+
 		eSEx.forEach(siteEntity -> {
 			if (sitesList.getSites().stream().noneMatch(s -> s.getUrl().equals(siteEntity.getUrl()))) {
 				indexRepository.deleteAllInBatch();
@@ -161,10 +163,11 @@ public class SchemaActions {
 		lemmaRepository.deleteAllInBatch();
 		pageRepository.deleteAllInBatch();
 		siteRepository.deleteAllInBatch();
-		indexRepository.resetIdOnIndexTable();
-		lemmaRepository.resetIdOnLemmaTable();
-		pageRepository.resetIdOnPageTable();
-		siteRepository.resetIdOnSiteTable();
+
+//		indexRepository.resetIdOnIndexTable();
+//		lemmaRepository.resetIdOnLemmaTable();
+//		pageRepository.resetIdOnPageTable();
+//		siteRepository.resetIdOnSiteTable();
 	}
 
 	private void resetAllIds() {

@@ -30,6 +30,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public StatisticsResponse getStatistics() {
+        log.warn("Mapping /statistics executed");
 
         TotalStatistics total = new TotalStatistics();
         total.setSites(sites.getSites().size());

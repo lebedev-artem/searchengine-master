@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.PageRepository;
-import searchengine.services.indexing.IndexServiceImpl;
+import searchengine.services.indexing.IndexingServiceImpl;
 import searchengine.services.stuff.CheckHeapSize;
 import searchengine.services.stuff.StringPool;
 
@@ -102,7 +102,7 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 	}
 
 	private boolean pressedStop() {
-		return IndexServiceImpl.pressedStop;
+		return IndexingServiceImpl.pressedStop;
 	}
 
 	private @NotNull Integer getRandom(){

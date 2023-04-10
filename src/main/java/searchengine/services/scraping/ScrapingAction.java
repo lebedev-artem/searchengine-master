@@ -18,7 +18,7 @@ import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
-import searchengine.services.indexing.IndexServiceImpl;
+import searchengine.services.indexing.IndexingServiceImpl;
 import searchengine.services.indexing.IndexingActionsImpl;
 import searchengine.services.stuff.AcceptableContentTypes;
 import searchengine.services.stuff.StringPool;
@@ -225,7 +225,7 @@ public class ScrapingAction extends RecursiveAction {
 	}
 
 	public boolean pressedStop() {
-		return IndexServiceImpl.pressedStop;
+		return IndexingServiceImpl.pressedStop;
 	}
 
 }

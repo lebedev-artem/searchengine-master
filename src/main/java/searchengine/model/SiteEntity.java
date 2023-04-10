@@ -26,8 +26,12 @@ public class SiteEntity {
 	}
 
 	@Id
-	@Column (nullable = false)
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column (name = "id", nullable = false)
+	@SequenceGenerator(
+			name = "site_seq",
+			sequenceName = "site_sequence",
+			initialValue = 1, allocationSize = 5)
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "site_seq")
 	private Integer id;
 
 	@Enumerated(EnumType.STRING)

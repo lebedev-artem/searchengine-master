@@ -57,7 +57,7 @@ public class IndexingActionsImpl implements IndexingActions {
 	public void startFullIndexing(@NotNull Set<SiteEntity> siteEntities) {
 		log.warn("Full indexing will be started now");
 		long start = System.currentTimeMillis();
-		ForkJoinPool pool = new ForkJoinPool(16);
+		ForkJoinPool pool = new ForkJoinPool();
 		setIndexingActionsStarted(true);
 
 		for (SiteEntity siteEntity : siteEntities) {
@@ -150,7 +150,7 @@ public class IndexingActionsImpl implements IndexingActions {
 			log.error("I don't want to sleep");
 		} finally {
 			shutDownAction(pool);
-			IndexServiceImpl.pressedStop = false;
+			IndexingServiceImpl.pressedStop = false;
 			setIndexingActionsStarted(false);
 			pageRepository.flush();
 			lemmaRepository.flush();
@@ -200,6 +200,6 @@ public class IndexingActionsImpl implements IndexingActions {
 	}
 
 	private boolean pressedStop() {
-		return IndexServiceImpl.pressedStop;
+		return IndexingServiceImpl.pressedStop;
 	}
 }

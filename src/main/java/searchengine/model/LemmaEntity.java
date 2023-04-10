@@ -22,7 +22,11 @@ public class LemmaEntity {
 
 	@Id
 	@Column(nullable = false)
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@SequenceGenerator(
+			name = "lemma_seq",
+			sequenceName = "lemma_sequence",
+			initialValue = 1, allocationSize = 100)
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "lemma_seq")
 	private Integer id;
 
 	//	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.MERGE, CascadeType.REFRESH})

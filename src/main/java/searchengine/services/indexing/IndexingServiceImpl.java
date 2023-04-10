@@ -2,7 +2,6 @@ package searchengine.services.indexing;
 
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import searchengine.model.*;
@@ -15,19 +14,25 @@ import java.util.*;
 @Getter
 @Service
 @RequiredArgsConstructor
-public class IndexServiceImpl implements IndexService {
+public class IndexingServiceImpl implements IndexingService {
 
 	private final IndexResponse indexResponse;
 	private final SiteRepository siteRepository;
 	private final IndexingActions indexingActions;
+	private final SchemaActions schemaActions;
 	public static volatile boolean pressedStop = false;
 	private static final ThreadLocal<Thread> singleTask = new ThreadLocal<>();
 
 	@Override
-	public synchronized ResponseEntity<?> indexingStart(@NotNull Set<SiteEntity> siteEntities) {
+	public synchronized ResponseEntity<?> indexingStart() {
+		log.warn("Mapping /startIndexing executed");
 
 		if (indexingActions.getIndexingActionsStarted())
 			return indexResponse.startFailed();
+
+		Set<SiteEntity> siteEntities = schemaActions.fullInit();
+		if (siteEntities.size() == 0)
+			return indexResponse.startFailedEmptySites();
 
 		singleTask.set(new Thread(() -> {
 			indexingActions.startFullIndexing(siteEntities);

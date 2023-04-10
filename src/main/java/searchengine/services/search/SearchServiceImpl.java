@@ -152,8 +152,8 @@ public class SearchServiceImpl implements SearchService {
 	private List<Integer> getPageEntitiesIdsByRarestLemma(SiteEntity site) {
 		return Objects.requireNonNull(getRarestIndexSet(site, rarestLemma))
 				.stream()
-				.map(IndexEntity::getId)
-				.map(IndexEntity.Id::getPageId)
+				.map(IndexEntity::getPageEntity)
+				.map(PageEntity::getId)
 				.collect(Collectors.toList());
 	}
 
@@ -278,7 +278,6 @@ public class SearchServiceImpl implements SearchService {
 			System.out.println("Rarest lemma - " + rarestLemma + " freq - " + lemmaRepository.getByLemmaAndSiteEntity(rarestLemma, site).getFrequency());
 			printResultPages("pages by rarest lemma", rarestPages);
 		}
-
 	}
 
 	private @NotNull String getTitle(String sourceHtml) {

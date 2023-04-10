@@ -18,8 +18,12 @@ import java.util.Set;
 public class PageEntity {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE)
-	@Column(nullable = false)
+	@SequenceGenerator(
+			name = "page_seq",
+			sequenceName = "page_sequence",
+			initialValue = 1, allocationSize = 50)
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "page_seq")
+	@Column(name = "id", nullable = false)
 	private Integer id;
 
 	//	cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH}
@@ -52,7 +56,7 @@ public class PageEntity {
 	@Column(length = 16777215, columnDefinition = "mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", nullable = false)
 	private String content;
 
-	@ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.MERGE, CascadeType.REFRESH})
+	@ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.REFRESH})
 //	@OnDelete(action = OnDeleteAction.CASCADE)
 	@JoinTable(
 			name = "search_index",

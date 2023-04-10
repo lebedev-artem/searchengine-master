@@ -11,7 +11,7 @@ import searchengine.model.*;
 import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
-import searchengine.services.indexing.IndexServiceImpl;
+import searchengine.services.indexing.IndexingServiceImpl;
 
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -60,8 +60,7 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 					int rank = collectedLemmas.get(lemma);
 					LemmaEntity lemmaEntity = createLemmaEntity(lemma);
 					indexEntities.add(
-							new IndexEntity(
-									new IndexEntity.Id(), pageEntity, lemmaEntity, rank));
+							new IndexEntity(pageEntity, lemmaEntity, rank));
 				}
 
 			} else {
@@ -120,6 +119,6 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 	}
 
 	public boolean pressedStop() {
-		return IndexServiceImpl.pressedStop;
+		return IndexingServiceImpl.pressedStop;
 	}
 }
