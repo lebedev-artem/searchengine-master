@@ -1,4 +1,4 @@
-package searchengine.services.stuff;
+package searchengine.tools;
 
 public class AcceptableContentTypes {
 	public final String[] acceptableContentTypes = new String[]{
@@ -9,7 +9,8 @@ public class AcceptableContentTypes {
 			"application/rtf"};
 
 	public boolean contains(String contentType){
-		for (String type : acceptableContentTypes) if (contentType.contains(type)) return true;
+		for (String type : acceptableContentTypes)
+			if (contentType.contains(type)) return true;
 		return false;
 	}
 }

@@ -56,14 +56,14 @@ public class PageEntity {
 	@Column(length = 16777215, columnDefinition = "mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", nullable = false)
 	private String content;
 
-	@ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.REFRESH})
+	@ManyToMany(fetch = FetchType.LAZY)
 //	@OnDelete(action = OnDeleteAction.CASCADE)
 	@JoinTable(
 			name = "search_index",
 			joinColumns = {@JoinColumn(name = "page_id")},
 			inverseJoinColumns = {@JoinColumn(name = "lemma_id")})
-//	@ManyToMany(fetch = FetchType.LAZY, mappedBy = "pageEntities", cascade = {CascadeType.REMOVE, CascadeType.MERGE, CascadeType.REFRESH})
-	@OnDelete(action = OnDeleteAction.CASCADE)
+//	@ManyToMany(fetch = FetchType.LAZY, mappedBy = "pageEntities")
+//	@OnDelete(action = OnDeleteAction.CASCADE)
 	private Set<LemmaEntity> lemmaEntities = new HashSet<>();
 
 	public PageEntity(SiteEntity siteEntity, int code, String content, String path) {

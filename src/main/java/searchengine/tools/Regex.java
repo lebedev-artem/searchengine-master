@@ -1,4 +1,4 @@
-package searchengine.services.stuff;
+package searchengine.tools;
 
 import java.util.ArrayList;
 import java.util.List;

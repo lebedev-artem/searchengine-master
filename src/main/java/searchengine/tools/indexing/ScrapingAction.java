@@ -1,4 +1,4 @@
-package searchengine.services.scraping;
+package searchengine.tools.indexing;
 
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
@@ -19,9 +19,8 @@ import searchengine.model.SiteEntity;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
 import searchengine.services.indexing.IndexingServiceImpl;
-import searchengine.services.indexing.IndexingActionsImpl;
-import searchengine.services.stuff.AcceptableContentTypes;
-import searchengine.services.stuff.StringPool;
+import searchengine.tools.AcceptableContentTypes;
+import searchengine.tools.StringPool;
 
 import java.io.IOException;
 import java.net.URL;
@@ -32,7 +31,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static java.lang.Thread.sleep;
-import static searchengine.services.stuff.Regex.*;
+import static searchengine.tools.Regex.*;
 
 @Slf4j
 @Getter
@@ -167,7 +166,8 @@ public class ScrapingAction extends RecursiveAction {
 				document = cleaner.clean(document);
 
 		} catch (IOException | UncheckedIOException exception) {
-			siteRepository.updateErrorStatusTimeByUrl(exception.getMessage(), LocalDateTime.now(), siteEntity.getUrl());
+			siteEntity.setLastError(exception.getMessage());
+			siteEntity.setStatusTime(LocalDateTime.now());
 			StringPool.internPage404(url);
 			log.error("Something went wrong 404. " + url + " Pages404 vault contains " + StringPool.pages404.size() + " url");
 			return null;

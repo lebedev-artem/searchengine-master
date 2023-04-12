@@ -4,9 +4,12 @@ import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import searchengine.dto.indexing.IndexingResponse;
 import searchengine.model.*;
 import searchengine.repositories.*;
-import java.time.LocalDateTime;
+import searchengine.tools.indexing.IndexingActions;
+import searchengine.tools.indexing.SchemaActions;
+
 import java.util.*;
 
 @Slf4j
@@ -16,7 +19,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class IndexingServiceImpl implements IndexingService {
 
-	private final IndexResponse indexResponse;
+	private final IndexingResponse indexingResponse;
 	private final SiteRepository siteRepository;
 	private final IndexingActions indexingActions;
 	private final SchemaActions schemaActions;
@@ -24,29 +27,37 @@ public class IndexingServiceImpl implements IndexingService {
 	private static final ThreadLocal<Thread> singleTask = new ThreadLocal<>();
 
 	@Override
-	public synchronized ResponseEntity<?> indexingStart() {
+	public synchronized ResponseEntity<IndexingResponse> indexingStart() {
 		log.warn("Mapping /startIndexing executed");
 
 		if (indexingActions.getIndexingActionsStarted())
-			return indexResponse.startFailed();
+			return indexingResponse.startFailed();
 
 		Set<SiteEntity> siteEntities = schemaActions.fullInit();
 		if (siteEntities.size() == 0)
-			return indexResponse.startFailedEmptySites();
+			return indexingResponse.startFailedEmptyQuery();
 
 		singleTask.set(new Thread(() -> {
 			indexingActions.startFullIndexing(siteEntities);
 		}, "0day-thread"));
 
 		singleTask.get().start();
-		return indexResponse.successfully();
+		return indexingResponse.successfully();
 	}
 
 	@Override
-	public ResponseEntity<?> indexingPageStart(SiteEntity siteEntity) {
+	public ResponseEntity<IndexingResponse> indexingPageStart(String url) {
+
+		log.warn("Mapping /indexPage executed");
 
 		if (indexingActions.getIndexingActionsStarted())
-			return indexResponse.startFailed();
+			return indexingResponse.startFailed();
+
+		if (url == null || url.equals(""))
+			return indexingResponse.startFailedEmptyQuery();
+
+		SiteEntity siteEntity = schemaActions.partialInit(url);
+		if (siteEntity == null) return indexingResponse.indexPageFailed();
 
 		singleTask.set(new Thread(() -> {
 			indexingActions.startPartialIndexing(siteEntity);
@@ -54,19 +65,20 @@ public class IndexingServiceImpl implements IndexingService {
 
 		singleTask.get().start();
 
-		return indexResponse.successfully();
+		return indexingResponse.successfully();
 	}
 
 	@Override
-	public ResponseEntity<?> indexingStop() {
+	public ResponseEntity<IndexingResponse> indexingStop() {
+		log.warn("Mapping /stopIndexing executed");
+
 		if (!indexingActions.getIndexingActionsStarted())
-			return indexResponse.stopFailed();
+			return indexingResponse.stopFailed();
 
 		setPressedStop(true);
 		indexingActions.setIndexingActionsStarted(false);
 
-		siteRepository.updateAllStatusStatusTimeError("FAILED", LocalDateTime.now(), "Индексация остановлена пользователем");
-		return indexResponse.successfully();
+		return indexingResponse.successfully();
 	}
 
 	@Override

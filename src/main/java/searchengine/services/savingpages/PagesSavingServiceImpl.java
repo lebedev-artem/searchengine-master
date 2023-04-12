@@ -8,8 +8,8 @@ import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.PageRepository;
 import searchengine.services.indexing.IndexingServiceImpl;
-import searchengine.services.stuff.CheckHeapSize;
-import searchengine.services.stuff.StringPool;
+import searchengine.tools.CheckHeapSize;
+import searchengine.tools.StringPool;
 
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;

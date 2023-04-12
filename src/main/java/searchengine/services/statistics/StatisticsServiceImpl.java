@@ -13,7 +13,7 @@ import searchengine.model.SiteEntity;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
-import searchengine.services.indexing.IndexingActions;
+import searchengine.tools.indexing.IndexingActions;
 
 import java.util.ArrayList;
 import java.util.List;

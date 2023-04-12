@@ -1,4 +1,4 @@
-package searchengine.services.stuff;
+package searchengine.tools;
 
 import org.springframework.stereotype.Component;
 

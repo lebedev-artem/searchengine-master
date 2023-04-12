@@ -12,6 +12,7 @@ import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.services.indexing.IndexingServiceImpl;
+import searchengine.tools.LemmaFinder;
 
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -38,6 +39,8 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 	private Map<String, Integer> collectedLemmas = new HashMap<>();
 	private Map<String, LemmaEntity> lemmaEntities = new HashMap<>();
 	private Integer countPages = 0;
+	private Integer countLemmas = 0;
+	private Integer countIndexes = 0;
 
 
 	public void startCollecting() {
@@ -61,6 +64,7 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 					LemmaEntity lemmaEntity = createLemmaEntity(lemma);
 					indexEntities.add(
 							new IndexEntity(pageEntity, lemmaEntity, rank));
+					countIndexes++;
 				}
 
 			} else {
@@ -78,7 +82,7 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 		} catch (InterruptedException e) {
 			log.error("Error sleeping after saving lemmas");
 		}
-		log.warn("Saving lemmas:" + (System.currentTimeMillis() - lemmaSave) + " ms");
+		log.warn("Saving lemmas lasts - " + (System.currentTimeMillis() - lemmaSave) + " ms");
 		long idxSave = System.currentTimeMillis();
 
 		indexRepository.saveAll(indexEntities);
@@ -87,7 +91,7 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 		} catch (InterruptedException e) {
 			log.error("Error sleeping after saving lemmas");
 		}
-		log.warn("Saving index: " + (System.currentTimeMillis() - idxSave) + " ms");
+		log.warn("Saving index lasts -  " + (System.currentTimeMillis() - idxSave) + " ms");
 		log.warn(logAboutEachSite());
 		indexEntities.clear();
 		lemmaEntities.clear();
@@ -102,16 +106,17 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 		} else {
 			lemmaObj = new LemmaEntity(siteEntity, lemma, INIT_FREQ);
 			lemmaEntities.put(lemma, lemmaObj);
+			countLemmas++;
 		}
 		return lemmaObj;
 	}
 
 
 	private @NotNull String logAboutEachSite() {
-		return lemmaRepository.countBySiteEntity(siteEntity)
-				+ " lemmas and "
-				+ indexRepository.countBySiteId(siteEntity.getId()) + " indexes saved"
-				+ " from DB from site url " + siteEntity.getUrl();
+		return countLemmas + " lemmas and "
+				+ countIndexes + " indexes saved "
+				+ "in DB from site with url "
+				+ siteEntity.getUrl();
 	}
 
 	public Boolean allowed() {

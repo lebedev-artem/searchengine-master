@@ -28,16 +28,16 @@ spring:
         order_inserts: true
         order_updates: true
         batch_versioned_data: true
-        generate_statistics: true
+#        generate_statistics: true
         jdbc:
-          batch_size: 100
+          batch_size: 1000
           batch_versioned_data: true
 #        enable_lazy_load_no_trans: true
 #        event:
 #          merge:
 #            entity_copy_observer: allow
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
       show-sql: true
       format_sql: true
       use_sql_comments: true
@@ -60,12 +60,12 @@ indexing-settings:
 #      name: playback
 #    - url: https://www.artlebedev.ru/
 #      name: Задизайнено
-#    - url: https://www.svetlovka.ru/
-#      name: Svetlovka
-#    - url: https://dombulgakova.ru/
-#      name: Дом Булгакова
-#    - url: https://www.tretyakovgallery.ru/
-#      name: Третьяковская галерея
+    - url: https://www.svetlovka.ru/
+      name: Svetlovka
+    - url: https://dombulgakova.ru/
+      name: Дом Булгакова
+    - url: https://www.tretyakovgallery.ru/
+      name: Третьяковская галерея
 #    - url: https://gallery.tverreg.ru/
 #      name: Тверская Картинная галерея
     - url: https://shm.ru/

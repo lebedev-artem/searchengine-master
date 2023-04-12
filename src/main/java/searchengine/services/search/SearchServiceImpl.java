@@ -19,7 +19,8 @@ import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
-import searchengine.services.lemmatization.LemmaFinder;
+import searchengine.tools.LemmaFinder;
+import searchengine.tools.SnippetGenerator;
 
 import java.util.*;
 import java.util.function.Function;

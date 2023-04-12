@@ -2,7 +2,7 @@ package searchengine.services.savingpages;
 
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
-import searchengine.services.stuff.StringPool;
+import searchengine.tools.StringPool;
 
 import java.util.concurrent.BlockingQueue;
 

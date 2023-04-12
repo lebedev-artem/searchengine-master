@@ -1,4 +1,4 @@
-package searchengine.services.indexing;
+package searchengine.tools.indexing;
 
 import searchengine.model.SiteEntity;
 import java.util.Set;

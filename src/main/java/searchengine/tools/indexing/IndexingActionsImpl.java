@@ -1,4 +1,4 @@
-package searchengine.services.indexing;
+package searchengine.tools.indexing;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -6,17 +6,18 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
+import searchengine.model.IndexingStatus;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
+import searchengine.services.indexing.IndexingServiceImpl;
 import searchengine.services.lemmatization.LemmasAndIndexCollectingService;
 import searchengine.services.savingpages.PagesSavingService;
-import searchengine.services.scraping.ScrapingAction;
-import searchengine.services.stuff.StaticVault;
-import searchengine.services.stuff.StringPool;
+import searchengine.tools.StaticVault;
+import searchengine.tools.StringPool;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -50,8 +51,6 @@ public class IndexingActionsImpl implements IndexingActions {
 	private final LemmaRepository lemmaRepository;
 	public static String siteUrl;
 	public static Integer counterActions = 0;
-//	private final StringPool stringPool = new StringPool();
-
 
 	@Override
 	public void startFullIndexing(@NotNull Set<SiteEntity> siteEntities) {
@@ -129,15 +128,13 @@ public class IndexingActionsImpl implements IndexingActions {
 		pagesSavingService.setIncomeQueue(queueOfPagesForSaving);
 		pagesSavingService.setScrapingIsDone(false);
 		pagesSavingService.setSiteEntity(siteEntity);
-//		pagesSavingService.setStringPool(stringPool);
 		pagesSavingService.startSavingPages();
 
 	}
 
-	private void scrapActions(@NotNull ForkJoinPool pool, SiteEntity siteEntity) {
+	private void scrapActions(@NotNull ForkJoinPool pool, @NotNull SiteEntity siteEntity) {
 		siteUrl = siteEntity.getUrl();
 		ScrapingAction action = new ScrapingAction(siteEntity.getUrl(), siteEntity, queueOfPagesForSaving, pageRepository, siteRepository);
-//		action.setStringPool(stringPool);
 		pool.invoke(action);
 	}
 
@@ -169,25 +166,31 @@ public class IndexingActionsImpl implements IndexingActions {
 	}
 
 	private void startActionsAfterIndexing(@NotNull SiteEntity siteEntity) {
-		String status = "INDEXED";
-		String lastError = "";
+		siteEntity.setStatus(IndexingStatus.INDEXED);
+		siteEntity.setLastError("");
+		siteEntity.setStatusTime(LocalDateTime.now());
 		int countPages = pageRepository.countBySiteEntity(siteEntity);
 		switch (countPages) {
 			case 0 -> {
-				status = "FAILED";
-				lastError = errors[1];
+				siteEntity.setStatus(IndexingStatus.FAILED);
+				siteEntity.setLastError(errors[1]);
 			}
 			case 1 -> {
-				status = "FAILED";
-				lastError = errors[0];
+				siteEntity.setStatus(IndexingStatus.FAILED);
+				siteEntity.setLastError(errors[0]);
 			}
 		}
 		if (!pressedStop()) {
-			siteRepository.updateStatusStatusTimeErrorByUrl(status, LocalDateTime.now(), lastError, siteEntity.getUrl());
-			log.warn("Status of site " + siteEntity.getName() + " set to " + status + ", error set to " + lastError);
+			log.warn("Status of site " + siteEntity.getName() + " set to " + siteEntity.getStatus().toString() + ", error set to " + siteEntity.getLastError());
+		} else {
+			siteEntity.setLastError("Индексация остановлена пользователем");
+			siteEntity.setStatus(IndexingStatus.FAILED);
+			log.warn("Status of site " + siteEntity.getName() + " set to " + siteEntity.getStatus().toString() + ", error set to " + siteEntity.getLastError());
 		}
+		siteRepository.save(siteEntity);
 		StringPool.savedPaths.clear();
 		StringPool.pages404.clear();
+		StringPool.visitedLinks.clear();
 	}
 
 	private void writeLogAfterIndexing(long start) {

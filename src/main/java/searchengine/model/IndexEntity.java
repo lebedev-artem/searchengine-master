@@ -21,18 +21,18 @@ public class IndexEntity {
 	@SequenceGenerator(
 			name = "index_seq",
 			sequenceName = "index_sequence",
-			initialValue = 1, allocationSize = 50)
+			initialValue = 1, allocationSize = 500)
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "index_seq")
 	private Integer id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@OnDelete(action = OnDeleteAction.CASCADE)
+//	@OnDelete(action = OnDeleteAction.CASCADE)
 //	@MapsId(value = "pageId")
 	@JoinColumn(foreignKey = @ForeignKey(name = "FK_index_page_id"), name = "page_id", nullable = false)
 	public PageEntity pageEntity;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@OnDelete(action = OnDeleteAction.CASCADE)
+//	@OnDelete(action = OnDeleteAction.CASCADE)
 //	@MapsId(("lemmaId"))
 	@JoinColumn(foreignKey = @ForeignKey(name = "FK_index_lemma_id"), name = "lemma_id", nullable = false)
 	public LemmaEntity lemmaEntity;

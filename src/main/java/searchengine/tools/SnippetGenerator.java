@@ -1,4 +1,4 @@
-package searchengine.services.search;
+package searchengine.tools;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
 import org.springframework.stereotype.Component;
-import searchengine.services.lemmatization.LemmaFinder;
+import searchengine.tools.LemmaFinder;
 
 import java.util.*;
 import java.util.stream.Collectors;
