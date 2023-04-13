@@ -73,3 +73,6 @@ indexing-settings:
 #    - url: https://www.artlebedev.ru/technogrette/html/filters-in-ie/
 #      name: test
 
+table-settings:
+  clear-site-if-not-exists: true
+  delete-next-level-pages: true

@@ -1,4 +1,4 @@
-package searchengine.services.statistics;
+package searchengine.services;
 
 import lombok.extern.slf4j.Slf4j;
 import searchengine.dto.statistics.StatisticsResponse;

@@ -1,4 +1,4 @@
-package searchengine.services.search;
+package searchengine.services.Impl;
 
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +19,7 @@ import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
+import searchengine.services.SearchService;
 import searchengine.tools.LemmaFinder;
 import searchengine.tools.SnippetGenerator;
 

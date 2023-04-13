@@ -1,4 +1,4 @@
-package searchengine.services.lemmatization;
+package searchengine.services;
 import searchengine.model.LemmaEntity;
 import searchengine.model.SiteEntity;
 

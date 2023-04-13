@@ -1,4 +1,4 @@
-package searchengine.services.indexing;
+package searchengine.services.Impl;
 
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import searchengine.dto.indexing.IndexingResponse;
 import searchengine.model.*;
 import searchengine.repositories.*;
+import searchengine.services.IndexingService;
 import searchengine.tools.indexing.IndexingActions;
 import searchengine.tools.indexing.SchemaActions;
 
@@ -81,7 +82,6 @@ public class IndexingServiceImpl implements IndexingService {
 		return indexingResponse.successfully();
 	}
 
-	@Override
 	public void setPressedStop(boolean value) {
 		pressedStop = value;
 	}

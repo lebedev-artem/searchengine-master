@@ -1,4 +1,4 @@
-package searchengine.services.lemmatization;
+package searchengine.services.Impl;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +11,8 @@ import searchengine.model.*;
 import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
-import searchengine.services.indexing.IndexingServiceImpl;
+import searchengine.services.Impl.IndexingServiceImpl;
+import searchengine.services.LemmasAndIndexCollectingService;
 import searchengine.tools.LemmaFinder;
 
 import java.util.*;
@@ -45,8 +46,12 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 
 	public void startCollecting() {
 		while (allowed()) {
+
 			if (pressedStop()) {
 				incomeQueue.clear();
+				savingLemmas();
+				savingIndexes();
+				log.warn(logAboutEachSite());
 				return;
 			}
 
@@ -57,7 +62,6 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 						(Jsoup.parse(pageEntity
 								.getContent()).body().text());
 
-//				long startPageTime = System.currentTimeMillis();
 				for (String lemma : collectedLemmas.keySet()) {
 
 					int rank = collectedLemmas.get(lemma);
@@ -75,14 +79,15 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 				}
 			}
 		}
-		long lemmaSave = System.currentTimeMillis();
-		lemmaRepository.saveAll(lemmaEntities.values());
-		try {
-			sleep(200);
-		} catch (InterruptedException e) {
-			log.error("Error sleeping after saving lemmas");
-		}
-		log.warn("Saving lemmas lasts - " + (System.currentTimeMillis() - lemmaSave) + " ms");
+		savingLemmas();
+		savingIndexes();
+
+		log.warn(logAboutEachSite());
+		indexEntities.clear();
+		lemmaEntities.clear();
+	}
+
+	private void savingIndexes() {
 		long idxSave = System.currentTimeMillis();
 
 		indexRepository.saveAll(indexEntities);
@@ -92,9 +97,17 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 			log.error("Error sleeping after saving lemmas");
 		}
 		log.warn("Saving index lasts -  " + (System.currentTimeMillis() - idxSave) + " ms");
-		log.warn(logAboutEachSite());
-		indexEntities.clear();
-		lemmaEntities.clear();
+	}
+
+	private void savingLemmas() {
+		long lemmaSave = System.currentTimeMillis();
+		lemmaRepository.saveAll(lemmaEntities.values());
+		try {
+			sleep(200);
+		} catch (InterruptedException e) {
+			log.error("Error sleeping after saving lemmas");
+		}
+		log.warn("Saving lemmas lasts - " + (System.currentTimeMillis() - lemmaSave) + " ms");
 	}
 
 	public LemmaEntity createLemmaEntity(String lemma) {

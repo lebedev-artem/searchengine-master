@@ -9,13 +9,10 @@ import org.springframework.stereotype.Component;
 import searchengine.model.IndexingStatus;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
-import searchengine.repositories.IndexRepository;
-import searchengine.repositories.LemmaRepository;
-import searchengine.repositories.PageRepository;
-import searchengine.repositories.SiteRepository;
-import searchengine.services.indexing.IndexingServiceImpl;
-import searchengine.services.lemmatization.LemmasAndIndexCollectingService;
-import searchengine.services.savingpages.PagesSavingService;
+import searchengine.services.Impl.IndexingServiceImpl;
+import searchengine.services.LemmasAndIndexCollectingService;
+import searchengine.services.PagesSavingService;
+import searchengine.services.RepositoryService;
 import searchengine.tools.StaticVault;
 import searchengine.tools.StringPool;
 
@@ -37,20 +34,15 @@ public class IndexingActionsImpl implements IndexingActions {
 	private final String[] errors = {
 			"Ошибка индексации: главная страница сайта не доступна",
 			"Ошибка индексации: сайт не доступен",
-			""
-	};
+			""};
+	public static String siteUrl;
 	private SiteEntity siteEntity;
+	private final RepositoryService repositoryService;
+	private final PagesSavingService pagesSavingService;
 	private volatile boolean indexingActionsStarted = false;
+	private final LemmasAndIndexCollectingService lemmasAndIndexCollectingService;
 	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(100);
 	private BlockingQueue<Integer> queueOfPagesForLemmasCollecting = new LinkedBlockingQueue<>(100_000);
-	private final PagesSavingService pagesSavingService;
-	private final LemmasAndIndexCollectingService lemmasAndIndexCollectingService;
-	private final PageRepository pageRepository;
-	private final SiteRepository siteRepository;
-	private final IndexRepository indexRepository;
-	private final LemmaRepository lemmaRepository;
-	public static String siteUrl;
-	public static Integer counterActions = 0;
 
 	@Override
 	public void startFullIndexing(@NotNull Set<SiteEntity> siteEntities) {
@@ -62,8 +54,12 @@ public class IndexingActionsImpl implements IndexingActions {
 		for (SiteEntity siteEntity : siteEntities) {
 			CountDownLatch latch = new CountDownLatch(3);
 			if (!pressedStop()) {
+
 				log.info(siteEntity.getName() + " with URL " + siteEntity.getUrl() + " started indexing");
-				log.info(pageRepository.count() + " pages, " + lemmaRepository.count() + " lemmas, " + indexRepository.count() + " indexes in table");
+				log.info(repositoryService.countPages() + " pages, "
+						+ repositoryService.countLemmas() + " lemmas, "
+						+ repositoryService.countIndexes() + " indexes in table");
+
 				Thread scrapingThread = new Thread(() -> {
 					scrapActions(pool, siteEntity);
 					latch.countDown();
@@ -134,7 +130,7 @@ public class IndexingActionsImpl implements IndexingActions {
 
 	private void scrapActions(@NotNull ForkJoinPool pool, @NotNull SiteEntity siteEntity) {
 		siteUrl = siteEntity.getUrl();
-		ScrapingAction action = new ScrapingAction(siteEntity.getUrl(), siteEntity, queueOfPagesForSaving, pageRepository, siteRepository);
+		ScrapingAction action = new ScrapingAction(siteEntity.getUrl(), siteEntity, queueOfPagesForSaving);
 		pool.invoke(action);
 	}
 
@@ -149,9 +145,7 @@ public class IndexingActionsImpl implements IndexingActions {
 			shutDownAction(pool);
 			IndexingServiceImpl.pressedStop = false;
 			setIndexingActionsStarted(false);
-			pageRepository.flush();
-			lemmaRepository.flush();
-			indexRepository.flush();
+			repositoryService.flushRepositories();
 		}
 	}
 
@@ -169,7 +163,7 @@ public class IndexingActionsImpl implements IndexingActions {
 		siteEntity.setStatus(IndexingStatus.INDEXED);
 		siteEntity.setLastError("");
 		siteEntity.setStatusTime(LocalDateTime.now());
-		int countPages = pageRepository.countBySiteEntity(siteEntity);
+		int countPages = repositoryService.countPagesOnSite(siteEntity);
 		switch (countPages) {
 			case 0 -> {
 				siteEntity.setStatus(IndexingStatus.FAILED);
@@ -187,17 +181,17 @@ public class IndexingActionsImpl implements IndexingActions {
 			siteEntity.setStatus(IndexingStatus.FAILED);
 			log.warn("Status of site " + siteEntity.getName() + " set to " + siteEntity.getStatus().toString() + ", error set to " + siteEntity.getLastError());
 		}
-		siteRepository.save(siteEntity);
+		repositoryService.saveSite(siteEntity);
 		StringPool.savedPaths.clear();
 		StringPool.pages404.clear();
 		StringPool.visitedLinks.clear();
 	}
 
 	private void writeLogAfterIndexing(long start) {
-		log.info(siteRepository.count() + " site(s)");
-		log.info(pageRepository.count() + " pages");
-		log.info(lemmaRepository.count() + " lemmas");
-		log.info(indexRepository.count() + " index entries");
+		log.info(repositoryService.countSites() + " site(s)");
+		log.info(repositoryService.countPages() + " pages");
+		log.info(repositoryService.countLemmas() + " lemmas");
+		log.info(repositoryService.countIndexes() + " index entries");
 		log.info("Just in " + (System.currentTimeMillis() - start) + " ms");
 		log.info("FINISHED. I'm ready to start again and again");
 	}

@@ -1,4 +1,4 @@
-package searchengine.services.savingpages;
+package searchengine.services;
 
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;

@@ -5,7 +5,6 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.model.SiteEntity;
 
-
 @Transactional
 @Repository
 public interface SiteRepository extends JpaRepository<SiteEntity, Long> {
@@ -15,6 +14,8 @@ public interface SiteRepository extends JpaRepository<SiteEntity, Long> {
 	boolean existsByUrl(String url);
 
 	SiteEntity findByUrl(String url);
+
+	SiteEntity findById(Integer id);
 
 
 }

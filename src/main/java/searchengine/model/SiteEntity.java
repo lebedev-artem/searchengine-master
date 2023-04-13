@@ -1,5 +1,5 @@
 package searchengine.model;
-import lombok.Builder;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -26,7 +26,7 @@ public class SiteEntity {
 	}
 
 	@Id
-	@Column (name = "id", nullable = false)
+	@Column(name = "id", nullable = false)
 	@SequenceGenerator(
 			name = "site_seq",
 			sequenceName = "site_sequence",

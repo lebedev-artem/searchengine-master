@@ -5,21 +5,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.model.*;
-import searchengine.repositories.IndexRepository;
-import searchengine.repositories.LemmaRepository;
-import searchengine.repositories.PageRepository;
-import searchengine.repositories.SiteRepository;
+import searchengine.services.RepositoryService;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
+import java.util.*;
 
 @Slf4j
 @Getter
@@ -29,10 +26,8 @@ import java.util.Set;
 public class SchemaActions {
 
 	private final SitesList sitesList;
-	private final SiteRepository siteRepository;
-	private final PageRepository pageRepository;
-	private final LemmaRepository lemmaRepository;
-	private final IndexRepository indexRepository;
+	private final Environment environment;
+	private final RepositoryService repositoryService;
 
 	public @NotNull Set<SiteEntity> fullInit() {
 
@@ -40,10 +35,11 @@ public class SchemaActions {
 			return new HashSet<>();
 
 		//exSE - existing in the database SiteEntities
-		List<SiteEntity> exSE = siteRepository.findAll();
+		List<SiteEntity> exSE = repositoryService.getSites();
 
 		//Checking existing Site from DB on SiteList
-		deleteSiteIfNotExist(exSE);
+		if (Objects.equals(environment.getProperty("table-settings.clear-site-if-not-exists"), "true"))
+			deleteSiteIfNotExist(exSE);
 
 		//newSE - Set of newly created entities of Site
 		Set<SiteEntity> newSE = new HashSet<>();
@@ -54,7 +50,7 @@ public class SchemaActions {
 			sitesList.getSites().forEach(site -> newSE.add(initSiteRow(site)));
 		} else {
 			sitesList.getSites().forEach(newSite -> {
-				SiteEntity existingSiteEntity = siteRepository.findByUrl(newSite.getUrl());
+				SiteEntity existingSiteEntity = repositoryService.getSiteByUrl(newSite.getUrl());
 				if (existingSiteEntity != null) {
 					log.info("Site " + newSite.getName() + " " + newSite.getUrl() + " found in table");
 					log.warn("Updating " + existingSiteEntity.getName() + " " + existingSiteEntity.getUrl() + " status and time");
@@ -63,8 +59,8 @@ public class SchemaActions {
 					existingSiteEntity.setStatusTime(LocalDateTime.now());
 
 					log.warn("Deletion pages and lemmas with indexes from " + existingSiteEntity.getName() + " " + existingSiteEntity.getUrl());
-					pageRepository.deleteAllBySiteEntity(existingSiteEntity);
-					lemmaRepository.deleteAllInBatchBySiteEntity(existingSiteEntity);
+					repositoryService.deletePagesFromSite(existingSiteEntity);
+					repositoryService.deleteLemmasFromSite(existingSiteEntity);
 
 					log.info("Site " + existingSiteEntity.getName() + " " + existingSiteEntity.getUrl() + " will be indexing again");
 					newSE.add(existingSiteEntity);
@@ -76,8 +72,8 @@ public class SchemaActions {
 			});
 		}
 		newSE.forEach(e -> {
-			if (!siteRepository.existsByUrl(e.getUrl())) {
-				siteRepository.save(e);
+			if (!repositoryService.siteExistsWithUrl(e.getUrl())) {
+				repositoryService.saveSite(e);
 				log.warn("SiteEntity name " + e.getName() + " with URL " + e.getUrl() + " saved in table");
 			}
 		});
@@ -87,14 +83,12 @@ public class SchemaActions {
 		return newSE;
 	}
 
-	private void deleteSiteIfNotExist(List<SiteEntity> exSE) {
-		for (SiteEntity siteEntity: exSE) {
+	private void deleteSiteIfNotExist(@NotNull List<SiteEntity> exSE) {
+		for (SiteEntity siteEntity : exSE) {
 			if (sitesList.getSites()
 					.stream()
-					.noneMatch(site -> site.getUrl().equals(siteEntity.getUrl()))){
-				indexRepository.deleteAllInBatch();
-				lemmaRepository.deleteAllInBatch();
-				siteRepository.deleteById(siteEntity.getId());
+					.noneMatch(site -> site.getUrl().equals(siteEntity.getUrl()))) {
+				repositoryService.deleteSite(siteEntity);
 				log.warn(siteEntity.getName() + " " + siteEntity.getUrl() + " deleted from table, because site not exist in SiteList");
 			}
 		}
@@ -107,7 +101,7 @@ public class SchemaActions {
 		} catch (MalformedURLException e) {
 			log.error("Can't get path or hostname from requested url");
 		}
-		String hostName = url.substring(0, url.lastIndexOf(path) + 1);;
+		String hostName = url.substring(0, url.lastIndexOf(path) + 1);
 
 		Site site = null;
 		for (Site s : sitesList.getSites()) {
@@ -124,24 +118,28 @@ public class SchemaActions {
 			return null;
 		}
 
-		SiteEntity siteEntity = siteRepository.findByUrl(site.getUrl());
+		SiteEntity siteEntity = repositoryService.getSiteByUrl(site.getUrl());
 		if (siteEntity == null) {
 			log.error("Table site doesn't contains entry with requested hostname");
 			return null;
 		}
 
-		if (!pageRepository.existsByPathAndSiteEntity(path, siteEntity)) {
+		if (!repositoryService.pageExistsOnSite(path, siteEntity)) {
 			log.error("No pages with requested path contains in table page");
 			log.info("Will try indexing this URL now");
 			siteEntity.setUrl(url);
 			return siteEntity;
 		}
 
-		List<PageEntity> pageEntities = pageRepository.findAllBySiteEntityAndPathContains(siteEntity, path);
+		List<PageEntity> pageEntities;
+		if (Objects.equals(environment.getProperty("table-settings.delete-next-level-pages"), "true"))
+			pageEntities = repositoryService.getNextLevelPagesFromSite(siteEntity, path);
+		else pageEntities = repositoryService.getPageFromSite(siteEntity, path);
+
 
 		log.info("Found " + pageEntities.size() + " entity(ies) in table page by requested path " + path);
 		decreaseLemmasFreqByPage(pageEntities);
-		pageRepository.deleteAllInBatch(pageEntities);
+		repositoryService.deletePages(pageEntities);
 		siteEntity.setUrl(url);
 		log.info(siteEntity.getUrl() + " will be indexing now");
 
@@ -159,10 +157,7 @@ public class SchemaActions {
 	}
 
 	private void virginSchema() {
-		indexRepository.deleteAllInBatch();
-		lemmaRepository.deleteAllInBatch();
-		pageRepository.deleteAllInBatch();
-		siteRepository.deleteAllInBatch();
+		repositoryService.deleteAllTables();
 	}
 
 	private void decreaseLemmasFreqByPage(@NotNull List<PageEntity> pageEntities) {
@@ -170,9 +165,9 @@ public class SchemaActions {
 		//getting all indexes by page
 
 		//getting all lemmas by indexes
-		List<IndexEntity> indexForLemmaDecreaseFreq = indexRepository.findAllByPageEntityIn(pageEntities);
+		List<IndexEntity> indexForLemmaDecreaseFreq = repositoryService.getIndexesFromPages(pageEntities);
 
-		if (indexForLemmaDecreaseFreq == null){
+		if (indexForLemmaDecreaseFreq == null) {
 			log.error("Set of Index entities by Page is empty");
 			return;
 		} else {
@@ -184,7 +179,7 @@ public class SchemaActions {
 			LemmaEntity lemmaEntity = indexObj.getLemmaEntity();
 			int oldFreq = lemmaEntity.getFrequency();
 
-			if (oldFreq == 1) lemmaRepository.delete(lemmaEntity);
+			if (oldFreq == 1) repositoryService.deleteLemma(lemmaEntity);
 			else lemmaEntity.setFrequency(oldFreq - 1);
 		}
 	}

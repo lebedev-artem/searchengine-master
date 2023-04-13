@@ -12,8 +12,6 @@ import java.util.List;
 @Repository
 public interface PageRepository extends JpaRepository<PageEntity, Long> {
 
-	void deleteById(Integer id);
-
 	void deleteAllBySiteEntity(SiteEntity siteEntity);
 
 	boolean existsByPathAndSiteEntity(String path, SiteEntity siteEntity);
@@ -25,5 +23,7 @@ public interface PageRepository extends JpaRepository<PageEntity, Long> {
 	List<PageEntity> findAllByIdIn(List<Integer> ids);
 
 	List<PageEntity> findAllBySiteEntityAndPathContains(SiteEntity siteEntity, String path);
+
+	List<PageEntity> findBySiteEntityAndPath(SiteEntity siteEntity, String path);
 
 }

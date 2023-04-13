@@ -13,15 +13,12 @@ import org.jsoup.safety.Cleaner;
 import org.jsoup.safety.Safelist;
 import org.jsoup.select.Elements;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
-import searchengine.repositories.PageRepository;
-import searchengine.repositories.SiteRepository;
-import searchengine.services.indexing.IndexingServiceImpl;
+import searchengine.services.Impl.IndexingServiceImpl;
 import searchengine.tools.AcceptableContentTypes;
 import searchengine.tools.StringPool;
-
 import java.io.IOException;
 import java.net.URL;
 import java.time.LocalDateTime;
@@ -29,54 +26,38 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import static java.lang.Thread.sleep;
 import static searchengine.tools.Regex.*;
 
 @Slf4j
 @Getter
 @Setter
-@Service
+@Component
 @NoArgsConstructor
 public class ScrapingAction extends RecursiveAction {
-	private static final Integer COUNT_PAGES_TO_DROP = 50;
-	private static final AcceptableContentTypes ACCEPTABLE_CONTENT_TYPES = new AcceptableContentTypes();
-	private final ReadWriteLock lock = new ReentrantReadWriteLock();
-	long timeStart;
 
-	private Connection.Response jsoupResponse;
-	private Document document;
-
-	private Integer parentStatusCode;
-	private String parentStatusMessage;
-	private String parentContent;
-	private String parentPath;
-	private String parentUrl;
 	private String siteUrl;
+	private String parentUrl;
+	private Document document;
+	private String parentPath;
 	private SiteEntity siteEntity;
 	private PageEntity pageEntity;
-
+	private Connection.Response jsoupResponse;
 	private BlockingQueue<PageEntity> outcomeQueue;
-	private PageRepository pageRepository;
-	private SiteRepository siteRepository;
-//	private StringPool stringPool;
+	private final ReadWriteLock lock = new ReentrantReadWriteLock();
+	private static final AcceptableContentTypes ACCEPTABLE_CONTENT_TYPES = new AcceptableContentTypes();
 
 	public ScrapingAction(String parentUrl,
 	                      @NotNull SiteEntity siteEntity,
-	                      BlockingQueue<PageEntity> outcomeQueue,
-	                      PageRepository pageRepository,
-	                      SiteRepository siteRepository) {
+	                      BlockingQueue<PageEntity> outcomeQueue) {
 		this.siteEntity = siteEntity;
 		this.outcomeQueue = outcomeQueue;
 		this.parentUrl = parentUrl;
-		this.pageRepository = pageRepository;
-		this.siteRepository = siteRepository;
 		this.siteUrl = IndexingActionsImpl.siteUrl;
 	}
 
 	@Override
 	protected void compute() {
-		timeStart = System.currentTimeMillis();
 		List<ScrapingAction> subTasks = new LinkedList<>();
 
 		if (pressedStop()) {
@@ -85,14 +66,12 @@ public class ScrapingAction extends RecursiveAction {
 			return;
 		}
 
-//		Connection.Response responseSinglePage = getResponseFromUrl(parentUrl);
 		jsoupResponse = getResponseFromUrl(parentUrl);
 		if (jsoupResponse != null) dropPageToQueue();
 		else return;
 
-//		if (jsoupResponse == null) jsoupResponse = getResponseFromUrl(parentUrl);
-
 		Set<String> childLinksOfTask = getChildLinks(parentUrl, document);
+
 		if (childLinksOfTask.size() != 0) {
 			forkTasksFromSubtasks(subTasks, childLinksOfTask);
 			joinTasksFromSubtasks(subTasks);
@@ -198,12 +177,11 @@ public class ScrapingAction extends RecursiveAction {
 
 		for (String childLink : subLinks) {
 			if (childIsValidToFork(childLink) && !StringPool.pages404.containsKey(childLink) && !StringPool.visitedLinks.containsKey(childLink)) {
-				ScrapingAction action = new ScrapingAction(childLink, siteEntity, outcomeQueue, pageRepository, siteRepository);
+				ScrapingAction action = new ScrapingAction(childLink, siteEntity, outcomeQueue);
 				action.fork();
 				subTasks.add(action);
 			}
 		}
-//		log.info(Objects.requireNonNull(subLinks).size() + " new tasks forked");
 	}
 
 	private void joinTasksFromSubtasks(List<ScrapingAction> childTasks) {
@@ -211,7 +189,6 @@ public class ScrapingAction extends RecursiveAction {
 			for (ScrapingAction task : childTasks) {
 				task.join();
 			}
-//		log.info(Objects.requireNonNull(childTasks).size() + " new tasks wait join");
 		System.gc();
 	}
 
