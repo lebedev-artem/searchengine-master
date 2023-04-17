@@ -35,4 +35,10 @@ public class StringPool {
 		return (exist == null) ? s : exist;
 	}
 
+	public static void clearAll(){
+		savedPaths.clear();;
+		visitedLinks.clear();
+		pages404.clear();
+	}
+
 }

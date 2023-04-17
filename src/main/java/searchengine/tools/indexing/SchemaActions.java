@@ -38,8 +38,10 @@ public class SchemaActions {
 		List<SiteEntity> exSE = repositoryService.getSites();
 
 		//Checking existing Site from DB on SiteList
-		if (Objects.equals(environment.getProperty("table-settings.clear-site-if-not-exists"), "true"))
+		if (Objects.equals(environment.getProperty("table-settings.clear-site-if-not-exists"), "true")) {
+
 			deleteSiteIfNotExist(exSE);
+		}
 
 		//newSE - Set of newly created entities of Site
 		Set<SiteEntity> newSE = new HashSet<>();

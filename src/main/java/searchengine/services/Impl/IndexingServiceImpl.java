@@ -6,11 +6,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import searchengine.dto.indexing.IndexingResponse;
 import searchengine.model.*;
-import searchengine.repositories.*;
 import searchengine.services.IndexingService;
 import searchengine.tools.indexing.IndexingActions;
 import searchengine.tools.indexing.SchemaActions;
-
 import java.util.*;
 
 @Slf4j
@@ -20,10 +18,9 @@ import java.util.*;
 @RequiredArgsConstructor
 public class IndexingServiceImpl implements IndexingService {
 
-	private final IndexingResponse indexingResponse;
-	private final SiteRepository siteRepository;
-	private final IndexingActions indexingActions;
 	private final SchemaActions schemaActions;
+	private final IndexingActions indexingActions;
+	private final IndexingResponse indexingResponse;
 	public static volatile boolean pressedStop = false;
 	private static final ThreadLocal<Thread> singleTask = new ThreadLocal<>();
 

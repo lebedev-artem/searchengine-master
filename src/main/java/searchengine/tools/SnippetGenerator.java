@@ -23,12 +23,13 @@ public class SnippetGenerator {
 	private List<String> queryWords;
 	private final LemmaFinder lemmaFinder;
 	private final Integer SNIPPET_LENGTH = 150;
-	private final Integer MAX_FULL_SNIPPET_LENGTH = 550;
+	private final Integer MAX_FULL_SNIPPET_LENGTH = 350;
 
 	public void setText(String text) {
 		this.text = Jsoup
 				.clean(text, Safelist.simpleText())
-				.replaceAll("[^А-Яа-яЁё\\d\\s,.!]+", "");
+				.replaceAll("[^А-Яа-яЁё\\d\\s,.!]+", " ")
+				.replaceAll("\\s+", " ");
 	}
 
 	public void setQueryWords(List<String> queryWords) {

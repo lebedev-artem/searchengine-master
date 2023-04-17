@@ -182,9 +182,7 @@ public class IndexingActionsImpl implements IndexingActions {
 			log.warn("Status of site " + siteEntity.getName() + " set to " + siteEntity.getStatus().toString() + ", error set to " + siteEntity.getLastError());
 		}
 		repositoryService.saveSite(siteEntity);
-		StringPool.savedPaths.clear();
-		StringPool.pages404.clear();
-		StringPool.visitedLinks.clear();
+		StringPool.clearAll();
 	}
 
 	private void writeLogAfterIndexing(long start) {
