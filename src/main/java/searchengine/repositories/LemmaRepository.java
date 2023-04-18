@@ -10,11 +10,9 @@ import searchengine.model.SiteEntity;
 @Repository
 public interface LemmaRepository extends JpaRepository<LemmaEntity, Long> {
 
-	void deleteAllInBatchBySiteEntity(SiteEntity siteEntity);
-
 	Integer countBySiteEntity(SiteEntity siteEntity);
 
-	LemmaEntity getByLemmaAndSiteEntity(String lemma, SiteEntity siteEntity);
+	void deleteAllInBatchBySiteEntity(SiteEntity siteEntity);
 
 	LemmaEntity findByLemmaAndSiteEntity(String lemma, SiteEntity siteEntity);
 }

@@ -1,7 +1,5 @@
 package searchengine.repositories;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,8 +25,5 @@ public interface PageRepository extends JpaRepository<PageEntity, Long> {
 	List<PageEntity> findAllBySiteEntityAndPathContains(SiteEntity siteEntity, String path);
 
 	List<PageEntity> findBySiteEntityAndPath(SiteEntity siteEntity, String path);
-
-
-	Page<PageEntity> findAllByIdIn(List<Integer> ids, Pageable pageable);
 
 }

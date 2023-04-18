@@ -3,16 +3,11 @@ package searchengine.controllers;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import searchengine.dto.indexing.IndexingResponse;
-import searchengine.repositories.PageRepository;
-import searchengine.repositories.SiteRepository;
 import searchengine.services.IndexingService;
-
 import searchengine.dto.search.SearchResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import searchengine.services.RepositoryService;
 import searchengine.services.SearchService;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.services.StatisticsService;
@@ -27,9 +22,6 @@ public class ApiController {
 	private final SearchService searchService;
 	private final IndexingService indexingService;
 	private final StatisticsService statisticsService;
-	private final PageRepository pageRepository;
-	private final RepositoryService repositoryService;
-	private final SiteRepository siteRepository;
 
 	@GetMapping("/statistics")
 	public ResponseEntity<StatisticsResponse> statistics() {
@@ -59,11 +51,5 @@ public class ApiController {
 			@RequestParam final Integer limit) {
 
 		return ResponseEntity.ok(searchService.getSearchResults(query, site, offset, limit));
-	}
-
-	@PostMapping("/test")
-	public ResponseEntity<?> test(@RequestParam final int id){
-		repositoryService.deleteSite(siteRepository.findById(id));
-		return new ResponseEntity<>(HttpStatus.ACCEPTED);
 	}
 }

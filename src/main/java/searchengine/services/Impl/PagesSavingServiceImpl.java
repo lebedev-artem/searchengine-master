@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.PageRepository;
-import searchengine.services.Impl.IndexingServiceImpl;
 import searchengine.services.PagesSavingService;
 import searchengine.tools.CheckHeapSize;
 import searchengine.tools.StringPool;

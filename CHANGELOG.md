@@ -33,6 +33,7 @@ ___
 - Composite key for **index** table removed.
 - Reset **id** of records in the database removed.
 - All **native SQL query** removed from repositories.
+- Pageable getting results from DB removed, because it is not possible to correctly count the number of results when searching for all sites
 
 
 

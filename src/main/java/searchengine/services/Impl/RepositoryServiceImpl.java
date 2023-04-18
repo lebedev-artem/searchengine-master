@@ -13,6 +13,7 @@ import searchengine.repositories.SiteRepository;
 import searchengine.services.RepositoryService;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -44,16 +45,21 @@ public class RepositoryServiceImpl implements RepositoryService {
 	}
 
 	@Override
+	public Integer countPagesFromSite(SiteEntity site) {
+		return pageRepository.countBySiteEntity(site);
+	}
+
+	@Override
+	public Integer countLemmasFromSite(SiteEntity site) {
+		return lemmaRepository.countBySiteEntity(site);
+	}
+
+	@Override
 	public void flushRepositories() {
 		lemmaRepository.flush();
 		pageRepository.flush();
 		indexRepository.flush();
 		siteRepository.flush();
-	}
-
-	@Override
-	public Integer countPagesOnSite(SiteEntity site) {
-		return pageRepository.countBySiteEntity(site);
 	}
 
 	@Override
@@ -74,6 +80,21 @@ public class RepositoryServiceImpl implements RepositoryService {
 	@Override
 	public SiteEntity getSiteByUrl(String url) {
 		return siteRepository.findByUrl(url);
+	}
+
+	@Override
+	public LemmaEntity getLemmaByNameFromSite(String name, SiteEntity site) {
+		return lemmaRepository.findByLemmaAndSiteEntity(name, site);
+	}
+
+	@Override
+	public IndexEntity getIndexByLemmaFromPage(LemmaEntity lemma, PageEntity page) {
+		return indexRepository.findByLemmaEntityAndPageEntity(lemma, page);
+	}
+
+	@Override
+	public Set<IndexEntity> getAllByLemma(LemmaEntity lemma) {
+		return indexRepository.findAllByLemmaEntity(lemma);
 	}
 
 	@Override
@@ -102,6 +123,11 @@ public class RepositoryServiceImpl implements RepositoryService {
 	@Override
 	public List<PageEntity> getNextLevelPagesFromSite(SiteEntity site, String path) {
 		return pageRepository.findAllBySiteEntityAndPathContains(site, path);
+	}
+
+	@Override
+	public List<PageEntity> getPagesByIds(List<Integer> ids) {
+		return pageRepository.findAllByIdIn(ids);
 	}
 
 	@Override

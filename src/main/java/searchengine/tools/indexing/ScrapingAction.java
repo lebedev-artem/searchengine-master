@@ -95,7 +95,7 @@ public class ScrapingAction extends RecursiveAction {
 			try {
 				if (url.matches(URL_IS_VALID)
 						//Temp check for this site
-						&& (href.startsWith(siteUrl) | href.contains("https://my.tretyakov.ru/app/gallery") | href.contains("https://my.tretyakov.ru/app/masterpiece/"))
+						&& (href.startsWith(siteUrl) | href.contains("my.tretyakov.ru/app/gallery?") | href.contains("my.tretyakov.ru/app/masterpiece/"))
 						&& !href.contains("#")
 						&& !href.equals(url)
 						&& !newChildLinks.contains(href)

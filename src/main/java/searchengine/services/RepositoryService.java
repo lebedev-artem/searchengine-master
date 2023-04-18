@@ -6,6 +6,7 @@ import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 
 import java.util.List;
+import java.util.Set;
 
 public interface RepositoryService {
 	Long countLemmas();
@@ -16,11 +17,19 @@ public interface RepositoryService {
 
 	Long countSites();
 
+	Integer countPagesFromSite(SiteEntity site);
+
+	Integer countLemmasFromSite(SiteEntity site);
+
 	List<SiteEntity> getSites();
 
 	SiteEntity getSiteByUrl(String url);
 
-	Integer countPagesOnSite(SiteEntity site);
+	LemmaEntity getLemmaByNameFromSite(String name, SiteEntity site);
+
+	IndexEntity getIndexByLemmaFromPage(LemmaEntity lemma, PageEntity page);
+
+	Set<IndexEntity> getAllByLemma(LemmaEntity lemma);
 
 	Boolean siteExistsWithUrl(String url);
 
@@ -51,6 +60,8 @@ public interface RepositoryService {
 	List<PageEntity> getPageFromSite(SiteEntity site, String path);
 
 	List<PageEntity> getNextLevelPagesFromSite(SiteEntity site, String path);
+
+	List<PageEntity> getPagesByIds(List<Integer> ids);
 
 
 }

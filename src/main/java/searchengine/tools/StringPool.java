@@ -36,7 +36,7 @@ public class StringPool {
 	}
 
 	public static void clearAll(){
-		savedPaths.clear();;
+		savedPaths.clear();
 		visitedLinks.clear();
 		pages404.clear();
 	}

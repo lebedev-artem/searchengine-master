@@ -163,7 +163,7 @@ public class IndexingActionsImpl implements IndexingActions {
 		siteEntity.setStatus(IndexingStatus.INDEXED);
 		siteEntity.setLastError("");
 		siteEntity.setStatusTime(LocalDateTime.now());
-		int countPages = repositoryService.countPagesOnSite(siteEntity);
+		int countPages = repositoryService.countPagesFromSite(siteEntity);
 		switch (countPages) {
 			case 0 -> {
 				siteEntity.setStatus(IndexingStatus.FAILED);

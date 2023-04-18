@@ -30,7 +30,7 @@ public class SiteEntity {
 	@SequenceGenerator(
 			name = "site_seq",
 			sequenceName = "site_sequence",
-			initialValue = 1, allocationSize = 5)
+			allocationSize = 1)
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "site_seq")
 	private Integer id;
 
@@ -41,7 +41,7 @@ public class SiteEntity {
 	@Column(name = "status_time", nullable = false, columnDefinition = "DATETIME")
 	private LocalDateTime statusTime;
 
-	@Column(columnDefinition = "TEXT", name = "last_error", nullable = true, length = 500)
+	@Column(columnDefinition = "TEXT", name = "last_error", length = 500)
 	private String lastError;
 
 	@Column(columnDefinition = "VARCHAR(255)", nullable = false)

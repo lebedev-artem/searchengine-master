@@ -35,9 +35,7 @@ public class IndexingServiceImpl implements IndexingService {
 		if (siteEntities.size() == 0)
 			return indexingResponse.startFailedEmptyQuery();
 
-		singleTask.set(new Thread(() -> {
-			indexingActions.startFullIndexing(siteEntities);
-		}, "0day-thread"));
+		singleTask.set(new Thread(() -> indexingActions.startFullIndexing(siteEntities), "0day-thread"));
 
 		singleTask.get().start();
 		return indexingResponse.successfully();
@@ -57,9 +55,7 @@ public class IndexingServiceImpl implements IndexingService {
 		SiteEntity siteEntity = schemaActions.partialInit(url);
 		if (siteEntity == null) return indexingResponse.indexPageFailed();
 
-		singleTask.set(new Thread(() -> {
-			indexingActions.startPartialIndexing(siteEntity);
-		}, "0day-thread"));
+		singleTask.set(new Thread(() -> indexingActions.startPartialIndexing(siteEntity), "0day-thread"));
 
 		singleTask.get().start();
 

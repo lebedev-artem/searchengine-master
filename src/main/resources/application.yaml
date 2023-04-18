@@ -64,16 +64,16 @@ indexing-settings:
 #      name: Svetlovka
     - url: https://dombulgakova.ru/
       name: Дом Булгакова
-#    - url: https://www.tretyakovgallery.ru/
-#      name: Третьяковская галерея
+    - url: https://www.tretyakovgallery.ru/
+      name: Третьяковская галерея
     - url: https://gallery.tverreg.ru/
       name: Тверская Картинная галерея
     - url: https://shm.ru/
       name: Исторический музей
     - url: https://www.artlebedev.ru/technogrette/
-      name: Техногрет
+      name: Студия Лебедева. Техногрет
     - url: https://www.artlebedev.ru/kovodstvo/sections/
-      name: Ководство
+      name: Студия Лебедева. Ководство
 
 table-settings:
   clear-site-if-not-exists: true

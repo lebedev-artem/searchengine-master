@@ -4,9 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
-
 import javax.persistence.*;
 import java.util.HashSet;
 import java.util.Objects;
@@ -25,13 +22,10 @@ public class LemmaEntity {
 	@SequenceGenerator(
 			name = "lemma_seq",
 			sequenceName = "lemma_sequence",
-			initialValue = 1, allocationSize = 100)
+			allocationSize = 250)
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "lemma_seq")
 	private Integer id;
-	//	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.MERGE, CascadeType.REFRESH})
-	//	@ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.REFRESH})
 	@ManyToOne(fetch = FetchType.LAZY)
-	//	@OnDelete(action = OnDeleteAction.NO_ACTION)
 	@JoinColumn(foreignKey = @ForeignKey(name = "lemma_site_FK"), columnDefinition = "Integer",
 			referencedColumnName = "id", name = "site_id", nullable = false, updatable = false)
 	private SiteEntity siteEntity;
@@ -42,15 +36,7 @@ public class LemmaEntity {
 	@Column(nullable = false)
 	private int frequency;
 
-	//	@ManyToMany
-//	@OnDelete(action = OnDeleteAction.CASCADE)
-//	@JoinTable(
-//			name = "search_index",
-//			joinColumns = {@JoinColumn(name = "lemma_id")},
-//			inverseJoinColumns = {@JoinColumn(name = "page_id")}
-//	)
 	@ManyToMany(fetch = FetchType.LAZY, mappedBy = "lemmaEntities")
-//	@OnDelete(action = OnDeleteAction.NO_ACTION)
 	private Set<PageEntity> pageEntities = new HashSet<>();
 
 

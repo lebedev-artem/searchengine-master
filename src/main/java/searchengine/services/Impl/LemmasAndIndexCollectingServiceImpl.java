@@ -11,7 +11,6 @@ import searchengine.model.*;
 import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
-import searchengine.services.Impl.IndexingServiceImpl;
 import searchengine.services.LemmasAndIndexCollectingService;
 import searchengine.tools.LemmaFinder;
 
