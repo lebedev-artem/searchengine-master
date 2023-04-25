@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 
 ___
 
+## [1.2] - 2023-04-25
+
+### Added
+
+- Added cleanup of page content with Jsoup.Clean before uploading to the database, which reduced the size of the uploaded data to DB by an average of 7 times (minimum 2, maximum about 15)
+
+### Fixed
+
+- Checked & fixed some code according to [design](https://docs.pmd-code.org/pmd-doc-6.55.0/pmd_rules_java.html#design), [code style](https://docs.pmd-code.org/pmd-doc-6.55.0/pmd_rules_java.html#code-style) and other rules of [PMD (static source code analyzer)](https://docs.pmd-code.org/pmd-doc-6.55.0/index.html)
+
+### Changed
+
+- Reduce complexity of methods.
+- Add _import static searchengine.tools.StringPool.*;_ to keep the clean code.
+
+### Removed
+
+- Unnecessary code in the parser when stopped is removed.
+
+___
+
 ## [1.1] - 2023-04-19
 
 ### Added
@@ -17,7 +38,7 @@ ___
 ### Fixed
 
 - The controllers have been made *flat*.
-- Improved performance due to the change in **id** generation type.
+- Improved performance approx. x2 due to the change in **id** generation type.
 - Calculating relevance fixed. The maximum relevance was calculated incorrectly.
 - Add missing space between words while cleaning text for snippet generator.
 
@@ -26,7 +47,6 @@ ___
 - Change Id generation strategy to **SEQUENCE** for table **site**, **page**, **lemma**.
 - Method parameters in the ApiController are made **final**.
 - Refactoring the arrangement of classes in packages.
-- Now entities getting from DB in search using Pageable with limit and offset.
 
 ### Removed
 

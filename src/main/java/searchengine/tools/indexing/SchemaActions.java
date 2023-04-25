@@ -74,8 +74,9 @@ public class SchemaActions {
 		}
 		newSE.forEach(e -> {
 			if (!repositoryService.siteExistsWithUrl(e.getUrl())) {
+				log.warn("SiteEntity name " + e.getName() + " with URL " + e.getUrl() + " saving in table");
 				repositoryService.saveSite(e);
-				log.warn("SiteEntity name " + e.getName() + " with URL " + e.getUrl() + " saved in table");
+
 			}
 		});
 
@@ -89,8 +90,8 @@ public class SchemaActions {
 			if (sitesList.getSites()
 					.stream()
 					.noneMatch(site -> site.getUrl().equals(siteEntity.getUrl()))) {
+				log.warn("Try deleting " + siteEntity.getName() + " " + siteEntity.getUrl() + " from table, because site not exist in SiteList");
 				repositoryService.deleteSite(siteEntity);
-				log.warn(siteEntity.getName() + " " + siteEntity.getUrl() + " deleted from table, because site not exist in SiteList");
 			}
 		}
 	}

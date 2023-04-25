@@ -22,22 +22,22 @@ public class IndexingServiceImpl implements IndexingService {
 	private final IndexingActions indexingActions;
 	private final IndexingResponse indexingResponse;
 	public static volatile boolean pressedStop = false;
-	private static final ThreadLocal<Thread> singleTask = new ThreadLocal<>();
+	private static final ThreadLocal<Thread> SINGLE_TASK = new ThreadLocal<>();
 
 	@Override
 	public synchronized ResponseEntity<IndexingResponse> indexingStart() {
 		log.warn("Mapping /startIndexing executed");
 
-		if (indexingActions.getIndexingActionsStarted())
+		if (indexingActions.isIndexingActionsStarted())
 			return indexingResponse.startFailed();
 
 		Set<SiteEntity> siteEntities = schemaActions.fullInit();
 		if (siteEntities.size() == 0)
 			return indexingResponse.startFailedEmptyQuery();
 
-		singleTask.set(new Thread(() -> indexingActions.startFullIndexing(siteEntities), "0day-thread"));
+		SINGLE_TASK.set(new Thread(() -> indexingActions.startFullIndexing(siteEntities), "0day-thread"));
 
-		singleTask.get().start();
+		SINGLE_TASK.get().start();
 		return indexingResponse.successfully();
 	}
 
@@ -46,7 +46,7 @@ public class IndexingServiceImpl implements IndexingService {
 
 		log.warn("Mapping /indexPage executed");
 
-		if (indexingActions.getIndexingActionsStarted())
+		if (indexingActions.isIndexingActionsStarted())
 			return indexingResponse.startFailed();
 
 		if (url == null || url.equals(""))
@@ -55,9 +55,9 @@ public class IndexingServiceImpl implements IndexingService {
 		SiteEntity siteEntity = schemaActions.partialInit(url);
 		if (siteEntity == null) return indexingResponse.indexPageFailed();
 
-		singleTask.set(new Thread(() -> indexingActions.startPartialIndexing(siteEntity), "0day-thread"));
+		SINGLE_TASK.set(new Thread(() -> indexingActions.startPartialIndexing(siteEntity), "0day-thread"));
 
-		singleTask.get().start();
+		SINGLE_TASK.get().start();
 
 		return indexingResponse.successfully();
 	}
@@ -66,7 +66,7 @@ public class IndexingServiceImpl implements IndexingService {
 	public ResponseEntity<IndexingResponse> indexingStop() {
 		log.warn("Mapping /stopIndexing executed");
 
-		if (!indexingActions.getIndexingActionsStarted())
+		if (!indexingActions.isIndexingActionsStarted())
 			return indexingResponse.stopFailed();
 
 		setPressedStop(true);

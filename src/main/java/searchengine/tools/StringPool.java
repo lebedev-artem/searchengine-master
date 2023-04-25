@@ -16,7 +16,7 @@ public class StringPool {
 
 	public StringPool() {
 		savedPaths = new ConcurrentHashMap<>(3000);
-		visitedLinks = new ConcurrentHashMap<>(5000, 1);
+		visitedLinks = new ConcurrentHashMap<>(5000);
 		pages404 = new ConcurrentHashMap<>(100);
 	}
 

@@ -13,7 +13,7 @@ import java.util.*;
 @Component
 public class LemmaFinder {
 	private static final String WORD_TYPE_REGEX = "\\W\\w&&[^а-яА-Я\\s]";
-	private static final String[] PARTICLES_NAMES = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
+	private static final String[] PARTICLES_NAMES = {"МЕЖД", "ПРЕДЛ", "СОЮЗ"};
 	private final LuceneMorphology luceneMorphology = new RussianLuceneMorphology();
 
 	public LemmaFinder() throws IOException {

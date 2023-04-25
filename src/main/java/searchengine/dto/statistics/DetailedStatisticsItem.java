@@ -1,6 +1,7 @@
 package searchengine.dto.statistics;
 
 import lombok.Data;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -16,11 +17,8 @@ public class DetailedStatisticsItem {
     private int pages;
     private int lemmas;
 
-    public void setStatusTime(LocalDateTime statusTime) {
-        this.statusTime = java.util.Date
-                .from(statusTime
-                        .atZone(ZoneId.systemDefault())
-                        .toInstant());
+    public void setStatusTime(@NotNull LocalDateTime statusTime) {
+        this.statusTime = Date.from(statusTime.atZone(ZoneId.systemDefault()).toInstant());
     }
 }
 

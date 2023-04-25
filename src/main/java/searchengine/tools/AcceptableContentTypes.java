@@ -1,7 +1,7 @@
 package searchengine.tools;
 
 public class AcceptableContentTypes {
-	public final String[] acceptableContentTypes = new String[]{
+	public final String[] acceptableContentTypes = {
 			"text/plain",
 			"text/html",
 			"application/xhtml+xml",

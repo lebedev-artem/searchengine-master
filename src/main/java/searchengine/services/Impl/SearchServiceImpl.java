@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SearchServiceImpl implements SearchService {
 
-	public static final double ratio = 1.85;
+	public static final double RATIO = 1.85;
 	private String rarestLemma = null;
 	private final LemmaFinder lemmaFinder;
 	private final SnippetGenerator snippetGenerator;
@@ -60,7 +60,7 @@ public class SearchServiceImpl implements SearchService {
 
 				//Calculate threshold of frequency for deleting
 				int totalFreq = getTotalFrequency(retrievedLemmas);
-				float thresholdFreq = (float) ((totalFreq / retrievedLemmas.size()) * ratio);
+				float thresholdFreq = (float) ((totalFreq / retrievedLemmas.size()) * RATIO);
 
 				//Delete most frequently lemmas, Sort by frequency
 				nextStepLemmas = removeMostFrequentlyLemmas(retrievedLemmas, thresholdFreq);

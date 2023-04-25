@@ -25,7 +25,7 @@ import static java.lang.Thread.sleep;
 @RequiredArgsConstructor
 public class PagesSavingServiceImpl implements PagesSavingService {
 	private final ReadWriteLock lock = new ReentrantReadWriteLock();
-	private volatile boolean scrapingIsDone;
+	private volatile boolean scrapingIsDone = false;
 	private BlockingQueue<PageEntity> incomeQueue;
 	private BlockingQueue<Integer> outcomeQueue;
 	private SiteEntity siteEntity;
@@ -36,7 +36,6 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 	private final CheckHeapSize checkHeapSize;
 
 	public void startSavingPages() {
-		scrapingIsDone = false;                                         //нужно устанавливать в потоке scraping
 		final long startTime = System.currentTimeMillis();
 
 		while (allowed()) {

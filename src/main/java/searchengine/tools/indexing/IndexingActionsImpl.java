@@ -150,7 +150,7 @@ public class IndexingActionsImpl implements IndexingActions {
 	}
 
 	@Override
-	public boolean getIndexingActionsStarted() {
+	public boolean isIndexingActionsStarted() {
 		return indexingActionsStarted;
 	}
 

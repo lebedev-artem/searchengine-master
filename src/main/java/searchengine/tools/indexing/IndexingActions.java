@@ -10,7 +10,7 @@ public interface IndexingActions {
 
 	void setIndexingActionsStarted(boolean value);
 
-	boolean getIndexingActionsStarted();
+	boolean isIndexingActionsStarted();
 
 }
 
