@@ -35,7 +35,7 @@ public class SnippetGenerator {
 		this.queryWords = queryWords;
 	}
 
-	public Map<Integer, String> getWords(@NotNull String text) {
+	public Map<Integer, String> getWordsAndPos(@NotNull String text) {
 		Map<Integer, String> words = new HashMap<>();
 		int pos = 0;
 		int index = text.indexOf(" ");
@@ -56,24 +56,25 @@ public class SnippetGenerator {
 		return words;
 	}
 
-	public Map<Integer, Set<String>> getLemmas() {
-		Map<Integer, String> words = getWords(text);
+	public Map<Integer, Set<String>> getLemmasAndPos() {
+		Map<Integer, String> words = getWordsAndPos(text);
 		Map<Integer, Set<String>> lemmas = new HashMap<>();
 		for (Map.Entry<Integer, String> entry : words.entrySet()) {
 			Set<String> lemmaSet = lemmaFinder.getLemmaSet(entry.getValue());
-			if (!lemmaSet.isEmpty())
+			if (!lemmaSet.isEmpty()) {
 				lemmas.put(entry.getKey(), lemmaSet);
+			}
 		}
 		return lemmas;
 	}
 
-	public Map<Integer, String> getDirtyForms() {
-		Map<Integer, Set<String>> lemmas = getLemmas();
+	public Map<Integer, String> getDirtyFormsAndPos() {
+		Map<Integer, Set<String>> lemmas = getLemmasAndPos();
 		Map<Integer, String> dirtyForms = new HashMap<>();
 		for (String queryWord : queryWords) {
 			for (Map.Entry<Integer, Set<String>> entry : lemmas.entrySet()) {
 				if (entry.getValue().contains(queryWord.toLowerCase())) {
-					String word = getWords(text).get(entry.getKey());
+					String word = getWordsAndPos(text).get(entry.getKey());
 					dirtyForms.put(entry.getKey(), word);
 				}
 			}
@@ -82,15 +83,25 @@ public class SnippetGenerator {
 	}
 
 	public String generateSnippets() {
-		String prevSnippet = "";
-		Map<Integer, String> dirtyForms = getDirtyForms();
+		Map<Integer, String> dirtyForms = getDirtyFormsAndPos();
 		List<Integer> sortedPositions = new ArrayList<>(dirtyForms.keySet());
 		Collections.sort(sortedPositions);
+
+		Map<String, Integer> markedSnipped = cuttingSnippetFromText(dirtyForms, sortedPositions);
+
+		Map<String, Integer> resultBoldedList = boldText(markedSnipped, new ArrayList<>(dirtyForms.values()));
+		StringBuilder sb = getResultSnippet(resultBoldedList);
+
+		return sb.toString();
+	}
+
+	@NotNull
+	private Map<String, Integer> cuttingSnippetFromText(Map<Integer, String> dirtyForms, @NotNull List<Integer> sortedPositions) {
+		String prevSnippet = "";
 		Map<String, Integer> markedSnipped = new HashMap<>();
 		int totalLength = 0;
 		int prevPos = -1;
 		int start = -1;
-		int end = -1;
 
 		for (Integer pos : sortedPositions) {
 			if (prevPos == -1) {
@@ -102,38 +113,41 @@ public class SnippetGenerator {
 					markedSnipped.put(prevSnippet, 0);
 				}
 			}
-			end = Math.min(pos + dirtyForms.get(pos).length() + SNIPPET_LENGTH / 2, text.length());
+
+			int end = Math.min(pos + dirtyForms.get(pos).length() + SNIPPET_LENGTH / 2, text.length());
 			prevSnippet = text.substring(start, end);
 			totalLength = totalLength + prevSnippet.length();
 
-			if (totalLength >= MAX_FULL_SNIPPET_LENGTH) break;
+			if (totalLength >= MAX_FULL_SNIPPET_LENGTH) {
+				break;
+			}
 			prevPos = pos;
 		}
 
-		if (!prevSnippet.isEmpty()) markedSnipped.put(prevSnippet, 0);
-
-		List<String> list = new ArrayList<>(dirtyForms.values());
-		Map<String, Integer> resultBoldedList = boldText(markedSnipped, list);
-		StringBuilder sb = getResultSnippet(resultBoldedList);
-
-		return sb.toString();
+		if (!prevSnippet.isEmpty()) {
+			markedSnipped.put(prevSnippet, 0);
+		}
+		return markedSnipped;
 	}
 
 	private @NotNull StringBuilder getResultSnippet(@NotNull Map<String, Integer> resultBoldedList) {
 		StringBuilder sb = new StringBuilder();
 		for (String s : resultBoldedList.keySet()) {
 			sb.append("&#8195").append(s).append(" . . .").append("<br><br>");
-			if (sb.length() >= MAX_FULL_SNIPPET_LENGTH)
+			if (sb.length() >= MAX_FULL_SNIPPET_LENGTH) {
 				break;
+			}
 		}
 		return sb;
 	}
 
 	private int getLastDotPositionInText(Integer pos) {
 		int lastDotPosition = text.substring(0, pos).lastIndexOf(".") + 2;
-		if (lastDotPosition >= 2) return lastDotPosition;
-		else return pos;
-
+		if (lastDotPosition >= 2) {
+			return lastDotPosition;
+		} else {
+			return pos;
+		}
 	}
 
 	private Map<String, Integer> boldText(@NotNull Map<String, Integer> source, List<String> words) {

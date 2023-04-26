@@ -15,7 +15,7 @@ ___
 
 - Checked & fixed some code according to [design](https://docs.pmd-code.org/pmd-doc-6.55.0/pmd_rules_java.html#design), [code style](https://docs.pmd-code.org/pmd-doc-6.55.0/pmd_rules_java.html#code-style) and other rules of [PMD (static source code analyzer)](https://docs.pmd-code.org/pmd-doc-6.55.0/index.html)
 - Duplicate code in some class removed.
-- Change sequence of deletion **pages** and **lemmas** in _partialInit_, causing the exception updating foreign key constraint.
+- Change sequence of deletion **[pages](https://github.com/lebedev-artem/searchengine-master/blob/fbacc375cc12f2e8c48b7f905e4f4cf477a079f5/src/main/java/searchengine/tools/indexing/SchemaActions.java#L196)** and **lemmas** in **[partialInit](https://github.com/lebedev-artem/searchengine-master/blob/fbacc375cc12f2e8c48b7f905e4f4cf477a079f5/src/main/java/searchengine/tools/indexing/SchemaActions.java#L100)**, causing the exception updating foreign key constraint.
 
 ### Changed
 

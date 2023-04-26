@@ -72,7 +72,7 @@ public class SchemaActions {
 		System.gc();
 	}
 
-	private void clearRelatedTables(SiteEntity site) {
+	private void clearRelatedTables(@NotNull SiteEntity site) {
 		log.info("Site " + site.getName() + " " + site.getUrl() + " found in table");
 		log.warn("Updating " + site.getName() + " " + site.getUrl() + " status and time");
 		site.setStatus(IndexingStatus.INDEXING);

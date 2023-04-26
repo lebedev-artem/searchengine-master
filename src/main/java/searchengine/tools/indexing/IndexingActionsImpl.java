@@ -55,40 +55,21 @@ public class IndexingActionsImpl implements IndexingActions {
 			CountDownLatch latch = new CountDownLatch(3);
 			if (!pressedStop()) {
 
-				log.info(siteEntity.getName() + " with URL " + siteEntity.getUrl() + " started indexing");
-				log.info(repositoryService.countPages() + " pages, "
-						+ repositoryService.countLemmas() + " lemmas, "
-						+ repositoryService.countIndexes() + " indexes in table");
+				writeLogBeforeIndexing(siteEntity);
 
-				Thread scrapingThread = new Thread(() -> {
-					scrapActions(pool, siteEntity);
-					latch.countDown();
-					pagesSavingService.setScrapingIsDone(true);
-					log.warn("crawl-thread finished, latch =  " + latch.getCount());
-				}, "crawl-thread");
-
-				Thread pagesSaverThread = new Thread(() -> {
-					pageSavingActions(siteEntity);
-					latch.countDown();
-					lemmasAndIndexCollectingService.setSavingPagesIsDone(true);
-					log.warn("saving-pages-thread finished, latch =  " + latch.getCount());
-				}, "pages-thread");
-
-				Thread lemmasCollectorThread = new Thread(() -> {
-					lemmasCollectingActions(siteEntity);
-					latch.countDown();
-					log.warn("lemmas-finding-thread finished, latch =  " + latch.getCount());
-				}, "lemmas-thread");
+				Thread scrapingThread = new Thread(() -> crawlThreadBody(pool, siteEntity, latch), "crawl-thread");
+				Thread pagesSaverThread = new Thread(() -> pagesThreadBody(siteEntity, latch), "pages-thread");
+				Thread lemmasCollectorThread = new Thread(() -> lemmasThreadBody(siteEntity, latch), "lemmas-thread");
 
 				scrapingThread.start();
 				pagesSaverThread.start();
 				lemmasCollectorThread.start();
+
 				try {
 					latch.await();
 				} catch (InterruptedException e) {
 					log.error("Can't await latch");
 				}
-
 				startActionsAfterIndexing(siteEntity);
 			} else {
 				stopPressedActions(pool);
@@ -100,6 +81,33 @@ public class IndexingActionsImpl implements IndexingActions {
 		writeLogAfterIndexing(start);
 		setIndexingActionsStarted(false);
 		System.gc();
+	}
+
+	private void writeLogBeforeIndexing(@NotNull SiteEntity siteEntity) {
+		log.info(siteEntity.getName() + " with URL " + siteEntity.getUrl() + " started indexing");
+		log.info(repositoryService.countPages() + " pages, "
+				+ repositoryService.countLemmas() + " lemmas, "
+				+ repositoryService.countIndexes() + " indexes in table");
+	}
+
+	private void lemmasThreadBody(SiteEntity siteEntity, @NotNull CountDownLatch latch) {
+		lemmasCollectingActions(siteEntity);
+		latch.countDown();
+		log.warn("lemmas-finding-thread finished, latch =  " + latch.getCount());
+	}
+
+	private void pagesThreadBody(SiteEntity siteEntity, @NotNull CountDownLatch latch) {
+		pageSavingActions(siteEntity);
+		latch.countDown();
+		lemmasAndIndexCollectingService.setSavingPagesIsDone(true);
+		log.warn("saving-pages-thread finished, latch =  " + latch.getCount());
+	}
+
+	private void crawlThreadBody(ForkJoinPool pool, SiteEntity siteEntity, @NotNull CountDownLatch latch) {
+		scrapActions(pool, siteEntity);
+		latch.countDown();
+		pagesSavingService.setScrapingIsDone(true);
+		log.warn("crawl-thread finished, latch =  " + latch.getCount());
 	}
 
 	@Override
