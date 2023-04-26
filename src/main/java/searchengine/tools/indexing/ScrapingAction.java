@@ -45,7 +45,7 @@ public class ScrapingAction extends RecursiveAction {
 	private SiteEntity siteEntity;
 	private PageEntity pageEntity;
 	private Set<String> childLinksOfTask;
-	private Connection.Response jsoupResponse;
+	private Connection.Response jsoupResponse = null;
 	private BlockingQueue<PageEntity> outcomeQueue;
 	private final ReadWriteLock lock = new ReentrantReadWriteLock();
 	private static final AcceptableContentTypes ACCEPTABLE_CONTENT_TYPES = new AcceptableContentTypes();
@@ -65,7 +65,7 @@ public class ScrapingAction extends RecursiveAction {
 
 		jsoupResponse = getResponseFromUrl(parentUrl);
 		if (jsoupResponse != null) {
-			dropPageToQueue();
+			spoolPageToQueue();
 
 			final Elements elements = document.select("a[href]");
 			if (!elements.isEmpty()) {
@@ -121,7 +121,8 @@ public class ScrapingAction extends RecursiveAction {
 
 		lock.readLock().lock();
 		if (!visitedLinks.containsKey(url)) internVisitedLinks(url);
-		else return null;
+		else
+			return null;
 		lock.readLock().unlock();
 
 		try {
@@ -131,17 +132,21 @@ public class ScrapingAction extends RecursiveAction {
 				parentPath = new URL(url).getPath();
 				cleanHtmlContent();
 				pageEntity = new PageEntity(siteEntity, jsoupResponse.statusCode(), document.html(), parentPath);
-			} else return null;
-
+			} else
+				return null;
 		} catch (IOException | UncheckedIOException exception) {
-			siteEntity.setLastError(exception.getMessage());
-			siteEntity.setStatusTime(LocalDateTime.now());
-			internPage404(url);
-			log.error("Something went wrong 404. " + url + " Pages404 vault contains " + pages404.size() + " url");
+			urlNotAvailableActions(url, exception);
 			return null;
 		}
 		log.info("Response from " + url + " got successfully");
 		return jsoupResponse;
+	}
+
+	private void urlNotAvailableActions(String url, @NotNull Exception exception) {
+		siteEntity.setLastError(exception.getMessage());
+		siteEntity.setStatusTime(LocalDateTime.now());
+		internPage404(url);
+		log.error("Something went wrong 404. " + url + " Pages404 vault contains " + pages404.size() + " url");
 	}
 
 	private void cleanHtmlContent() {
@@ -155,7 +160,7 @@ public class ScrapingAction extends RecursiveAction {
 		}
 	}
 
-	private void dropPageToQueue() {
+	private void spoolPageToQueue() {
 		try {
 			while (true) {
 				if (outcomeQueue.remainingCapacity() < 10 && !pressedStop()) {
@@ -173,7 +178,8 @@ public class ScrapingAction extends RecursiveAction {
 	}
 
 	private void forkAndJoinTasks() {
-		if (pressedStop()) return;
+		if (pressedStop())
+			return;
 
 		List<ScrapingAction> subTasks = new LinkedList<>();
 
@@ -187,18 +193,8 @@ public class ScrapingAction extends RecursiveAction {
 			}
 		}
 
-		for (ScrapingAction task : subTasks) {
-			task.join();
-		}
+		for (ScrapingAction task : subTasks) task.join();
 	}
-
-//	private void joinTasksFromSubtasks(List<ScrapingAction> childTasks) {
-//		if (childTasks != null)
-//			for (ScrapingAction task : childTasks) {
-//				task.join();
-//			}
-//		System.gc();
-//	}
 
 	private boolean childIsValidToFork(@NotNull String subLink) {
 		final String ext = subLink.substring(subLink.length() - 4);

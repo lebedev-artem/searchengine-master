@@ -14,6 +14,8 @@ ___
 ### Fixed
 
 - Checked & fixed some code according to [design](https://docs.pmd-code.org/pmd-doc-6.55.0/pmd_rules_java.html#design), [code style](https://docs.pmd-code.org/pmd-doc-6.55.0/pmd_rules_java.html#code-style) and other rules of [PMD (static source code analyzer)](https://docs.pmd-code.org/pmd-doc-6.55.0/index.html)
+- Duplicate code in some class removed.
+- Change sequence of deletion **pages** and **lemmas** in _partialInit_, causing the exception updating foreign key constraint.
 
 ### Changed
 

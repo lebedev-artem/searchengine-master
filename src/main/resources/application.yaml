@@ -62,19 +62,19 @@ indexing-settings:
 #      name: artlebedev.ru
 #    - url: https://www.svetlovka.ru/
 #      name: Svetlovka
-    - url: https://dombulgakova.ru/
-      name: Дом Булгакова
-    - url: https://www.tretyakovgallery.ru/
-      name: Третьяковская галерея
-    - url: https://gallery.tverreg.ru/
-      name: Тверская Картинная галерея
-    - url: https://shm.ru/
-      name: Исторический музей
-    - url: https://www.artlebedev.ru/technogrette/
-      name: Студия Лебедева. Техногрет
+#    - url: https://dombulgakova.ru/
+#      name: Дом Булгакова
+#    - url: https://www.tretyakovgallery.ru/
+#      name: Третьяковская галерея
+#    - url: https://gallery.tverreg.ru/
+#      name: Тверская Картинная галерея
+#    - url: https://shm.ru/
+#      name: Исторический музей
+#    - url: https://www.artlebedev.ru/technogrette/
+#      name: Студия Лебедева. Техногрет
     - url: https://www.artlebedev.ru/kovodstvo/sections/
       name: Студия Лебедева. Ководство
-    - url: https://nopaper.ru
+    - url: https://nopaper.ru/
       name: Нет Бумаге!
 
 table-settings:
