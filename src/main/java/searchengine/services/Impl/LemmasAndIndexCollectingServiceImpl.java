@@ -47,10 +47,7 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 		while (allowed()) {
 
 			if (pressedStop()) {
-				incomeQueue.clear();
-				savingLemmas();
-				savingIndexes();
-				log.warn(logAboutEachSite());
+				actionsAfterStop();
 				return;
 			}
 
@@ -62,11 +59,9 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 								.getContent()).body().text());
 
 				for (String lemma : collectedLemmas.keySet()) {
-
 					int rank = collectedLemmas.get(lemma);
 					LemmaEntity lemmaEntity = createLemmaEntity(lemma);
-					indexEntities.add(
-							new IndexEntity(pageEntity, lemmaEntity, rank));
+					indexEntities.add(new IndexEntity(pageEntity, lemmaEntity, rank));
 					countIndexes++;
 				}
 
@@ -80,10 +75,14 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 		}
 		savingLemmas();
 		savingIndexes();
-
 		log.warn(logAboutEachSite());
-		indexEntities.clear();
-		lemmaEntities.clear();
+	}
+
+	private void actionsAfterStop() {
+		incomeQueue.clear();
+		savingLemmas();
+		savingIndexes();
+		log.warn(logAboutEachSite());
 	}
 
 	private void savingIndexes() {
@@ -96,6 +95,7 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 			log.error("Error sleeping after saving lemmas");
 		}
 		log.warn("Saving index lasts -  " + (System.currentTimeMillis() - idxSave) + " ms");
+		indexEntities.clear();
 	}
 
 	private void savingLemmas() {
@@ -107,6 +107,7 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 			log.error("Error sleeping after saving lemmas");
 		}
 		log.warn("Saving lemmas lasts - " + (System.currentTimeMillis() - lemmaSave) + " ms");
+		lemmaEntities.clear();
 	}
 
 	public LemmaEntity createLemmaEntity(String lemma) {

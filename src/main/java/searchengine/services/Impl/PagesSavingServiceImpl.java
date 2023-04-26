@@ -40,31 +40,19 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 
 		while (allowed()) {
 			if (pressedStop()) {
-				incomeQueue.clear();
-				outcomeQueue.clear();
+				actionsAfterStop();
 				return;
 			}
 
 			pageEntity = incomeQueue.poll();
 			if (pageEntity != null) {
-//				String fullLink = pageEntity.getSiteEntity().getUrl().concat(pageEntity.getPath().substring(1));
 
 				if (!StringPool.savedPaths.containsKey(pageEntity.getPath())) {
-
 					pageRepository.save(pageEntity);
 
-					lock.readLock().lock();
-					StringPool.internSavedPath(pageEntity.getPath());
-					lock.readLock().unlock();
-
-					tryPutPageIdToOutcomeQueue();
-					log.warn(pageEntity.getPath() + " saved. queue has " + incomeQueue.size());
-					counter++;
-					if (counter > getRandom()){
-						log.warn("Another " + counter + " pages saved to the database. " + pageRepository.countBySiteEntity(siteEntity) + " total saved. IncomeQueue has " + incomeQueue.size() + " objects");
-						log.info("Used heap size - " + checkHeapSize.getHeap() + ". Free - " + checkHeapSize.getFreeHeap());
-						counter = 0;
-					}
+					addPathToStaticVaultAsSaved();
+					putPageIdToOutcomeQueue();
+					writeLogAboutEachPage();
 				}
 			} else {
 				try {
@@ -75,6 +63,33 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 			}
 		}
 		log.warn(logAboutEachSite(startTime));
+	}
+
+	private void addPathToStaticVaultAsSaved() {
+		lock.readLock().lock();
+		StringPool.internSavedPath(pageEntity.getPath());
+		lock.readLock().unlock();
+	}
+
+	private void writeLogAboutEachPage() {
+		log.warn(pageEntity.getPath() + " saved. queue has " + incomeQueue.size());
+		counter++;
+
+		if (counter > getRandom()){
+			log.warn("Another "
+					+ counter + " pages saved to the database. "
+					+ pageRepository.countBySiteEntity(siteEntity) + " total saved. IncomeQueue has "
+					+ incomeQueue.size() + " objects");
+			log.info("Used heap size - "
+					+ checkHeapSize.getHeap() + ". Free - "
+					+ checkHeapSize.getFreeHeap());
+			counter = 0;
+		}
+	}
+
+	private void actionsAfterStop() {
+		incomeQueue.clear();
+		outcomeQueue.clear();
 	}
 
 
@@ -88,7 +103,7 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 				+ " in " + (System.currentTimeMillis() - startTime) + " ms";
 	}
 
-	private void tryPutPageIdToOutcomeQueue() {
+	private void putPageIdToOutcomeQueue() {
 		try {
 			while (true) {
 				if (outcomeQueue.remainingCapacity() < 5 && !pressedStop()) sleep(5_000);

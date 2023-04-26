@@ -2,6 +2,7 @@ package searchengine.services.Impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
@@ -34,23 +35,15 @@ public class StatisticsServiceImpl implements StatisticsService {
         total.setIndexing(indexingActions.isIndexingActionsStarted());
 
         List<DetailedStatisticsItem> detailed = new ArrayList<>();
+
         List<Site> sitesList = sites.getSites();
-
         for (Site site : sitesList) {
-            DetailedStatisticsItem item = new DetailedStatisticsItem();
-            item.setName(site.getName());
-            item.setUrl(site.getUrl());
+            SiteEntity siteEntity = repositoryService.getSiteByUrl(site.getUrl());
 
-            SiteEntity siteEntity = repositoryService.getSiteByUrl(item.getUrl());
             if (siteEntity != null) {
-
                 int pages = repositoryService.countPagesFromSite(siteEntity);
                 int lemmas = repositoryService.countLemmasFromSite(siteEntity);
-                item.setPages(pages);
-                item.setLemmas(lemmas);
-                item.setStatus(siteEntity.getStatus().toString());
-                item.setError(siteEntity.getLastError());
-                item.setStatusTime(siteEntity.getStatusTime());
+                DetailedStatisticsItem item = setDetailedStatisticsItem(site, pages, lemmas, siteEntity);
 
                 total.setPages(total.getPages() + pages);
                 total.setLemmas(total.getLemmas() + lemmas);
@@ -58,12 +51,25 @@ public class StatisticsServiceImpl implements StatisticsService {
             }
         }
 
-        StatisticsResponse response = new StatisticsResponse();
         StatisticsData data = new StatisticsData();
         data.setTotal(total);
         data.setDetailed(detailed);
+
+        StatisticsResponse response = new StatisticsResponse();
         response.setStatistics(data);
         response.setResult(true);
         return response;
+    }
+
+    private @NotNull DetailedStatisticsItem setDetailedStatisticsItem(Site site, int pages, int lemmas, SiteEntity siteEntity){
+        DetailedStatisticsItem item = new DetailedStatisticsItem();
+        item.setName(site.getName());
+        item.setUrl(site.getUrl());
+        item.setPages(pages);
+        item.setLemmas(lemmas);
+        item.setStatus(siteEntity.getStatus().toString());
+        item.setError(siteEntity.getLastError());
+        item.setStatusTime(siteEntity.getStatusTime());
+        return item;
     }
 }
