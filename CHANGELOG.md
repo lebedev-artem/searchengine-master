@@ -9,8 +9,8 @@ ___
 
 ### Added
 
-- Added cleanup of page content with Jsoup.Clean before uploading to the database, which reduced the size of the uploaded data to DB by an average of 7 times (minimum 2, maximum about 15)
-- Method **sleeping(int millis, String s)** was created to call the sleep() method in a catch block with arguments, which can be used in different code sections.
+- Added [cleanup](https://github.com/lebedev-artem/searchengine-master/blob/3daeaa493cde218360e489aba1c5c7de0d44329b/src/main/java/searchengine/tools/indexing/ScrapingAction.java#L152) of page content with Jsoup.Clean before uploading to the database, which reduced the size of the uploaded data to DB by an average of 7 times (minimum 2, maximum about 15)
+- Method **[sleeping(int millis, String s)](https://github.com/lebedev-artem/searchengine-master/blob/3daeaa493cde218360e489aba1c5c7de0d44329b/src/main/java/searchengine/services/Impl/LemmasAndIndexCollectingServiceImpl.java#L71)** was created to call the sleep() method in a catch block with arguments, which can be used in different code sections.
 - Lombok **@Builder** for DTO of statistics items added.
 
 
