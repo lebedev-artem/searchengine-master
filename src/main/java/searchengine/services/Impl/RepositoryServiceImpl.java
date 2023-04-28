@@ -12,6 +12,7 @@ import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
 import searchengine.services.RepositoryService;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -68,6 +69,16 @@ public class RepositoryServiceImpl implements RepositoryService {
 	}
 
 	@Override
+	public void saveLemmas(Collection<LemmaEntity> lemmas) {
+		lemmaRepository.saveAll(lemmas);
+	}
+
+	@Override
+	public void saveIndexes(Collection<IndexEntity> indexes) {
+		indexRepository.saveAll(indexes);
+	}
+
+	@Override
 	public void deleteSite(SiteEntity site) {
 		siteRepository.delete(site);
 	}
@@ -75,6 +86,11 @@ public class RepositoryServiceImpl implements RepositoryService {
 	@Override
 	public List<SiteEntity> getSites() {
 		return siteRepository.findAll();
+	}
+
+	@Override
+	public PageEntity getPageRef(Integer pageId) {
+		return pageRepository.getReferenceById(pageId);
 	}
 
 	@Override

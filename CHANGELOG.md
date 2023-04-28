@@ -5,26 +5,35 @@ All notable changes to this project will be documented in this file.
 
 ___
 
-## [1.2] - 2023-04-25
+## [1.2] - 2023-04-29
 
 ### Added
 
 - Added cleanup of page content with Jsoup.Clean before uploading to the database, which reduced the size of the uploaded data to DB by an average of 7 times (minimum 2, maximum about 15)
+- Method **sleeping(int millis, String s)** was created to call the sleep() method in a catch block with arguments, which can be used in different code sections.
+- Lombok **@Builder** for DTO of statistics items added.
+
 
 ### Fixed
-
+- Trying to reduce count of methods lines (complexity of methods).
 - Checked & fixed some code according to [design](https://docs.pmd-code.org/pmd-doc-6.55.0/pmd_rules_java.html#design), [code style](https://docs.pmd-code.org/pmd-doc-6.55.0/pmd_rules_java.html#code-style) and other rules of [PMD (static source code analyzer)](https://docs.pmd-code.org/pmd-doc-6.55.0/index.html)
 - Duplicate code in some class removed.
 - Change sequence of deletion **[pages](https://github.com/lebedev-artem/searchengine-master/blob/fbacc375cc12f2e8c48b7f905e4f4cf477a079f5/src/main/java/searchengine/tools/indexing/SchemaActions.java#L196)** and **lemmas** in **[partialInit](https://github.com/lebedev-artem/searchengine-master/blob/fbacc375cc12f2e8c48b7f905e4f4cf477a079f5/src/main/java/searchengine/tools/indexing/SchemaActions.java#L100)**, causing the exception updating foreign key constraint.
+- Implemented the **RepositoryService** dependency in the **LemmasAndIndexCollectingService**.
+- Unnecessary code in the parser when stopped is removed.
+- Optimizing the code has increased the parsing speed by about 20%
+
+|  **Before** | `7 site(s) 2026 pages 54012 lemmas 613535 index entries Just in 888329 ms`  |
+|---|-----------------------------------------------------------------------------|
+| **After**  | `7 site(s) 2035 pages 54093 lemmas 621423 index entries Just in 648315 ms ` |
 
 ### Changed
 
-- Reduce complexity of methods.
 - Add _import static searchengine.tools.StringPool.*;_ to keep the clean code.
 
 ### Removed
 
-- Unnecessary code in the parser when stopped is removed.
+
 
 ___
 

@@ -25,7 +25,7 @@ import static java.lang.Thread.sleep;
 @RequiredArgsConstructor
 public class PagesSavingServiceImpl implements PagesSavingService {
 	private final ReadWriteLock lock = new ReentrantReadWriteLock();
-	private volatile boolean scrapingIsDone = false;
+	private boolean scrapingIsDone = false;
 	private BlockingQueue<PageEntity> incomeQueue;
 	private BlockingQueue<Integer> outcomeQueue;
 	private SiteEntity siteEntity;
@@ -37,8 +37,8 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 
 	public void startSavingPages() {
 		final long startTime = System.currentTimeMillis();
-
 		while (allowed()) {
+
 			if (pressedStop()) {
 				actionsAfterStop();
 				return;
@@ -46,20 +46,16 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 
 			pageEntity = incomeQueue.poll();
 			if (pageEntity != null) {
-
 				if (!StringPool.savedPaths.containsKey(pageEntity.getPath())) {
-					pageRepository.save(pageEntity);
 
+					pageRepository.save(pageEntity);
 					addPathToStaticVaultAsSaved();
 					putPageIdToOutcomeQueue();
 					writeLogAboutEachPage();
+
 				}
 			} else {
-				try {
-					sleep(1_000);
-				} catch (InterruptedException e) {
-					log.error("Can't sleep after getting null pageEntity");
-				}
+				sleeping(1_000, "Can't sleep after getting null pageEntity");
 			}
 		}
 		log.warn(logAboutEachSite(startTime));
@@ -125,4 +121,12 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 		int high = 260;
 		return r.nextInt(high-low) + low;
 		}
+
+	private static void sleeping(int millis, String s) {
+		try {
+			sleep(millis);
+		} catch (InterruptedException e) {
+			log.error(s);
+		}
+	}
 }

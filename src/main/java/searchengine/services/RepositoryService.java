@@ -5,6 +5,7 @@ import searchengine.model.LemmaEntity;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -22,6 +23,8 @@ public interface RepositoryService {
 	Integer countLemmasFromSite(SiteEntity site);
 
 	List<SiteEntity> getSites();
+
+	PageEntity getPageRef(Integer pageId);
 
 	SiteEntity getSiteByUrl(String url);
 
@@ -44,6 +47,10 @@ public interface RepositoryService {
 	void flushRepositories();
 
 	void saveSite(SiteEntity site);
+
+	void saveLemmas(Collection<LemmaEntity> lemmas);
+
+	void saveIndexes(Collection<IndexEntity> indexes);
 
 	void deleteSite(SiteEntity site);
 

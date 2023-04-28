@@ -69,7 +69,6 @@ public class SchemaActions {
 			}
 		});
 		log.info("Schema initialized!");
-		System.gc();
 	}
 
 	private void clearRelatedTables(@NotNull SiteEntity site) {

@@ -8,15 +8,12 @@ import org.jetbrains.annotations.NotNull;
 import org.jsoup.Jsoup;
 import org.springframework.stereotype.Service;
 import searchengine.model.*;
-import searchengine.repositories.IndexRepository;
-import searchengine.repositories.LemmaRepository;
-import searchengine.repositories.PageRepository;
 import searchengine.services.LemmasAndIndexCollectingService;
+import searchengine.services.RepositoryService;
 import searchengine.tools.LemmaFinder;
 
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
-
 import static java.lang.Thread.sleep;
 
 @Slf4j
@@ -26,22 +23,20 @@ import static java.lang.Thread.sleep;
 @RequiredArgsConstructor
 public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollectingService {
 
-	private final LemmaRepository lemmaRepository;
-	private final IndexRepository indexRepository;
-	private final PageRepository pageRepository;
-	private final LemmaFinder lemmaFinder;
-	private static final Integer INIT_FREQ = 1;
-	private volatile boolean savingPagesIsDone;
-	private BlockingQueue<Integer> incomeQueue;
-	private SiteEntity siteEntity;
-	private IndexEntity indexEntity;
-	private Set<IndexEntity> indexEntities = new HashSet<>();
-	private Map<String, Integer> collectedLemmas = new HashMap<>();
-	private Map<String, LemmaEntity> lemmaEntities = new HashMap<>();
+
 	private Integer countPages = 0;
 	private Integer countLemmas = 0;
 	private Integer countIndexes = 0;
-
+	private SiteEntity siteEntity;
+	private IndexEntity indexEntity;
+	private final LemmaFinder lemmaFinder;
+	private static final Integer INIT_FREQ = 1;
+	private boolean savingPagesIsDone;
+	private BlockingQueue<Integer> incomeQueue;
+	private final RepositoryService repositoryService;
+	private Set<IndexEntity> indexEntities = new HashSet<>();
+	private Map<String, Integer> collectedLemmas = new HashMap<>();
+	private Map<String, LemmaEntity> lemmaEntities = new HashMap<>();
 
 	public void startCollecting() {
 		while (allowed()) {
@@ -53,7 +48,7 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 
 			Integer pageId = incomeQueue.poll();
 			if (pageId != null) {
-				PageEntity pageEntity = pageRepository.getReferenceById(pageId);
+				PageEntity pageEntity = repositoryService.getPageRef(pageId);
 				collectedLemmas = lemmaFinder.collectLemmas
 						(Jsoup.parse(pageEntity
 								.getContent()).body().text());
@@ -64,18 +59,21 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 					indexEntities.add(new IndexEntity(pageEntity, lemmaEntity, rank));
 					countIndexes++;
 				}
-
 			} else {
-				try {
-					sleep(10);
-				} catch (InterruptedException e) {
-					log.error("Error sleeping while waiting for an item in line");
-				}
+				sleeping(10, "Error sleeping while waiting for an item in line");
 			}
 		}
 		savingLemmas();
 		savingIndexes();
 		log.warn(logAboutEachSite());
+	}
+
+	private static void sleeping(int millis, String s) {
+		try {
+			sleep(millis);
+		} catch (InterruptedException e) {
+			log.error(s);
+		}
 	}
 
 	private void actionsAfterStop() {
@@ -88,24 +86,16 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 	private void savingIndexes() {
 		long idxSave = System.currentTimeMillis();
 
-		indexRepository.saveAll(indexEntities);
-		try {
-			sleep(200);
-		} catch (InterruptedException e) {
-			log.error("Error sleeping after saving lemmas");
-		}
+		repositoryService.saveIndexes(indexEntities);
+		sleeping(200, "Error sleeping after saving lemmas");
 		log.warn("Saving index lasts -  " + (System.currentTimeMillis() - idxSave) + " ms");
 		indexEntities.clear();
 	}
 
 	private void savingLemmas() {
 		long lemmaSave = System.currentTimeMillis();
-		lemmaRepository.saveAll(lemmaEntities.values());
-		try {
-			sleep(200);
-		} catch (InterruptedException e) {
-			log.error("Error sleeping after saving lemmas");
-		}
+		repositoryService.saveLemmas(lemmaEntities.values());
+		sleeping(200, "Error sleeping after saving lemmas");
 		log.warn("Saving lemmas lasts - " + (System.currentTimeMillis() - lemmaSave) + " ms");
 		lemmaEntities.clear();
 	}

@@ -69,10 +69,9 @@ public class SnippetGenerator {
 	}
 
 	public Map<Integer, String> getDirtyFormsAndPos() {
-		Map<Integer, Set<String>> lemmas = getLemmasAndPos();
 		Map<Integer, String> dirtyForms = new HashMap<>();
 		for (String queryWord : queryWords) {
-			for (Map.Entry<Integer, Set<String>> entry : lemmas.entrySet()) {
+			for (Map.Entry<Integer, Set<String>> entry : getLemmasAndPos().entrySet()) {
 				if (entry.getValue().contains(queryWord.toLowerCase())) {
 					String word = getWordsAndPos(text).get(entry.getKey());
 					dirtyForms.put(entry.getKey(), word);

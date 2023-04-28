@@ -39,7 +39,7 @@ public class IndexingActionsImpl implements IndexingActions {
 	private SiteEntity siteEntity;
 	private final RepositoryService repositoryService;
 	private final PagesSavingService pagesSavingService;
-	private volatile boolean indexingActionsStarted = false;
+	private boolean indexingActionsStarted = false;
 	private final LemmasAndIndexCollectingService lemmasAndIndexCollectingService;
 	private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(100);
 	private BlockingQueue<Integer> queueOfPagesForLemmasCollecting = new LinkedBlockingQueue<>(100_000);
@@ -65,11 +65,7 @@ public class IndexingActionsImpl implements IndexingActions {
 				pagesSaverThread.start();
 				lemmasCollectorThread.start();
 
-				try {
-					latch.await();
-				} catch (InterruptedException e) {
-					log.error("Can't await latch");
-				}
+				awaitLatch(latch);
 				startActionsAfterIndexing(siteEntity);
 			} else {
 				stopPressedActions(pool);
@@ -80,7 +76,6 @@ public class IndexingActionsImpl implements IndexingActions {
 		shutDownAction(pool);
 		writeLogAfterIndexing(start);
 		setIndexingActionsStarted(false);
-		System.gc();
 	}
 
 	private void writeLogBeforeIndexing(@NotNull SiteEntity siteEntity) {
@@ -164,7 +159,6 @@ public class IndexingActionsImpl implements IndexingActions {
 
 	private void shutDownAction(@NotNull ForkJoinPool pool) {
 		pool.shutdownNow();
-		System.gc();
 	}
 
 	private void startActionsAfterIndexing(@NotNull SiteEntity siteEntity) {
@@ -204,5 +198,13 @@ public class IndexingActionsImpl implements IndexingActions {
 
 	private boolean pressedStop() {
 		return IndexingServiceImpl.pressedStop;
+	}
+
+	private static void awaitLatch(@NotNull CountDownLatch latch) {
+		try {
+			latch.await();
+		} catch (InterruptedException e) {
+			log.error("Can't await latch");
+		}
 	}
 }

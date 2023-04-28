@@ -111,8 +111,10 @@
 
 
 __Скомпилированный JAR__
-[SearchEngine-1.1-SNAPSHOT.jar](https://drive.google.com/file/d/1YWBVcc4ZqG-QJOuDtV9Gcu6-bB28qT9c/view?usp=share_link)
+[SearchEngine-1.2-SNAPSHOT.jar](https://drive.google.com/file/d/1MTR8foSMbJh4suTfZy9wR_iL3kzCrWyb/view?usp=share_link)
 
 __Наполненная тестовая MySQL база__ [Dump20230419.sql](https://drive.google.com/file/d/1Kf-k1OFsV_zgneCPj2pz8e7lmzNwoRL4/view?usp=share_link)
 
 __Она же в zip__ [Dump20230419.zip](https://drive.google.com/file/d/1qNwEbqzOLMC8ARsJUTq-mspuwNIlTJOG/view?usp=share_link)
+
+![Scraping process](/src/main/resources/img/scrapingprocess.gif "Scraping process")

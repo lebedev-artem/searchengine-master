@@ -10,7 +10,4 @@ public interface IndexingService {
 	ResponseEntity<IndexingResponse> indexingStart();
 
 	ResponseEntity<IndexingResponse> indexingPageStart(String url);
-
-//	void setPressedStop(boolean value);
-
 }

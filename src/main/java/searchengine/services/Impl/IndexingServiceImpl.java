@@ -21,11 +21,11 @@ public class IndexingServiceImpl implements IndexingService {
 	private final SchemaActions schemaActions;
 	private final IndexingActions indexingActions;
 	private final IndexingResponse indexingResponse;
-	public static volatile boolean pressedStop = false;
+	public static boolean pressedStop = false;
 	private static final ThreadLocal<Thread> SINGLE_TASK = new ThreadLocal<>();
 
 	@Override
-	public synchronized ResponseEntity<IndexingResponse> indexingStart() {
+	public ResponseEntity<IndexingResponse> indexingStart() {
 		log.warn("Mapping /startIndexing executed");
 
 		if (indexingActions.isIndexingActionsStarted())

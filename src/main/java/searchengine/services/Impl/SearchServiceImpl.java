@@ -1,6 +1,5 @@
 package searchengine.services.Impl;
 
-import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -29,6 +28,7 @@ import java.util.stream.Collectors;
 public class SearchServiceImpl implements SearchService {
 
 	public static final double RATIO = 1.85;
+	private Integer totalPagesCount = 0;
 	private String rarestLemma = null;
 	private final LemmaFinder lemmaFinder;
 	private final SnippetGenerator snippetGenerator;
@@ -36,90 +36,106 @@ public class SearchServiceImpl implements SearchService {
 
 	private List<PageEntity> pagesByRarestLemma = new ArrayList<>();
 	private Map<String, LemmaEntity> nextStepLemmas = new HashMap<>();
-	private Map<PageEntity, Float> totalPagesWithRelevance = new HashMap<>();
+	private final Map<PageEntity, Float> totalPagesWithRelevance = new HashMap<>();
 
 	@Override
-	@Builder
 	public SearchResponse getSearchResults(@NotNull String query, String siteUrl, Integer offset, Integer limit) {
 		if (query.isEmpty()) return emptyQuery();
 
-		//Get lemmas from search query
 		Set<String> queryLemmas = lemmaFinder.getLemmaSet(query);
-		List<String> queryList = new ArrayList<>(queryLemmas);
-
-		//One or all sites
-		List<SiteEntity> siteEntities = siteUrl != null
-				? Collections.singletonList(repositoryService.getSiteByUrl(siteUrl))
-				: repositoryService.getSites();
-
-		int totalPagesCount = 0;
+		List<SiteEntity> siteEntities = getSiteEntities(siteUrl);
 
 		for (SiteEntity site : siteEntities) {
 			Map<String, LemmaEntity> retrievedLemmas = getLemmaEntitiesFromTable(queryLemmas, site);
+
 			if (retrievedLemmas.size() != 0) {
-
-				//Calculate threshold of frequency for deleting
-				int totalFreq = getTotalFrequency(retrievedLemmas);
-				float thresholdFreq = (float) ((totalFreq / retrievedLemmas.size()) * RATIO);
-
-				//Delete most frequently lemmas, Sort by frequency
-				nextStepLemmas = removeMostFrequentlyLemmas(retrievedLemmas, thresholdFreq);
-				nextStepLemmas = sortByFrequency(nextStepLemmas);
-
-				//Get list of Pages by rarest lemma
-				rarestLemma = nextStepLemmas.keySet().stream().findFirst().orElse(null);
-				if (rarestLemma != null) {
-					List<Integer> pageIds = getPageEntitiesIdsByRarestLemma(site);
-
-					pagesByRarestLemma = repositoryService.getPagesByIds(pageIds);
-					totalPagesCount += pagesByRarestLemma.size();
-				}
+				pagesByRarestLemma = getPagesByRarestLemma(site, retrievedLemmas);
+				List<PageEntity> finalPages = getFinalPagesList(site);
+				totalPagesWithRelevance.putAll(calculateAbsRelevance(finalPages, nextStepLemmas));
 			}
-
-			//We continue to look for the remaining lemmas on these pages
-			Map<String, LemmaEntity> finalLemmas = getFinalSortedLemmasMap(rarestLemma, nextStepLemmas);
-
-			List<PageEntity> finalPages = new ArrayList<>(pagesByRarestLemma);
-			for (String desiredLemma : finalLemmas.keySet()) {
-				List<PageEntity> eachIterationPages = getRetainedPages(site, pagesByRarestLemma, desiredLemma);
-				finalPages.clear();
-				finalPages.addAll(eachIterationPages);
-			}
-
-			//Calculate absolute relevancy
-			Map<PageEntity, Float> pagesWithAbsRelativeMap = calculateAbsRelevance(finalPages, nextStepLemmas);
-			totalPagesWithRelevance.putAll(pagesWithAbsRelativeMap);
 		}
 
-		float maxRank = getMaxRank(totalPagesWithRelevance);
-		totalPagesWithRelevance = calculateRelevance(totalPagesWithRelevance, maxRank);
-		totalPagesWithRelevance = sortByRank(totalPagesWithRelevance);
+		Map<PageEntity, Float> subsetMap = getSortedSubsetMap(getTotalPagesWithRelevance(totalPagesWithRelevance), limit, offset);
+		List<SearchData> totalData = getTotalData(queryLemmas, subsetMap);
 
-		//Consider limit offset
-		Map<PageEntity, Float> subsetMap = getSortedSubsetMap(totalPagesWithRelevance, limit, offset);
+		return getResponse(totalData);
+	}
 
+	@NotNull
+	private List<SearchData> getTotalData(Set<String> queryLemmas, @NotNull Map<PageEntity, Float> subsetMap) {
 		List<SearchData> totalData = new ArrayList<>();
 
 		for (PageEntity page : subsetMap.keySet()) {
-
-			SearchData searchData = SearchData.builder()
-					.uri(page.getPath())
-					.siteName(page.getSiteEntity().getName())
-					.site(page.getSiteEntity().getUrl().replaceFirst("/$", ""))
-					.snippet(getSnippet(page, queryList))
-					.relevance(subsetMap.get(page))
-					.title(getTitle(page.getContent())).build();
-
+			SearchData searchData = getSearchData(queryLemmas, subsetMap, page);
 			totalData.add(searchData);
 		}
+		return totalData;
+	}
 
-		totalPagesWithRelevance.clear();
-
-		return SearchResponse.builder()
+	private SearchResponse getResponse(List<SearchData> totalData) {
+		SearchResponse result = SearchResponse.builder()
 				.result(true)
 				.count(totalPagesCount)
 				.data(totalData)
 				.build();
+		totalPagesWithRelevance.clear();
+		totalPagesCount = 0;
+		return result;
+	}
+
+	private SearchData getSearchData(Set<String> queryLemmas, @NotNull Map<PageEntity, Float> subsetMap, @NotNull PageEntity page) {
+		return SearchData.builder()
+				.uri(page.getPath())
+				.siteName(page.getSiteEntity().getName())
+				.site(page.getSiteEntity().getUrl().replaceFirst("/$", ""))
+				.snippet(getSnippet(page, new ArrayList<>(queryLemmas)))
+				.relevance(subsetMap.get(page))
+				.title(getTitle(page.getContent())).build();
+	}
+
+	private Map<PageEntity, Float> getTotalPagesWithRelevance(Map<PageEntity, Float> pages) {
+		Map<PageEntity, Float> result;
+		float maxRank = getMaxRank(pages);
+		Map<PageEntity, Float> pagesWRel = calculateRelevance(pages, maxRank);
+		result = sortByRank(pagesWRel);
+		return result;
+	}
+
+	@NotNull
+	private List<PageEntity> getFinalPagesList(SiteEntity site) {
+		Map<String, LemmaEntity> finalLemmas = getFinalSortedLemmasMap(rarestLemma, nextStepLemmas);
+
+		List<PageEntity> finalPages = new ArrayList<>(pagesByRarestLemma);
+		for (String desiredLemma : finalLemmas.keySet()) {
+			List<PageEntity> eachIterationPages = getRetainedPages(site, pagesByRarestLemma, desiredLemma);
+			finalPages.clear();
+			finalPages.addAll(eachIterationPages);
+		}
+		return finalPages;
+	}
+
+	private List<PageEntity> getPagesByRarestLemma(SiteEntity site, Map<String, LemmaEntity> retrievedLemmas) {
+		int totalFreq = getTotalFrequency(retrievedLemmas);
+		float thresholdFreq = (float) ((totalFreq / retrievedLemmas.size()) * RATIO);
+
+		nextStepLemmas = removeMostFrequentlyLemmas(retrievedLemmas, thresholdFreq);
+		nextStepLemmas = sortByFrequency(nextStepLemmas);
+
+		rarestLemma = nextStepLemmas.keySet().stream().findFirst().orElse(null);
+
+		List<PageEntity> result = null;
+		if (rarestLemma != null) {
+			List<Integer> pageIds = getPageEntitiesIdsByRarestLemma(site);
+			result = repositoryService.getPagesByIds(pageIds);
+			totalPagesCount += result.size();
+		}
+		return result;
+	}
+
+	private List<SiteEntity> getSiteEntities(String siteUrl) {
+		return siteUrl != null
+				? Collections.singletonList(repositoryService.getSiteByUrl(siteUrl))
+				: repositoryService.getSites();
 	}
 
 	@NotNull
@@ -238,7 +254,6 @@ public class SearchServiceImpl implements SearchService {
 		LemmaEntity rarestLemmaEntity = repositoryService.getLemmaByNameFromSite(rarestLemma, site);
 		if (rarestLemmaEntity != null)
 			return repositoryService.getAllByLemma(rarestLemmaEntity);
-
 		return null;
 	}
 
