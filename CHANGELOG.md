@@ -33,6 +33,8 @@ ___
 
 ### Removed
 
+- StaticVault for lemmas and index entities removed.
+
 
 
 ___

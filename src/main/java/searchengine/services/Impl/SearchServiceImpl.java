@@ -2,6 +2,7 @@ package searchengine.services.Impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.Jsoup;
@@ -18,6 +19,8 @@ import searchengine.services.SearchService;
 import searchengine.tools.LemmaFinder;
 import searchengine.tools.SnippetGenerator;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -30,6 +33,7 @@ public class SearchServiceImpl implements SearchService {
 	public static final double RATIO = 1.85;
 	private Integer totalPagesCount = 0;
 	private String rarestLemma = null;
+	private String previousQuery = "";
 	private final LemmaFinder lemmaFinder;
 	private final SnippetGenerator snippetGenerator;
 	private final RepositoryService repositoryService;
@@ -40,6 +44,7 @@ public class SearchServiceImpl implements SearchService {
 
 	@Override
 	public SearchResponse getSearchResults(@NotNull String query, String siteUrl, Integer offset, Integer limit) {
+		log.warn("Mapping /search executed. " + "query - " + query + ", url - " + siteUrl + ", offset - " + offset + ", limit - " + limit);
 		if (query.isEmpty()) return emptyQuery();
 
 		Set<String> queryLemmas = lemmaFinder.getLemmaSet(query);
@@ -51,7 +56,8 @@ public class SearchServiceImpl implements SearchService {
 			if (retrievedLemmas.size() != 0) {
 				pagesByRarestLemma = getPagesByRarestLemma(site, retrievedLemmas);
 				List<PageEntity> finalPages = getFinalPagesList(site);
-				totalPagesWithRelevance.putAll(calculateAbsRelevance(finalPages, nextStepLemmas));
+				totalPagesWithRelevance.putAll(calculateAbsoluteRelevance(finalPages, nextStepLemmas));
+
 			}
 		}
 
@@ -87,7 +93,7 @@ public class SearchServiceImpl implements SearchService {
 		return SearchData.builder()
 				.uri(page.getPath())
 				.siteName(page.getSiteEntity().getName())
-				.site(page.getSiteEntity().getUrl().replaceFirst("/$", ""))
+				.site(getShortUrl(page.getSiteEntity().getUrl()).replaceFirst("/$", ""))
 				.snippet(getSnippet(page, new ArrayList<>(queryLemmas)))
 				.relevance(subsetMap.get(page))
 				.title(getTitle(page.getContent())).build();
@@ -111,6 +117,7 @@ public class SearchServiceImpl implements SearchService {
 			finalPages.clear();
 			finalPages.addAll(eachIterationPages);
 		}
+		totalPagesCount += finalPages.size();
 		return finalPages;
 	}
 
@@ -127,7 +134,7 @@ public class SearchServiceImpl implements SearchService {
 		if (rarestLemma != null) {
 			List<Integer> pageIds = getPageEntitiesIdsByRarestLemma(site);
 			result = repositoryService.getPagesByIds(pageIds);
-			totalPagesCount += result.size();
+//			totalPagesCount += result.size();
 		}
 		return result;
 	}
@@ -201,17 +208,22 @@ public class SearchServiceImpl implements SearchService {
 				.toList();
 	}
 
-	private @NotNull Map<PageEntity, Float> calculateAbsRelevance(@NotNull List<PageEntity> source, Map<String, LemmaEntity> lemmas) {
+	private @NotNull Map<PageEntity, Float> calculateAbsoluteRelevance(@NotNull List<PageEntity> source, Map<String, LemmaEntity> lemmas) {
 		Map<PageEntity, Float> result = new HashMap<>();
 		for (PageEntity p : source) {
-			float absRelPage = (float) 0;
-			for (LemmaEntity l : lemmas.values()) {
-				IndexEntity idx = repositoryService.getIndexByLemmaFromPage(l, p);
-				if (idx != null) {
-					absRelPage += idx.getLemmaRank();
-				}
-			}
+			float absRelPage = getSumOfLemmasRankFromPage(lemmas, p);
 			result.put(p, absRelPage);
+		}
+		return result;
+	}
+
+	private float getSumOfLemmasRankFromPage(@NotNull Map<String, LemmaEntity> lemmas, PageEntity p) {
+		float result = (float) 0;
+		for (LemmaEntity l : lemmas.values()) {
+			IndexEntity idx = repositoryService.getIndexByLemmaFromPage(l, p);
+			if (idx != null) {
+				result += idx.getLemmaRank();
+			}
 		}
 		return result;
 	}
@@ -269,4 +281,15 @@ public class SearchServiceImpl implements SearchService {
 				.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 	}
 
+	public int findNthOccurrence(@NotNull String str, char ch, int n) {
+		int index = str.indexOf(ch);
+		while (--n > 0 && index != -1) {
+			index = str.indexOf(ch, index + 1);
+		}
+		return index;
+	}
+
+	private String getShortUrl(String url){
+		return url.substring(0, findNthOccurrence(url, '/', 3));
+	}
 }

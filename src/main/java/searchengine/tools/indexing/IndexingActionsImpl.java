@@ -13,7 +13,6 @@ import searchengine.services.Impl.IndexingServiceImpl;
 import searchengine.services.LemmasAndIndexCollectingService;
 import searchengine.services.PagesSavingService;
 import searchengine.services.RepositoryService;
-import searchengine.tools.StaticVault;
 import searchengine.tools.StringPool;
 
 import java.time.LocalDateTime;
@@ -52,25 +51,25 @@ public class IndexingActionsImpl implements IndexingActions {
 		setIndexingActionsStarted(true);
 
 		for (SiteEntity siteEntity : siteEntities) {
-			CountDownLatch latch = new CountDownLatch(3);
-			if (!pressedStop()) {
 
-				writeLogBeforeIndexing(siteEntity);
-
-				Thread scrapingThread = new Thread(() -> crawlThreadBody(pool, siteEntity, latch), "crawl-thread");
-				Thread pagesSaverThread = new Thread(() -> pagesThreadBody(siteEntity, latch), "pages-thread");
-				Thread lemmasCollectorThread = new Thread(() -> lemmasThreadBody(siteEntity, latch), "lemmas-thread");
-
-				scrapingThread.start();
-				pagesSaverThread.start();
-				lemmasCollectorThread.start();
-
-				awaitLatch(latch);
-				startActionsAfterIndexing(siteEntity);
-			} else {
+			if (pressedStop()) {
 				stopPressedActions(pool);
 				break;
 			}
+
+			CountDownLatch latch = new CountDownLatch(3);
+			writeLogBeforeIndexing(siteEntity);
+
+			Thread scrapingThread = new Thread(() -> crawlThreadBody(pool, siteEntity, latch), "crawl-thread");
+			Thread pagesSaverThread = new Thread(() -> pagesThreadBody(siteEntity, latch), "pages-thread");
+			Thread lemmasCollectorThread = new Thread(() -> lemmasThreadBody(siteEntity, latch), "lemmas-thread");
+
+			scrapingThread.start();
+			pagesSaverThread.start();
+			lemmasCollectorThread.start();
+
+			awaitLatch(latch);
+			doActionsAfterIndexing(siteEntity);
 
 		}
 		shutDownAction(pool);
@@ -118,8 +117,6 @@ public class IndexingActionsImpl implements IndexingActions {
 		lemmasAndIndexCollectingService.setSavingPagesIsDone(false);
 		lemmasAndIndexCollectingService.setSiteEntity(siteEntity);
 		lemmasAndIndexCollectingService.startCollecting();
-		StaticVault.indexEntitiesMap.clear();
-		StaticVault.lemmaEntitiesMap.clear();
 	}
 
 	private void pageSavingActions(SiteEntity siteEntity) {
@@ -161,7 +158,7 @@ public class IndexingActionsImpl implements IndexingActions {
 		pool.shutdownNow();
 	}
 
-	private void startActionsAfterIndexing(@NotNull SiteEntity siteEntity) {
+	private void doActionsAfterIndexing(@NotNull SiteEntity siteEntity) {
 		siteEntity.setStatus(IndexingStatus.INDEXED);
 		siteEntity.setLastError("");
 		siteEntity.setStatusTime(LocalDateTime.now());

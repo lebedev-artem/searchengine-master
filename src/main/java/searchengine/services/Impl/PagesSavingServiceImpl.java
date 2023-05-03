@@ -102,8 +102,10 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 	private void putPageIdToOutcomeQueue() {
 		try {
 			while (true) {
-				if (outcomeQueue.remainingCapacity() < 5 && !pressedStop()) sleep(5_000);
-				else break;
+				if (outcomeQueue.remainingCapacity() < 5 && !pressedStop())
+					sleep(5_000);
+				else
+					break;
 			}
 			outcomeQueue.put(pageEntity.getId());
 		} catch (InterruptedException ex) {

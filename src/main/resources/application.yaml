@@ -64,8 +64,8 @@ indexing-settings:
 #      name: Svetlovka
     - url: https://dombulgakova.ru/
       name: Дом Булгакова
-    - url: https://www.tretyakovgallery.ru/
-      name: Третьяковская галерея
+#    - url: https://www.tretyakovgallery.ru/
+#      name: Третьяковская галерея
     - url: https://gallery.tverreg.ru/
       name: Тверская Картинная галерея
     - url: https://shm.ru/
