@@ -54,7 +54,6 @@ public class IndexingServiceImpl implements IndexingService {
 
 		SiteEntity siteEntity = schemaActions.partialInit(url);
 		if (siteEntity == null) return indexingResponse.indexPageFailed();
-
 		SINGLE_TASK.set(new Thread(() -> indexingActions.startPartialIndexing(siteEntity), "0day-thread"));
 
 		SINGLE_TASK.get().start();

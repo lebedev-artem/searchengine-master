@@ -60,8 +60,8 @@ indexing-settings:
 #      name: playback
 #    - url: https://www.artlebedev.ru/
 #      name: artlebedev.ru
-#    - url: https://www.svetlovka.ru/
-#      name: Svetlovka
+    - url: https://www.svetlovka.ru/
+      name: Svetlovka
     - url: https://dombulgakova.ru/
       name: Дом Булгакова
 #    - url: https://www.tretyakovgallery.ru/
@@ -70,12 +70,16 @@ indexing-settings:
       name: Тверская Картинная галерея
     - url: https://shm.ru/
       name: Исторический музей
-    - url: https://www.artlebedev.ru/technogrette/
-      name: Студия Лебедева. Техногрет
-    - url: https://www.artlebedev.ru/kovodstvo/sections/
-      name: Студия Лебедева. Ководство
+#    - url: https://www.artlebedev.ru/technogrette/
+#      name: Студия Лебедева. Техногрет
+#    - url: https://www.artlebedev.ru/kovodstvo/sections/
+#      name: Студия Лебедева. Ководство
     - url: https://nopaper.ru/
       name: Нет Бумаге!
+    - url: https://mydiscoveries.ru/
+      name: Новые открытия каждый день
+    - url: https://opisanie-kartin.com/
+      name: Описание картин
 
 table-settings:
   clear-site-if-not-exists: true

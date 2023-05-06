@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ___
 
+## [1.3] - 2023-05-06
+
+### Added
+
+### Fixed
+
+- Fixed the problem of writing an incorrect site url after indexing a separate page
+
+### Changed
+
+### Removed
+
+___
+
 ## [1.2] - 2023-04-29
 
 ### Added

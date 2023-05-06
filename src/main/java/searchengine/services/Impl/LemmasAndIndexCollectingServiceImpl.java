@@ -6,6 +6,8 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jsoup.Jsoup;
+import org.jsoup.safety.Cleaner;
+import org.jsoup.safety.Safelist;
 import org.springframework.stereotype.Service;
 import searchengine.model.*;
 import searchengine.services.LemmasAndIndexCollectingService;
@@ -50,8 +52,7 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 			if (pageId != null) {
 				PageEntity pageEntity = repositoryService.getPageRef(pageId);
 				collectedLemmas = lemmaFinder.collectLemmas
-						(Jsoup.parse(pageEntity
-								.getContent()).body().text());
+						(Jsoup.clean(pageEntity.getContent(), Safelist.simpleText()));
 
 				for (String lemma : collectedLemmas.keySet()) {
 					int rank = collectedLemmas.get(lemma);

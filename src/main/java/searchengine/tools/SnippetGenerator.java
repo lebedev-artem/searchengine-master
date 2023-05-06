@@ -21,8 +21,8 @@ public class SnippetGenerator {
 	private String text;
 	private List<String> queryWords;
 	private final LemmaFinder lemmaFinder;
-	private final Integer SNIPPET_LENGTH = 150;
-	private final Integer MAX_FULL_SNIPPET_LENGTH = 350;
+	private final Integer SNIPPET_LENGTH = 100;
+	private final Integer MAX_FULL_SNIPPET_LENGTH = 450;
 
 	public void setText(String text) {
 		this.text = Jsoup
@@ -142,15 +142,17 @@ public class SnippetGenerator {
 
 	private int getLastDotPositionInText(Integer pos) {
 		int lastDotPosition = text.substring(0, pos).lastIndexOf(".") + 2;
-		if (lastDotPosition >= 2) {
+		if (lastDotPosition >= 2 && (pos - lastDotPosition) <= SNIPPET_LENGTH) {
 			return lastDotPosition;
 		} else {
 			return pos;
 		}
 	}
 
-	private Map<String, Integer> boldText(@NotNull Map<String, Integer> source, List<String> words) {
+	private Map<String, Integer> boldText(Map<String, Integer> source, List<String> words) {
 		Map<String, Integer> resultMap = new HashMap<>();
+		if (source == null)
+			return  resultMap;
 		for (String key : source.keySet()) {
 			int count = 0;
 			for (String word : words) {
