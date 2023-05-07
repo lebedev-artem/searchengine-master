@@ -177,6 +177,16 @@ public class RepositoryServiceImpl implements RepositoryService {
 	}
 
 	@Override
+	public void deleteSiteById(Integer id) {
+		siteRepository.deleteById(id);
+	}
+
+	@Override
+	public void deletePageById(Integer id) {
+		pageRepository.deleteById(id);
+	}
+
+	@Override
 	public List<IndexEntity> getIndexesFromPages(List<PageEntity> pages) {
 		return indexRepository.findAllByPageEntityIn(pages);
 	}

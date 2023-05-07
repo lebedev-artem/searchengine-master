@@ -42,6 +42,10 @@ public interface RepositoryService {
 
 	void deleteIndexes();
 
+	void deleteSiteById(Integer Id);
+
+	void deletePageById(Integer id);
+
 	void deleteAllTables();
 
 	void flushRepositories();

@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import searchengine.dto.search.SearchData;
 import searchengine.dto.search.SearchResponse;
@@ -30,12 +31,13 @@ import static searchengine.tools.UrlFormatter.getShortUrl;
 @RequiredArgsConstructor
 public class SearchServiceImpl implements SearchService {
 
-	public static final double RATIO = 1.95;
+	public static final double RATIO = 1.80;
 	private Integer totalPagesCount = 0;
 	private String rarestLemma = null;
 	private final LemmaFinder lemmaFinder;
 	private final SnippetGenerator snippetGenerator;
 	private final RepositoryService repositoryService;
+	private final Environment environment;
 	private Map<String, LemmaEntity> nextStepLemmas = new HashMap<>();
 	private final Map<PageEntity, Float> returnPagesWithRelevance = new HashMap<>();
 
@@ -108,14 +110,15 @@ public class SearchServiceImpl implements SearchService {
 		if (fondLemmas.size() == 0) {
 			return false;
 		}
-		for (String lemma : query) {
-			if (!fondLemmas.containsKey(lemma)) {
-				result = false;
-				System.out.println("Not all queried lemmas exists on site. Skip other result from this site");
-				break;
+		if (Objects.equals(environment.getProperty("user-settings.return-zero-pages-if-not-all-lemmas-found"), "true")) {
+			for (String lemma : query) {
+				if (!fondLemmas.containsKey(lemma)) {
+					result = false;
+					System.out.println("Not all queried lemmas exists on site. Skip other result from this site");
+					break;
+				}
 			}
 		}
-
 		return result;
 	}
 
@@ -126,22 +129,26 @@ public class SearchServiceImpl implements SearchService {
 
 		List<PageEntity> finalPages = new ArrayList<>(prevStepPages);
 		for (String desiredLemma : finalLemmas.keySet()) {
-			List<PageEntity> eachIterationPages = getRetainedPages(site, prevStepPages, desiredLemma);
+			List<PageEntity> eachIterationPages = getRetainedPages(site, finalPages, desiredLemma);
 			finalPages.clear();
 			finalPages.addAll(eachIterationPages);
 		}
 		totalPagesCount += finalPages.size();
-		System.out.println("After retain " + finalLemmas.size() + " pages remained");
+		System.out.println("After retain " + finalPages.size() + " pages remained");
+
 		return finalPages;
 	}
 
 	private List<PageEntity> getPagesByRarestLemma(SiteEntity site, Map<String, LemmaEntity> retrievedLemmas) {
 		int totalFreq = getTotalFrequency(retrievedLemmas);
-		float thresholdFreq = (float) ((totalFreq / retrievedLemmas.size()) * RATIO);
+		double ratio = 1;
+		if (Objects.equals(environment.getProperty("user-settings.delete-most-frequently-lemmas"), "true")){
+			ratio = RATIO;
+		}
+		float thresholdFreq = (float) ((totalFreq / retrievedLemmas.size()) * ratio);
 
 		nextStepLemmas = removeMostFrequentlyLemmas(retrievedLemmas, thresholdFreq);
 		nextStepLemmas = sortByFrequency(nextStepLemmas);
-		System.out.println("Working set of lemmas contains " + nextStepLemmas.size() + "lemma(s) after deletion of most frequently");
 
 		rarestLemma = nextStepLemmas.keySet().stream().findFirst().orElse(null);
 		System.out.println("Rarest lemma is - " + rarestLemma);
@@ -182,19 +189,22 @@ public class SearchServiceImpl implements SearchService {
 
 		//Create a new Map with the selected elements
 		Map<PageEntity, Float> result = new LinkedHashMap<>();
+		System.out.println("Next pages will show as results");
 		for (Map.Entry<PageEntity, Float> entry : subsetEntries) {
 			result.put(entry.getKey(), entry.getValue());
+			System.out.println("Page id " + entry.getKey().getId() + " with path " + entry.getKey().getPath() + " with rank " + entry.getValue());
 		}
 		return result;
 	}
 
-	private @NotNull Map<String, LemmaEntity> getLemmaEntitiesFromTable(@NotNull Set<String> queryLemmas, SiteEntity site) {
+	private @NotNull Map<String, LemmaEntity> getLemmaEntitiesFromTable(@NotNull Set<String> queryLemmas, @NotNull SiteEntity site) {
 
 		Map<String, LemmaEntity> result = queryLemmas.stream()
 				.map(lemma -> repositoryService.getLemmaByNameFromSite(lemma, site))
 				.filter(Objects::nonNull)
 				.collect(Collectors.toMap(LemmaEntity::getLemma, Function.identity()));
-		System.out.println("site - " + site.getUrl() + ", retrieved lemmas count - " + result.size());
+		System.out.println("Site - " + site.getUrl() + " precessing now");
+		System.out.println("Retrieved lemmas count - " + result.size());
 		return result;
 	}
 
@@ -295,9 +305,13 @@ public class SearchServiceImpl implements SearchService {
 	}
 
 	private @NotNull Map<String, LemmaEntity> removeMostFrequentlyLemmas(@NotNull Map<String, LemmaEntity> source, float thresholdFreq) {
-		return source.entrySet()
+		Map<String, LemmaEntity> result = source.entrySet()
 				.stream()
 				.filter(entry -> entry.getValue().getFrequency() <= thresholdFreq)
 				.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+		System.out.println("Remained lemmas are:");
+		result.keySet().forEach(r -> System.out.println(" ".repeat(22) + r));
+		System.out.println("Working set of lemmas contains " + result.size() + " lemma(s) after deletion of most frequently");
+		return result;
 	}
 }

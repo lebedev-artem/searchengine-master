@@ -22,7 +22,7 @@ public class SnippetGenerator {
 	private List<String> queryWords;
 	private final LemmaFinder lemmaFinder;
 	private final Integer SNIPPET_LENGTH = 100;
-	private final Integer MAX_FULL_SNIPPET_LENGTH = 450;
+	private final Integer MAX_FULL_SNIPPET_LENGTH = 1000;
 
 	public void setText(String text) {
 		this.text = Jsoup
@@ -69,7 +69,8 @@ public class SnippetGenerator {
 	}
 
 	public Map<Integer, String> getDirtyFormsAndPos() {
-		Map<Integer, String> dirtyForms = new HashMap<>();
+		Map<Integer, String> dirtyForms = new TreeMap<>();
+		Set<String> uniqueValues = new HashSet<>();
 		for (String queryWord : queryWords) {
 			for (Map.Entry<Integer, Set<String>> entry : getLemmasAndPos().entrySet()) {
 				if (entry.getValue().contains(queryWord.toLowerCase())) {
@@ -78,6 +79,17 @@ public class SnippetGenerator {
 				}
 			}
 		}
+
+		for (Iterator<Map.Entry<Integer, String>> iterator = dirtyForms.entrySet().iterator(); iterator.hasNext();) {
+			Map.Entry<Integer, String> entry = iterator.next();
+			String value = entry.getValue();
+			if (uniqueValues.contains(value)) {
+				iterator.remove();
+			} else {
+				uniqueValues.add(value);
+			}
+		}
+
 		return dirtyForms;
 	}
 
@@ -152,7 +164,7 @@ public class SnippetGenerator {
 	private Map<String, Integer> boldText(Map<String, Integer> source, List<String> words) {
 		Map<String, Integer> resultMap = new HashMap<>();
 		if (source == null)
-			return  resultMap;
+			return resultMap;
 		for (String key : source.keySet()) {
 			int count = 0;
 			for (String word : words) {
@@ -163,9 +175,10 @@ public class SnippetGenerator {
 			}
 			resultMap.put(key, count);
 		}
+
 		return resultMap.entrySet()
 				.stream()
-				.sorted(Collections.reverseOrder(Map.Entry.comparingByValue()))
+				.sorted(Map.Entry.comparingByValue())
 				.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
 						(oldValue, newValue) -> oldValue, LinkedHashMap::new));
 	}

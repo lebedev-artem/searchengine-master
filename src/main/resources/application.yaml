@@ -81,6 +81,8 @@ indexing-settings:
     - url: https://opisanie-kartin.com/
       name: Описание картин
 
-table-settings:
+user-settings:
   clear-site-if-not-exists: true
   delete-next-level-pages: true
+  delete-most-frequently-lemmas: true
+  return-zero-pages-if-not-all-lemmas-found: true

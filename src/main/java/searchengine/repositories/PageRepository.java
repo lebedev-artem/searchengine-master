@@ -26,4 +26,5 @@ public interface PageRepository extends JpaRepository<PageEntity, Long> {
 
 	List<PageEntity> findBySiteEntityAndPath(SiteEntity siteEntity, String path);
 
+	void deleteById(Integer id);
 }

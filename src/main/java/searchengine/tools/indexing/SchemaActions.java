@@ -35,7 +35,7 @@ public class SchemaActions {
 		if (sitesList.getSites().size() != 0) {
 			List<SiteEntity> existingSites = repositoryService.getSites();
 
-			if (Objects.equals(environment.getProperty("table-settings.clear-site-if-not-exists"), "true")) {
+			if (Objects.equals(environment.getProperty("user-settings.clear-site-if-not-exists"), "true")) {
 				deleteSiteIfNotExist(existingSites);
 			}
 
@@ -139,7 +139,7 @@ public class SchemaActions {
 
 	private List<PageEntity> getPageEntities(String path, SiteEntity siteEntity) {
 		List<PageEntity> pageEntities;
-		if (Objects.equals(environment.getProperty("table-settings.delete-next-level-pages"), "true"))
+		if (Objects.equals(environment.getProperty("user-settings.delete-next-level-pages"), "true"))
 			pageEntities = repositoryService.getNextLevelPagesFromSite(siteEntity, path);
 		else pageEntities = repositoryService.getPageFromSite(siteEntity, path);
 		return pageEntities;

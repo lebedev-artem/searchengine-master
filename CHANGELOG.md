@@ -9,12 +9,17 @@ ___
 
 ### Added
 
+- In [application.yaml](https://github.com/lebedev-artem/searchengine-master/blob/4cd80e1f636f6a14d77a0aff7f8f94b0276c470e/src/main/resources/application.yaml) added [delete-most-frequently-lemmas](https://github.com/lebedev-artem/searchengine-master/blob/062c8b71d1acaaaa5a1afad432991cfbae47ed73/src/main/resources/application.yaml#L87), [return-zero-pages-if-not-all-lemmas-found](https://github.com/lebedev-artem/searchengine-master/blob/062c8b71d1acaaaa5a1afad432991cfbae47ed73/src/main/resources/application.yaml#L88) properties.
+
 ### Fixed
 
 - Fixed the problem of writing an incorrect site url after indexing a separate page
-
+- The error during the search for occurrences of remaining lemmas on pages has been fixed. Change [set of pages](https://github.com/lebedev-artem/searchengine-master/blob/062c8b71d1acaaaa5a1afad432991cfbae47ed73/src/main/java/searchengine/services/Impl/SearchServiceImpl.java#L132) .
+    
 ### Changed
 
+- Sorting of final set of snippets changed to [natural order](https://github.com/lebedev-artem/searchengine-master/blob/062c8b71d1acaaaa5a1afad432991cfbae47ed73/src/main/java/searchengine/tools/SnippetGenerator.java#L181) for possibility put the rarest word on top
+- Zero count pages may be returned if [not all lemmas exists on site](https://github.com/lebedev-artem/searchengine-master/blob/062c8b71d1acaaaa5a1afad432991cfbae47ed73/src/main/java/searchengine/services/Impl/SearchServiceImpl.java#L108) (see property in *.yaml)
 ### Removed
 
 ___
@@ -59,7 +64,7 @@ ___
 
 - [Batch](https://github.com/lebedev-artem/searchengine-master/blob/0623f920f6cdd3d09077b04e681452f4653e8c03/src/main/resources/application.yaml#L33) INSERT / UPDATE hibernate statement.
 - Cascade deletion all dependent tables by **site**.
-- In [application.yaml](https://github.com/lebedev-artem/searchengine-master/blob/4cd80e1f636f6a14d77a0aff7f8f94b0276c470e/src/main/resources/application.yaml) added [properties](https://github.com/lebedev-artem/searchengine-master/blob/4cd80e1f636f6a14d77a0aff7f8f94b0276c470e/src/main/resources/application.yaml#L76), that can be used to control certain actions with the table
+- In [application.yaml](https://github.com/lebedev-artem/searchengine-master/blob/4cd80e1f636f6a14d77a0aff7f8f94b0276c470e/src/main/resources/application.yaml) added [properties](https://github.com/lebedev-artem/searchengine-master/blob/4cd80e1f636f6a14d77a0aff7f8f94b0276c470e/src/main/resources/application.yaml#L76), that can be used to control certain actions.
 - Created [RepositoryService](https://github.com/lebedev-artem/searchengine-master/blob/4cd80e1f636f6a14d77a0aff7f8f94b0276c470e/src/main/java/searchengine/services/RepositoryService.java)
 
 ### Fixed
