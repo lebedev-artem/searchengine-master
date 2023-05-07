@@ -9,7 +9,7 @@ ___
 
 ### Added
 
-- In [application.yaml](https://github.com/lebedev-artem/searchengine-master/blob/4cd80e1f636f6a14d77a0aff7f8f94b0276c470e/src/main/resources/application.yaml) added [delete-most-frequently-lemmas](https://github.com/lebedev-artem/searchengine-master/blob/062c8b71d1acaaaa5a1afad432991cfbae47ed73/src/main/resources/application.yaml#L87), [return-zero-pages-if-not-all-lemmas-found](https://github.com/lebedev-artem/searchengine-master/blob/062c8b71d1acaaaa5a1afad432991cfbae47ed73/src/main/resources/application.yaml#L88) properties.
+- In [application.yaml](https://github.com/lebedev-artem/searchengine-master/blob/7835ef659c65c80a57a62a8284f485751496fa7f/src/main/resources/application.yaml) added [delete-most-frequently-lemmas](delete-most-frequently-lemmas), [return-zero-pages-if-not-all-lemmas-found](return-zero-pages-if-not-all-lemmas-found) properties.
 
 ### Fixed
 
@@ -18,8 +18,8 @@ ___
     
 ### Changed
 
-- Sorting of final set of snippets changed to [natural order](https://github.com/lebedev-artem/searchengine-master/blob/062c8b71d1acaaaa5a1afad432991cfbae47ed73/src/main/java/searchengine/tools/SnippetGenerator.java#L181) for possibility put the rarest word on top
-- Zero count pages may be returned if [not all lemmas exists on site](https://github.com/lebedev-artem/searchengine-master/blob/062c8b71d1acaaaa5a1afad432991cfbae47ed73/src/main/java/searchengine/services/Impl/SearchServiceImpl.java#L108) (see property in *.yaml)
+- Sorting of final set of snippets changed to [natural order](https://github.com/lebedev-artem/searchengine-master/blob/7835ef659c65c80a57a62a8284f485751496fa7f/src/main/java/searchengine/tools/SnippetGenerator.java#L181) for possibility put the rarest word on top
+- Zero count pages may be returned if [not all lemmas exists on site](https://github.com/lebedev-artem/searchengine-master/blob/7835ef659c65c80a57a62a8284f485751496fa7f/src/main/java/searchengine/services/Impl/SearchServiceImpl.java#L108) (see property in *.yaml)
 ### Removed
 
 ___
