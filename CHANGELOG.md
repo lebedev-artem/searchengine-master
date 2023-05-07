@@ -9,12 +9,12 @@ ___
 
 ### Added
 
-- In [application.yaml](https://github.com/lebedev-artem/searchengine-master/blob/7835ef659c65c80a57a62a8284f485751496fa7f/src/main/resources/application.yaml) added [delete-most-frequently-lemmas](delete-most-frequently-lemmas), [return-zero-pages-if-not-all-lemmas-found](return-zero-pages-if-not-all-lemmas-found) properties.
+- In [application.yaml](https://github.com/lebedev-artem/searchengine-master/blob/7835ef659c65c80a57a62a8284f485751496fa7f/src/main/resources/application.yaml) added [delete-most-frequently-lemmas](https://github.com/lebedev-artem/searchengine-master/blob/e46dbe16e96e145b17327a85622d92bb8cb2fe88/src/main/resources/application.yaml#L87), [return-zero-pages-if-not-all-lemmas-found](https://github.com/lebedev-artem/searchengine-master/blob/e46dbe16e96e145b17327a85622d92bb8cb2fe88/src/main/resources/application.yaml#L88) properties.
 
 ### Fixed
 
 - Fixed the problem of writing an incorrect site url after indexing a separate page
-- The error during the search for occurrences of remaining lemmas on pages has been fixed. Change [set of pages](https://github.com/lebedev-artem/searchengine-master/blob/062c8b71d1acaaaa5a1afad432991cfbae47ed73/src/main/java/searchengine/services/Impl/SearchServiceImpl.java#L132) .
+- The error during the search for occurrences of remaining lemmas on pages has been fixed. Change [set of pages](https://github.com/lebedev-artem/searchengine-master/blob/e46dbe16e96e145b17327a85622d92bb8cb2fe88/src/main/java/searchengine/services/Impl/SearchServiceImpl.java#L132) .
     
 ### Changed
 
