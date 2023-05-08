@@ -176,9 +176,16 @@ public class SnippetGenerator {
 			resultMap.put(key, count);
 		}
 
+		//Natural order
+//		return resultMap.entrySet()
+//				.stream()
+//				.sorted(Map.Entry.comparingByValue())
+//				.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+//						(oldValue, newValue) -> oldValue, LinkedHashMap::new));
+		//Reverse order
 		return resultMap.entrySet()
 				.stream()
-				.sorted(Map.Entry.comparingByValue())
+				.sorted(Collections.reverseOrder(Map.Entry.comparingByValue()))
 				.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
 						(oldValue, newValue) -> oldValue, LinkedHashMap::new));
 	}

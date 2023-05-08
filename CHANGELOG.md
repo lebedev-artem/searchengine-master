@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 
 ___
 
-## [1.3] - 2023-05-06
+## [1.3] - 2023-05-08
 
 ### Added
 
@@ -18,8 +18,8 @@ ___
     
 ### Changed
 
-- Sorting of final set of snippets changed to [natural order](https://github.com/lebedev-artem/searchengine-master/blob/7835ef659c65c80a57a62a8284f485751496fa7f/src/main/java/searchengine/tools/SnippetGenerator.java#L181) for possibility put the rarest word on top
-- Zero count pages may be returned if [not all lemmas exists on site](https://github.com/lebedev-artem/searchengine-master/blob/7835ef659c65c80a57a62a8284f485751496fa7f/src/main/java/searchengine/services/Impl/SearchServiceImpl.java#L108) (see property in *.yaml)
+- Zero pages may be returned if [not all lemmas exists on site](https://github.com/lebedev-artem/searchengine-master/blob/7835ef659c65c80a57a62a8284f485751496fa7f/src/main/java/searchengine/services/Impl/SearchServiceImpl.java#L108) (see property in *.yaml)
+
 ### Removed
 
 ___
