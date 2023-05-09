@@ -11,6 +11,8 @@ import searchengine.tools.indexing.IndexingActions;
 import searchengine.tools.indexing.SchemaActions;
 import java.util.*;
 
+import static searchengine.tools.indexing.IndexingActionsImpl.*;
+
 @Slf4j
 @Setter
 @Getter
@@ -36,7 +38,7 @@ public class IndexingServiceImpl implements IndexingService {
 			return indexingResponse.startFailedEmptyQuery();
 
 		SINGLE_TASK.set(new Thread(() -> indexingActions.startFullIndexing(siteEntities), "0day-thread"));
-
+		isPartialIndexing = false;
 		SINGLE_TASK.get().start();
 		return indexingResponse.successfully();
 	}
@@ -57,7 +59,7 @@ public class IndexingServiceImpl implements IndexingService {
 		SINGLE_TASK.set(new Thread(() -> indexingActions.startPartialIndexing(siteEntity), "0day-thread"));
 
 		SINGLE_TASK.get().start();
-
+		isPartialIndexing = true;
 		return indexingResponse.successfully();
 	}
 

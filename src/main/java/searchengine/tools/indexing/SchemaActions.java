@@ -18,6 +18,8 @@ import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.*;
 
+import static searchengine.tools.indexing.IndexingActionsImpl.*;
+
 @Slf4j
 @Getter
 @Setter
@@ -115,9 +117,9 @@ public class SchemaActions {
 
 			decreaseLemmasFreqByPage(pageEntities);
 		}
+		homeSiteUrl = siteEntity.getUrl();
 		siteEntity.setUrl(url);
 		log.info(siteEntity.getUrl() + " will be indexing now");
-
 		return siteEntity;
 	}
 

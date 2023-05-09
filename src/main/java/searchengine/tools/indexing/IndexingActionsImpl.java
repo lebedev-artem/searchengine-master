@@ -14,7 +14,6 @@ import searchengine.services.LemmasAndIndexCollectingService;
 import searchengine.services.PagesSavingService;
 import searchengine.services.RepositoryService;
 import searchengine.tools.StringPool;
-import searchengine.tools.UrlFormatter;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -23,8 +22,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.LinkedBlockingQueue;
-
-import static searchengine.tools.UrlFormatter.getShortUrl;
 
 @Slf4j
 @Setter
@@ -38,6 +35,8 @@ public class IndexingActionsImpl implements IndexingActions {
 			"Ошибка индексации: сайт не доступен",
 			""};
 	public static String siteUrl;
+	public static String homeSiteUrl;
+	public static Boolean isPartialIndexing;
 	private SiteEntity siteEntity;
 	private final RepositoryService repositoryService;
 	private final PagesSavingService pagesSavingService;
@@ -113,6 +112,7 @@ public class IndexingActionsImpl implements IndexingActions {
 		Set<SiteEntity> oneEntitySet = new HashSet<>();
 		oneEntitySet.add(siteEntity);
 		startFullIndexing(oneEntitySet);
+
 	}
 
 	private void lemmasCollectingActions(SiteEntity siteEntity) {
@@ -183,7 +183,9 @@ public class IndexingActionsImpl implements IndexingActions {
 			siteEntity.setStatus(IndexingStatus.FAILED);
 			log.warn("Status of site " + siteEntity.getName() + " set to " + siteEntity.getStatus().toString() + ", error set to " + siteEntity.getLastError());
 		}
-		siteEntity.setUrl(siteUrl);
+		if (isPartialIndexing){
+			siteEntity.setUrl(homeSiteUrl);
+		}
 		repositoryService.saveSite(siteEntity);
 		StringPool.clearAll();
 	}
