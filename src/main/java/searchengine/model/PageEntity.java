@@ -19,11 +19,7 @@ public class PageEntity {
 
 	@Id
 	@Column(name = "id", nullable = false)
-	@SequenceGenerator(
-			name = "page_seq",
-			sequenceName = "page_sequence",
-			allocationSize = 40)
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "page_seq")
+	@GeneratedValue(strategy = GenerationType.SEQUENCE)
 	private Integer id;
 
 	@ManyToOne(fetch = FetchType.LAZY, targetEntity = SiteEntity.class, cascade = {CascadeType.MERGE, CascadeType.REFRESH}, optional = false)

@@ -14,11 +14,7 @@ public class IndexEntity {
 
 	@javax.persistence.Id
 	@Column(nullable = false)
-	@SequenceGenerator(
-			name = "index_seq",
-			sequenceName = "index_sequence",
-			allocationSize = 500)
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "index_seq")
+	@GeneratedValue(strategy = GenerationType.SEQUENCE)
 	private Integer id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)

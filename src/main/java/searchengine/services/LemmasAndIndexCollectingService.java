@@ -10,7 +10,7 @@ public interface LemmasAndIndexCollectingService {
 	void setSiteEntity(SiteEntity siteEntity);
 	void setSavingPagesIsDone(boolean b);
 	void startCollecting();
-	boolean pressedStop();
+	void setEnabled(boolean value);
 	LemmaEntity createLemmaEntity(String lemma);
 	Boolean allowed();
 }

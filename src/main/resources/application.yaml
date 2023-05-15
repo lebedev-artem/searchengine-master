@@ -60,10 +60,8 @@ indexing-settings:
 #      name: playback
 #    - url: https://www.artlebedev.ru/
 #      name: artlebedev.ru
-#    - url: https://www.svetlovka.ru/
-#      name: Svetlovka
-#    - url: https://dombulgakova.ru/
-#      name: Дом Булгакова
+    - url: https://www.svetlovka.ru/
+      name: Svetlovka
 #    - url: https://www.tretyakovgallery.ru/
 #      name: Третьяковская галерея
 #    - url: https://gallery.tverreg.ru/
@@ -76,17 +74,20 @@ indexing-settings:
 #      name: Студия Лебедева. Ководство
     - url: https://nopaper.ru/
       name: Нет Бумаге!
-#    - url: https://mydiscoveries.ru/
-#      name: Новые открытия каждый день
-#    - url: https://opisanie-kartin.com/
-#      name: Описание картин
+    - url: https://mydiscoveries.ru/
+      name: Новые открытия каждый день
+    - url: https://opisanie-kartin.com/
+      name: Описание картин
     - url: http://cimus.biz/
       name: Цимус
-    - url: http://htmlboss.ru/
-      name: HTML Boss
+    - url: https://dombulgakova.ru/
+      name: Home of Bulgakov
+    - url: https://nikoartgallery.com/
+      name: Niko Gallery
 
 user-settings:
   clear-site-if-not-exists: true
   delete-next-level-pages: true
   delete-most-frequently-lemmas: true
   return-zero-pages-if-not-all-lemmas-found: true
+  logging-enable: false

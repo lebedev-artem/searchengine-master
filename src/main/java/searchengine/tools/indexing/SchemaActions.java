@@ -11,7 +11,10 @@ import org.springframework.stereotype.Component;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.model.*;
-import searchengine.services.RepositoryService;
+import searchengine.repositories.IndexRepository;
+import searchengine.repositories.LemmaRepository;
+import searchengine.repositories.PageRepository;
+import searchengine.repositories.SiteRepository;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -29,13 +32,17 @@ public class SchemaActions {
 
 	private final SitesList sitesList;
 	private final Environment environment;
-	private final RepositoryService repositoryService;
+	private final SiteRepository siteRepository;
+	private final PageRepository pageRepository;
+	private final LemmaRepository lemmaRepository;
+	private final IndexRepository indexRepository;
+
 
 	public @NotNull Set<SiteEntity> fullInit() {
 		Set<SiteEntity> newSites = new HashSet<>();
 
 		if (sitesList.getSites().size() != 0) {
-			List<SiteEntity> existingSites = repositoryService.getSites();
+			List<SiteEntity> existingSites = siteRepository.findAll();
 
 			if (Objects.equals(environment.getProperty("user-settings.clear-site-if-not-exists"), "true")) {
 				deleteSiteIfNotExist(existingSites);
@@ -52,7 +59,7 @@ public class SchemaActions {
 
 	private @NotNull SiteEntity getSiteEntity(@NotNull Site newSite) {
 		SiteEntity result;
-		SiteEntity existingSite = repositoryService.getSiteByUrl(newSite.getUrl());
+		SiteEntity existingSite = siteRepository.findByUrl(newSite.getUrl());
 		if (existingSite != null) {
 			clearRelatedTables(existingSite);
 			result = existingSite;
@@ -65,9 +72,9 @@ public class SchemaActions {
 
 	private void persistSites(@NotNull Set<SiteEntity> newSE) {
 		newSE.forEach(e -> {
-			if (!repositoryService.siteExistsWithUrl(e.getUrl())) {
+			if (!siteRepository.existsByUrl(e.getUrl())) {
 				log.warn("SiteEntity name " + e.getName() + " with URL " + e.getUrl() + " saving in table");
-				repositoryService.saveSite(e);
+				siteRepository.save(e);
 			}
 		});
 		log.info("Schema initialized!");
@@ -81,8 +88,8 @@ public class SchemaActions {
 		site.setStatusTime(LocalDateTime.now());
 
 		log.warn("Deletion pages and lemmas with indexes from " + site.getName() + " " + site.getUrl());
-		repositoryService.deletePagesFromSite(site);
-		repositoryService.deleteLemmasFromSite(site);
+		pageRepository.deleteAllBySiteEntity(site);
+		lemmaRepository.deleteAllInBatchBySiteEntity(site);
 
 		log.info("Site " + site.getName() + " " + site.getUrl() + " will be indexing again");
 	}
@@ -93,7 +100,7 @@ public class SchemaActions {
 					.stream()
 					.noneMatch(site -> site.getUrl().equals(siteEntity.getUrl()))) {
 				log.warn("Try deleting " + siteEntity.getName() + " " + siteEntity.getUrl() + " from table, because site not exist in SiteList");
-				repositoryService.deleteSite(siteEntity);
+				siteRepository.delete(siteEntity);
 			}
 		}
 	}
@@ -108,7 +115,7 @@ public class SchemaActions {
 		if (siteEntity == null)
 			return null;
 
-		if (!repositoryService.pageExistsOnSite(path, siteEntity)) {
+		if (!pageRepository.existsByPathAndSiteEntity(path, siteEntity)) {
 			log.error("No pages with requested path contains in table page");
 			log.info("Will try indexing this URL now");
 		} else {
@@ -130,7 +137,7 @@ public class SchemaActions {
 			log.error("SiteList doesn't contains hostname of requested URL");
 			return null;
 		} else {
-			siteEntity = repositoryService.getSiteByUrl(site.getUrl());
+			siteEntity = siteRepository.findByUrl(site.getUrl());
 			if (siteEntity == null) {
 				log.error("Table site doesn't contains entry with requested hostname");
 				return null;
@@ -142,8 +149,8 @@ public class SchemaActions {
 	private List<PageEntity> getPageEntities(String path, SiteEntity siteEntity) {
 		List<PageEntity> pageEntities;
 		if (Objects.equals(environment.getProperty("user-settings.delete-next-level-pages"), "true"))
-			pageEntities = repositoryService.getNextLevelPagesFromSite(siteEntity, path);
-		else pageEntities = repositoryService.getPageFromSite(siteEntity, path);
+			pageEntities = pageRepository.findAllBySiteEntityAndPathContains(siteEntity, path);
+		else pageEntities = pageRepository.findBySiteEntityAndPath(siteEntity, path);
 		return pageEntities;
 	}
 
@@ -180,13 +187,16 @@ public class SchemaActions {
 
 	private void virginSchema() {
 		log.warn("Table `site` is empty. All sites will be getting from SiteList");
-		repositoryService.deleteAllTables();
+		indexRepository.deleteAllInBatch();
+		lemmaRepository.deleteAllInBatch();
+		pageRepository.deleteAllInBatch();
+		siteRepository.deleteAllInBatch();
 	}
 
 	private void decreaseLemmasFreqByPage(@NotNull List<PageEntity> pageEntities) {
 		log.warn("Start decreasing freq of lemmas of deleted pages");
 
-		List<IndexEntity> indexForLemmaDecreaseFreq = repositoryService.getIndexesFromPages(pageEntities);
+		List<IndexEntity> indexForLemmaDecreaseFreq = indexRepository.findAllByPageEntityIn(pageEntities);
 
 		if (indexForLemmaDecreaseFreq == null) {
 			log.error("Set of Index entities by Page is empty");
@@ -194,13 +204,13 @@ public class SchemaActions {
 		}
 
 		log.info("Found " + indexForLemmaDecreaseFreq.size() + " index entities by set of requested pages");
-		repositoryService.deletePages(pageEntities);
+		pageRepository.deleteAllInBatch(pageEntities);
 
 		for (IndexEntity indexObj : indexForLemmaDecreaseFreq) {
 			LemmaEntity lemmaEntity = indexObj.getLemmaEntity();
 			int oldFreq = lemmaEntity.getFrequency();
 
-			if (oldFreq == 1) repositoryService.deleteLemma(lemmaEntity);
+			if (oldFreq == 1) lemmaRepository.delete(lemmaEntity);
 			else lemmaEntity.setFrequency(oldFreq - 1);
 		}
 	}

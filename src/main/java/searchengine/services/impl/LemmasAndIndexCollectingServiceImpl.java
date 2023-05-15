@@ -1,4 +1,4 @@
-package searchengine.services.Impl;
+package searchengine.services.impl;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -6,12 +6,13 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jsoup.Jsoup;
-import org.jsoup.safety.Cleaner;
 import org.jsoup.safety.Safelist;
 import org.springframework.stereotype.Service;
 import searchengine.model.*;
+import searchengine.repositories.IndexRepository;
+import searchengine.repositories.LemmaRepository;
+import searchengine.repositories.PageRepository;
 import searchengine.services.LemmasAndIndexCollectingService;
-import searchengine.services.RepositoryService;
 import searchengine.tools.LemmaFinder;
 
 import java.util.*;
@@ -25,7 +26,7 @@ import static java.lang.Thread.sleep;
 @RequiredArgsConstructor
 public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollectingService {
 
-
+	private Boolean enabled = true;
 	private Integer countPages = 0;
 	private Integer countLemmas = 0;
 	private Integer countIndexes = 0;
@@ -35,22 +36,24 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 	private static final Integer INIT_FREQ = 1;
 	private boolean savingPagesIsDone;
 	private BlockingQueue<Integer> incomeQueue;
-	private final RepositoryService repositoryService;
 	private Set<IndexEntity> indexEntities = new HashSet<>();
 	private Map<String, Integer> collectedLemmas = new HashMap<>();
 	private Map<String, LemmaEntity> lemmaEntities = new HashMap<>();
+	private final PageRepository pageRepository;
+	private final IndexRepository indexRepository;
+	private final LemmaRepository lemmaRepository;
 
 	public void startCollecting() {
 		while (allowed()) {
 
-			if (pressedStop()) {
+			if (!enabled) {
 				actionsAfterStop();
 				return;
 			}
 
 			Integer pageId = incomeQueue.poll();
 			if (pageId != null) {
-				PageEntity pageEntity = repositoryService.getPageRef(pageId);
+				PageEntity pageEntity = pageRepository.getReferenceById(pageId);
 				collectedLemmas = lemmaFinder.collectLemmas
 						(Jsoup.clean(pageEntity.getContent(), Safelist.simpleText()));
 
@@ -67,6 +70,11 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 		savingLemmas();
 		savingIndexes();
 		log.warn(logAboutEachSite());
+	}
+
+	@Override
+	public void setEnabled(boolean value) {
+		enabled = value;
 	}
 
 	private static void sleeping(int millis, String s) {
@@ -87,7 +95,7 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 	private void savingIndexes() {
 		long idxSave = System.currentTimeMillis();
 
-		repositoryService.saveIndexes(indexEntities);
+		indexRepository.saveAll(indexEntities);
 		sleeping(200, "Error sleeping after saving lemmas");
 		log.warn("Saving index lasts -  " + (System.currentTimeMillis() - idxSave) + " ms");
 		indexEntities.clear();
@@ -95,7 +103,7 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 
 	private void savingLemmas() {
 		long lemmaSave = System.currentTimeMillis();
-		repositoryService.saveLemmas(lemmaEntities.values());
+		lemmaRepository.saveAll(lemmaEntities.values());
 		sleeping(200, "Error sleeping after saving lemmas");
 		log.warn("Saving lemmas lasts - " + (System.currentTimeMillis() - lemmaSave) + " ms");
 		lemmaEntities.clear();
@@ -125,9 +133,5 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 
 	public Boolean allowed() {
 		return !savingPagesIsDone | incomeQueue.iterator().hasNext();
-	}
-
-	public boolean pressedStop() {
-		return IndexingServiceImpl.pressedStop;
 	}
 }

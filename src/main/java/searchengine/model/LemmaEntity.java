@@ -19,11 +19,7 @@ public class LemmaEntity {
 
 	@Id
 	@Column(nullable = false)
-	@SequenceGenerator(
-			name = "lemma_seq",
-			sequenceName = "lemma_sequence",
-			allocationSize = 250)
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "lemma_seq")
+	@GeneratedValue(strategy = GenerationType.SEQUENCE)
 	private Integer id;
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(foreignKey = @ForeignKey(name = "lemma_site_FK"), columnDefinition = "Integer",

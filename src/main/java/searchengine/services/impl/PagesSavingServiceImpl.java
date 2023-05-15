@@ -1,8 +1,9 @@
-package searchengine.services.Impl;
+package searchengine.services.impl;
 
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
@@ -11,6 +12,7 @@ import searchengine.services.PagesSavingService;
 import searchengine.tools.CheckHeapSize;
 import searchengine.tools.StringPool;
 
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -24,22 +26,25 @@ import static java.lang.Thread.sleep;
 @Service
 @RequiredArgsConstructor
 public class PagesSavingServiceImpl implements PagesSavingService {
-	private final ReadWriteLock lock = new ReentrantReadWriteLock();
-	private boolean scrapingIsDone = false;
-	private BlockingQueue<PageEntity> incomeQueue;
-	private BlockingQueue<Integer> outcomeQueue;
+
+	private Boolean enabled = true;
+	private Integer counter = 0;
 	private SiteEntity siteEntity;
 	private PageEntity pageEntity;
-	private final PageRepository pageRepository;
 	private StringPool stringPool;
-	private Integer counter = 0;
+	private boolean scrapingIsDone = false;
+	private BlockingQueue<Integer> outcomeQueue;
+	private BlockingQueue<PageEntity> incomeQueue;
 	private final CheckHeapSize checkHeapSize;
+	private final ReadWriteLock lock = new ReentrantReadWriteLock();
+	private final Environment environment;
+	private final PageRepository pageRepository;
 
 	public void startSavingPages() {
 		final long startTime = System.currentTimeMillis();
 		while (allowed()) {
 
-			if (pressedStop()) {
+			if (!enabled) {
 				actionsAfterStop();
 				return;
 			}
@@ -61,6 +66,11 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 		log.warn(logAboutEachSite(startTime));
 	}
 
+	@Override
+	public void setEnabled(boolean value) {
+		enabled = value;
+	}
+
 	private void addPathToStaticVaultAsSaved() {
 		lock.readLock().lock();
 		StringPool.internSavedPath(pageEntity.getPath());
@@ -68,19 +78,23 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 	}
 
 	private void writeLogAboutEachPage() {
-		log.warn(pageEntity.getPath() + " saved. queue has " + incomeQueue.size());
-		counter++;
 
-		if (counter > getRandom()){
-			log.warn("Another "
-					+ counter + " pages saved to the database. "
-					+ pageRepository.countBySiteEntity(siteEntity) + " total saved. IncomeQueue has "
-					+ incomeQueue.size() + " objects");
-			log.info("Used heap size - "
-					+ checkHeapSize.getHeap() + ". Free - "
-					+ checkHeapSize.getFreeHeap());
-			counter = 0;
+		if (Objects.equals(environment.getProperty("user-settings.logging-enable"), "true")){
+			log.warn(pageEntity.getPath() + " saved. queue has " + incomeQueue.size());
+			counter++;
+
+			if (counter > getRandom()){
+				log.warn("Another "
+						+ counter + " pages saved to the database. "
+						+ pageRepository.countBySiteEntity(siteEntity) + " total saved. IncomeQueue has "
+						+ incomeQueue.size() + " objects");
+				log.info("Used heap size - "
+						+ checkHeapSize.getHeap() + ". Free - "
+						+ checkHeapSize.getFreeHeap());
+				counter = 0;
+			}
 		}
+
 	}
 
 	private void actionsAfterStop() {
@@ -102,7 +116,7 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 	private void putPageIdToOutcomeQueue() {
 		try {
 			while (true) {
-				if (outcomeQueue.remainingCapacity() < 5 && !pressedStop())
+				if (outcomeQueue.remainingCapacity() < 5 && enabled)
 					sleep(5_000);
 				else
 					break;
@@ -111,10 +125,6 @@ public class PagesSavingServiceImpl implements PagesSavingService {
 		} catch (InterruptedException ex) {
 			log.error("Can't put pageEntity to outcomeQueue");
 		}
-	}
-
-	private boolean pressedStop() {
-		return IndexingServiceImpl.pressedStop;
 	}
 
 	private @NotNull Integer getRandom(){

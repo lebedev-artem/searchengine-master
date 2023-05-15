@@ -13,10 +13,10 @@ import org.jsoup.safety.Cleaner;
 import org.jsoup.safety.Safelist;
 import org.jsoup.select.Elements;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
-import searchengine.services.Impl.IndexingServiceImpl;
 import searchengine.tools.AcceptableContentTypes;
 
 import java.io.IOException;
@@ -38,6 +38,7 @@ import static searchengine.tools.StringPool.*;
 @NoArgsConstructor
 public class ScrapingAction extends RecursiveAction {
 
+	public static volatile Boolean enabled = true;
 	private String siteUrl;
 	private String parentUrl;
 	private Document document;
@@ -47,21 +48,24 @@ public class ScrapingAction extends RecursiveAction {
 	private Set<String> childLinksOfTask;
 	private Connection.Response jsoupResponse = null;
 	private BlockingQueue<PageEntity> outcomeQueue;
+	private Environment environment;
 	private final ReadWriteLock lock = new ReentrantReadWriteLock();
 	private static final AcceptableContentTypes ACCEPTABLE_CONTENT_TYPES = new AcceptableContentTypes();
 
 	public ScrapingAction(String parentUrl,
-	                      @NotNull SiteEntity siteEntity,
-	                      BlockingQueue<PageEntity> outcomeQueue) {
+						  @NotNull SiteEntity siteEntity,
+						  BlockingQueue<PageEntity> outcomeQueue, Environment environment) {
 		this.siteEntity = siteEntity;
 		this.outcomeQueue = outcomeQueue;
 		this.parentUrl = parentUrl;
+		this.environment = environment;
 		this.siteUrl = IndexingActionsImpl.siteUrl;
 	}
 
 	@Override
 	protected void compute() {
-		if (pressedStop()) return;
+		if (!enabled)
+			return;
 
 		jsoupResponse = getResponseFromUrl(parentUrl);
 		if (jsoupResponse != null) {
@@ -103,11 +107,7 @@ public class ScrapingAction extends RecursiveAction {
 
 	private boolean urlIsValidToProcess(String sourceUrl, Set<String> newChildLinks, String extractedHref) {
 		return sourceUrl.matches(URL_IS_VALID)
-				//Temp check for this site
-				&&
-				(extractedHref.startsWith(siteUrl)
-						| extractedHref.contains("my.tretyakov.ru/app/gallery?")
-						| extractedHref.contains("my.tretyakov.ru/app/masterpiece/"))
+				&& extractedHref.startsWith(siteUrl)
 				&& !extractedHref.contains("#")
 				&& !extractedHref.equals(sourceUrl)
 				&& !newChildLinks.contains(extractedHref)
@@ -138,7 +138,10 @@ public class ScrapingAction extends RecursiveAction {
 			urlNotAvailableActions(url, exception);
 			return null;
 		}
-		log.info("Response from " + url + " got successfully");
+		if (Objects.equals(environment.getProperty("user-settings.logging-enable"), "true")){
+			log.info("Response from " + url + " got successfully");
+		}
+
 		return jsoupResponse;
 	}
 
@@ -146,7 +149,10 @@ public class ScrapingAction extends RecursiveAction {
 		siteEntity.setLastError(exception.getMessage());
 		siteEntity.setStatusTime(LocalDateTime.now());
 		internPage404(url);
-		log.error("Something went wrong 404. " + url + " Pages404 vault contains " + pages404.size() + " url");
+		if (Objects.equals(environment.getProperty("user-settings.logging-enable"), "true")){
+			log.error("Something went wrong 404. " + url + " Pages404 vault contains " + pages404.size() + " url");
+		}
+
 	}
 
 	private void cleanHtmlContent() {
@@ -163,7 +169,7 @@ public class ScrapingAction extends RecursiveAction {
 	private void spoolPageToQueue() {
 		try {
 			while (true) {
-				if (outcomeQueue.remainingCapacity() < 10 && !pressedStop()) {
+				if (outcomeQueue.remainingCapacity() < 10 && enabled) {
 					sleep(20_000);
 				} else break;
 			}
@@ -178,7 +184,7 @@ public class ScrapingAction extends RecursiveAction {
 	}
 
 	private void forkAndJoinTasks() {
-		if (pressedStop())
+		if (!enabled)
 			return;
 
 		List<ScrapingAction> subTasks = new LinkedList<>();
@@ -187,7 +193,7 @@ public class ScrapingAction extends RecursiveAction {
 			if (childIsValidToFork(childLink)
 					&& !pages404.containsKey(childLink)
 					&& !visitedLinks.containsKey(childLink)) {
-				ScrapingAction action = new ScrapingAction(childLink, siteEntity, outcomeQueue);
+				ScrapingAction action = new ScrapingAction(childLink, siteEntity, outcomeQueue, environment);
 				action.fork();
 				subTasks.add(action);
 			}
@@ -203,10 +209,6 @@ public class ScrapingAction extends RecursiveAction {
 
 	public String getHrefFromElement(Element element) {
 		return (element != null) ? element.absUrl("href") : "";
-	}
-
-	public boolean pressedStop() {
-		return IndexingServiceImpl.pressedStop;
 	}
 
 }

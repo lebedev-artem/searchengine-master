@@ -1,8 +1,7 @@
-package searchengine.services.Impl;
+package searchengine.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jsoup.Jsoup;
@@ -15,7 +14,10 @@ import searchengine.model.IndexEntity;
 import searchengine.model.LemmaEntity;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
-import searchengine.services.RepositoryService;
+import searchengine.repositories.IndexRepository;
+import searchengine.repositories.LemmaRepository;
+import searchengine.repositories.PageRepository;
+import searchengine.repositories.SiteRepository;
 import searchengine.services.SearchService;
 import searchengine.tools.LemmaFinder;
 import searchengine.tools.SnippetGenerator;
@@ -36,10 +38,13 @@ public class SearchServiceImpl implements SearchService {
 	private String rarestLemma = null;
 	private final LemmaFinder lemmaFinder;
 	private final SnippetGenerator snippetGenerator;
-	private final RepositoryService repositoryService;
 	private final Environment environment;
 	private Map<String, LemmaEntity> nextStepLemmas = new HashMap<>();
 	private final Map<PageEntity, Float> returnPagesWithRelevance = new HashMap<>();
+	private final PageRepository pageRepository;
+	private final SiteRepository siteRepository;
+	private final LemmaRepository lemmaRepository;
+	private final IndexRepository indexRepository;
 
 	@Override
 	public SearchResponse getSearchResults(@NotNull String query, String siteUrl, Integer offset, Integer limit) {
@@ -156,7 +161,7 @@ public class SearchServiceImpl implements SearchService {
 		List<PageEntity> result = null;
 		if (rarestLemma != null) {
 			List<Integer> pageIds = getPageEntitiesIdsByRarestLemma(site);
-			result = repositoryService.getPagesByIds(pageIds);
+			result = pageRepository.findAllByIdIn(pageIds);
 			System.out.println("From rarest lemma uploaded " + result.size() + " pages");
 		}
 
@@ -165,8 +170,8 @@ public class SearchServiceImpl implements SearchService {
 
 	private List<SiteEntity> getSiteEntities(String siteUrl) {
 		return siteUrl != null
-				? Collections.singletonList(repositoryService.getSiteByUrl(siteUrl))
-				: repositoryService.getSites();
+				? Collections.singletonList(siteRepository.findByUrl(siteUrl))
+				: siteRepository.findAll();
 	}
 
 	@NotNull
@@ -200,7 +205,7 @@ public class SearchServiceImpl implements SearchService {
 	private @NotNull Map<String, LemmaEntity> getLemmaEntitiesFromTable(@NotNull Set<String> queryLemmas, @NotNull SiteEntity site) {
 
 		Map<String, LemmaEntity> result = queryLemmas.stream()
-				.map(lemma -> repositoryService.getLemmaByNameFromSite(lemma, site))
+				.map(lemma -> lemmaRepository.findByLemmaAndSiteEntity(lemma, site))
 				.filter(Objects::nonNull)
 				.collect(Collectors.toMap(LemmaEntity::getLemma, Function.identity()));
 		System.out.println("Site - " + site.getUrl() + " precessing now");
@@ -230,8 +235,8 @@ public class SearchServiceImpl implements SearchService {
 	}
 
 	private @NotNull List<PageEntity> getRetainedPages(SiteEntity site, @NotNull List<PageEntity> finalPages, String lemma) {
-		LemmaEntity lemmaEntity = repositoryService.getLemmaByNameFromSite(lemma, site);
-		Set<IndexEntity> indexSet = repositoryService.getAllByLemma(lemmaEntity);
+		LemmaEntity lemmaEntity = lemmaRepository.findByLemmaAndSiteEntity(lemma, site);
+		Set<IndexEntity> indexSet = indexRepository.findAllByLemmaEntity(lemmaEntity);
 		return finalPages.stream()
 				.filter(pageEntity -> indexSet.stream()
 						.anyMatch(index -> Objects.equals(index.getPageEntity().getId(), pageEntity.getId())))
@@ -250,7 +255,7 @@ public class SearchServiceImpl implements SearchService {
 	private float getSumOfLemmasRankFromPage(@NotNull Map<String, LemmaEntity> lemmas, PageEntity p) {
 		float result = (float) 0;
 		for (LemmaEntity l : lemmas.values()) {
-			IndexEntity idx = repositoryService.getIndexByLemmaFromPage(l, p);
+			IndexEntity idx = indexRepository.findByLemmaEntityAndPageEntity(l, p);
 			if (idx != null) {
 				result += idx.getLemmaRank();
 			}
@@ -293,9 +298,9 @@ public class SearchServiceImpl implements SearchService {
 	}
 
 	private @Nullable Set<IndexEntity> getRarestIndexSet(SiteEntity site, String rarestLemma) {
-		LemmaEntity rarestLemmaEntity = repositoryService.getLemmaByNameFromSite(rarestLemma, site);
+		LemmaEntity rarestLemmaEntity = lemmaRepository.findByLemmaAndSiteEntity(rarestLemma, site);
 		if (rarestLemmaEntity != null)
-			return repositoryService.getAllByLemma(rarestLemmaEntity);
+			return indexRepository.findAllByLemmaEntity(rarestLemmaEntity);
 		return null;
 	}
 

@@ -1,4 +1,4 @@
-package searchengine.services.Impl;
+package searchengine.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +11,9 @@ import searchengine.dto.statistics.StatisticsData;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.TotalStatistics;
 import searchengine.model.SiteEntity;
-import searchengine.services.RepositoryService;
+import searchengine.repositories.LemmaRepository;
+import searchengine.repositories.PageRepository;
+import searchengine.repositories.SiteRepository;
 import searchengine.services.StatisticsService;
 import searchengine.tools.indexing.IndexingActions;
 
@@ -26,8 +28,10 @@ import java.util.List;
 public class StatisticsServiceImpl implements StatisticsService {
 
 	private final SitesList sites;
-	private final RepositoryService repositoryService;
 	private final IndexingActions indexingActions;
+	private final SiteRepository siteRepository;
+	private final PageRepository pageRepository;
+	private final LemmaRepository lemmaRepository;
 
 	@Override
 	public StatisticsResponse getStatistics() {
@@ -39,10 +43,10 @@ public class StatisticsServiceImpl implements StatisticsService {
 
 		List<Site> sitesList = sites.getSites();
 		for (Site site : sitesList) {
-			SiteEntity siteEntity = repositoryService.getSiteByUrl(site.getUrl());
+			SiteEntity siteEntity = siteRepository.findByUrl(site.getUrl());
 			if (siteEntity != null) {
-				int pages = repositoryService.countPagesFromSite(siteEntity);
-				int lemmas = repositoryService.countLemmasFromSite(siteEntity);
+				int pages = pageRepository.countBySiteEntity(siteEntity);
+				int lemmas = lemmaRepository.countBySiteEntity(siteEntity);
 				totalPages += pages;
 				totalLemmas += lemmas;
 

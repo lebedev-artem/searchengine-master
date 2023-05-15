@@ -1,4 +1,4 @@
-package searchengine.services.Impl;
+package searchengine.services.impl;
 
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
@@ -23,8 +23,7 @@ public class IndexingServiceImpl implements IndexingService {
 	private final SchemaActions schemaActions;
 	private final IndexingActions indexingActions;
 	private final IndexingResponse indexingResponse;
-	public static boolean pressedStop = false;
-	private static final ThreadLocal<Thread> SINGLE_TASK = new ThreadLocal<>();
+	private Thread SINGLE_TASK;
 
 	@Override
 	public ResponseEntity<IndexingResponse> indexingStart() {
@@ -37,9 +36,9 @@ public class IndexingServiceImpl implements IndexingService {
 		if (siteEntities.size() == 0)
 			return indexingResponse.startFailedEmptyQuery();
 
-		SINGLE_TASK.set(new Thread(() -> indexingActions.startFullIndexing(siteEntities), "0day-thread"));
+		SINGLE_TASK = new Thread(() -> indexingActions.startFullIndexing(siteEntities), "0day-thread");
 		isPartialIndexing = false;
-		SINGLE_TASK.get().start();
+		SINGLE_TASK.start();
 		return indexingResponse.successfully();
 	}
 
@@ -56,9 +55,9 @@ public class IndexingServiceImpl implements IndexingService {
 
 		SiteEntity siteEntity = schemaActions.partialInit(url);
 		if (siteEntity == null) return indexingResponse.indexPageFailed();
-		SINGLE_TASK.set(new Thread(() -> indexingActions.startPartialIndexing(siteEntity), "0day-thread"));
+		SINGLE_TASK = new Thread(() -> indexingActions.startPartialIndexing(siteEntity), "0day-thread");
 
-		SINGLE_TASK.get().start();
+		SINGLE_TASK.start();
 		isPartialIndexing = true;
 		return indexingResponse.successfully();
 	}
@@ -70,13 +69,13 @@ public class IndexingServiceImpl implements IndexingService {
 		if (!indexingActions.isIndexingActionsStarted())
 			return indexingResponse.stopFailed();
 
-		setPressedStop(true);
+		setEnabled(false);
 		indexingActions.setIndexingActionsStarted(false);
 
 		return indexingResponse.successfully();
 	}
 
-	public void setPressedStop(boolean value) {
-		pressedStop = value;
+	public void setEnabled(boolean value) {
+		indexingActions.setEnabled(value);
 	}
 }
