@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 
 ___
 
+## [1.4] - 2023-05-24
+
+### Added
+
+
+### Fixed
+
+-  Fixed methods of getting path to be able to parse sites like http://www.sitename.com/level1/
+
+### Changed
+
+- ID generation for entities changed to IDENTITY
+
+### Removed
+
+- Static boolean variable removed from services
+- RepositoryService removed
+- Class for PageEntity saving removed and went to FJP
+
+___
+
 ## [1.3] - 2023-05-08
 
 ### Added
