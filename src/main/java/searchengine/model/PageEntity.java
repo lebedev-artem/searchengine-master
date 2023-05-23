@@ -3,6 +3,7 @@ package searchengine.model;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Immutable;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
@@ -13,13 +14,14 @@ import java.util.Set;
 @Setter
 @Getter
 @Entity
+@Immutable
 @NoArgsConstructor
 @Table(name = "page", indexes = @Index(name = "path_siteId_index", columnList = "path, site_id", unique = true))
 public class PageEntity {
 
 	@Id
 	@Column(name = "id", nullable = false)
-	@GeneratedValue(strategy = GenerationType.SEQUENCE)
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer id;
 
 	@ManyToOne(fetch = FetchType.LAZY, targetEntity = SiteEntity.class, cascade = {CascadeType.MERGE, CascadeType.REFRESH}, optional = false)

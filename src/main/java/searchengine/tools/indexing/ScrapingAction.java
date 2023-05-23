@@ -14,13 +14,12 @@ import org.jsoup.safety.Safelist;
 import org.jsoup.select.Elements;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.core.env.Environment;
-import org.springframework.stereotype.Component;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
+import searchengine.repositories.PageRepository;
 import searchengine.tools.AcceptableContentTypes;
 
 import java.io.IOException;
-import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
@@ -34,13 +33,13 @@ import static searchengine.tools.StringPool.*;
 @Slf4j
 @Getter
 @Setter
-@Component
-@NoArgsConstructor
+@RequiredArgsConstructor
 public class ScrapingAction extends RecursiveAction {
 
 	public static volatile Boolean enabled = true;
-	private String siteUrl;
-	private String parentUrl;
+	public String homeUrl;
+	public String siteUrl;
+	private String currentUrl;
 	private Document document;
 	private String parentPath;
 	private SiteEntity siteEntity;
@@ -49,17 +48,20 @@ public class ScrapingAction extends RecursiveAction {
 	private Connection.Response jsoupResponse = null;
 	private BlockingQueue<PageEntity> outcomeQueue;
 	private Environment environment;
+	private final PageRepository pageRepository;
 	private final ReadWriteLock lock = new ReentrantReadWriteLock();
 	private static final AcceptableContentTypes ACCEPTABLE_CONTENT_TYPES = new AcceptableContentTypes();
 
-	public ScrapingAction(String parentUrl,
-						  @NotNull SiteEntity siteEntity,
-						  BlockingQueue<PageEntity> outcomeQueue, Environment environment) {
+	public ScrapingAction(String currentUrl,
+	                      @NotNull SiteEntity siteEntity,
+	                      BlockingQueue<PageEntity> outcomeQueue, Environment environment, PageRepository pageRepository, String homeUrl, String siteUrl) {
 		this.siteEntity = siteEntity;
 		this.outcomeQueue = outcomeQueue;
-		this.parentUrl = parentUrl;
+		this.currentUrl = currentUrl;
 		this.environment = environment;
-		this.siteUrl = IndexingActionsImpl.siteUrl;
+		this.pageRepository = pageRepository;
+		this.homeUrl = homeUrl;
+		this.siteUrl = siteUrl;
 	}
 
 	@Override
@@ -67,13 +69,13 @@ public class ScrapingAction extends RecursiveAction {
 		if (!enabled)
 			return;
 
-		jsoupResponse = getResponseFromUrl(parentUrl);
+		jsoupResponse = getResponseFromUrl(currentUrl);
 		if (jsoupResponse != null) {
-			spoolPageToQueue();
+			saveExtractedPage();
 
 			final Elements elements = document.select("a[href]");
 			if (!elements.isEmpty()) {
-				childLinksOfTask = getChildLinks(parentUrl, elements);
+				childLinksOfTask = getChildLinks(currentUrl, elements);
 			}
 
 			if (childLinksOfTask != null) forkAndJoinTasks();
@@ -129,7 +131,7 @@ public class ScrapingAction extends RecursiveAction {
 			jsoupResponse = Jsoup.connect(url).execute();
 			if (ACCEPTABLE_CONTENT_TYPES.contains(jsoupResponse.contentType())) {
 				document = jsoupResponse.parse();
-				parentPath = new URL(url).getPath();
+				parentPath = "/" + url.replace(homeUrl, "");
 				cleanHtmlContent();
 				pageEntity = new PageEntity(siteEntity, jsoupResponse.statusCode(), document.html(), parentPath);
 			} else
@@ -138,7 +140,7 @@ public class ScrapingAction extends RecursiveAction {
 			urlNotAvailableActions(url, exception);
 			return null;
 		}
-		if (Objects.equals(environment.getProperty("user-settings.logging-enable"), "true")){
+		if (Objects.equals(environment.getProperty("user-settings.logging-enable"), "true")) {
 			log.info("Response from " + url + " got successfully");
 		}
 
@@ -149,10 +151,9 @@ public class ScrapingAction extends RecursiveAction {
 		siteEntity.setLastError(exception.getMessage());
 		siteEntity.setStatusTime(LocalDateTime.now());
 		internPage404(url);
-		if (Objects.equals(environment.getProperty("user-settings.logging-enable"), "true")){
+		if (Objects.equals(environment.getProperty("user-settings.logging-enable"), "true")) {
 			log.error("Something went wrong 404. " + url + " Pages404 vault contains " + pages404.size() + " url");
 		}
-
 	}
 
 	private void cleanHtmlContent() {
@@ -166,21 +167,15 @@ public class ScrapingAction extends RecursiveAction {
 		}
 	}
 
-	private void spoolPageToQueue() {
-		try {
-			while (true) {
-				if (outcomeQueue.remainingCapacity() < 10 && enabled) {
-					sleep(20_000);
-				} else break;
-			}
+	private void saveExtractedPage() {
 			lock.readLock().lock();
-			if (!savedPaths.containsKey(parentPath))
-				outcomeQueue.put(pageEntity);
+			if (!savedPaths.containsKey(parentPath)){
+				pageRepository.save(pageEntity);
+				internSavedPath(pageEntity.getPath());
+				putPageEntityToOutcomeQueue();
+				writeLogAboutEachPage();
+			}
 			lock.readLock().unlock();
-
-		} catch (InterruptedException e) {
-			log.error("Cant drop page to queue");
-		}
 	}
 
 	private void forkAndJoinTasks() {
@@ -193,12 +188,11 @@ public class ScrapingAction extends RecursiveAction {
 			if (childIsValidToFork(childLink)
 					&& !pages404.containsKey(childLink)
 					&& !visitedLinks.containsKey(childLink)) {
-				ScrapingAction action = new ScrapingAction(childLink, siteEntity, outcomeQueue, environment);
+				ScrapingAction action = new ScrapingAction(childLink, siteEntity, outcomeQueue, environment, pageRepository, homeUrl, siteUrl);
 				action.fork();
 				subTasks.add(action);
 			}
 		}
-
 		for (ScrapingAction task : subTasks) task.join();
 	}
 
@@ -211,4 +205,23 @@ public class ScrapingAction extends RecursiveAction {
 		return (element != null) ? element.absUrl("href") : "";
 	}
 
+	private void writeLogAboutEachPage() {
+		if (Objects.equals(environment.getProperty("user-settings.logging-enable"), "true")) {
+			log.warn(pageEntity.getPath() + " saved");
+		}
+	}
+
+	private void putPageEntityToOutcomeQueue() {
+		try {
+			while (true) {
+				if (outcomeQueue.remainingCapacity() < 5 && enabled)
+					sleep(5_000);
+				else
+					break;
+			}
+			outcomeQueue.put(pageEntity);
+		} catch (InterruptedException ex) {
+			log.error("Can't put pageEntity to outcomeQueue");
+		}
+	}
 }

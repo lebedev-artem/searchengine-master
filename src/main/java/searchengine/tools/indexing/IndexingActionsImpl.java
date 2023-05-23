@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
+import searchengine.config.Site;
+import searchengine.config.SitesList;
 import searchengine.model.IndexingStatus;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
@@ -14,9 +16,8 @@ import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
-import searchengine.services.LemmasAndIndexCollectingService;
-import searchengine.services.PagesSavingService;
 import searchengine.tools.StringPool;
+import searchengine.tools.UrlFormatter;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -37,22 +38,19 @@ public class IndexingActionsImpl implements IndexingActions {
             "Ошибка индексации: главная страница сайта не доступна",
             "Ошибка индексации: сайт не доступен",
             ""};
-    public Boolean enabled = true;
-    public static String siteUrl;
-    public static String homeSiteUrl;
-    public static Boolean isPartialIndexing;
+
+    private Boolean enabled = true;
     private SiteEntity siteEntity;
-    private final PagesSavingService pagesSavingService;
-    private boolean indexingActionsStarted = false;
-    private final LemmasAndIndexCollectingService lemmasAndIndexCollectingService;
-    private BlockingQueue<PageEntity> queueOfPagesForSaving = new LinkedBlockingQueue<>(100);
-    private BlockingQueue<Integer> queueOfPagesForLemmasCollecting = new LinkedBlockingQueue<>(100_000);
+    private BlockingQueue<PageEntity> queueOfPagesForLemmasCollecting = new LinkedBlockingQueue<>(1_000);
     private ScrapingAction action;
+    private boolean indexingActionsStarted = false;
+    private final SitesList sitesList;
     private final Environment environment;
     private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
     private final SiteRepository siteRepository;
+    private final LemmasAndIndexCollectingService lemmasAndIndexCollectingService;
 
     @Override
     public void startFullIndexing(@NotNull Set<SiteEntity> siteEntities) {
@@ -68,31 +66,22 @@ public class IndexingActionsImpl implements IndexingActions {
                 break;
             }
 
-            CountDownLatch latch = new CountDownLatch(3);
+            CountDownLatch latch = new CountDownLatch(2);
             writeLogBeforeIndexing(siteEntity);
 
             Thread scrapingThread = new Thread(() -> crawlThreadBody(pool, siteEntity, latch), "crawl-thread");
-            Thread pagesSaverThread = new Thread(() -> pagesThreadBody(siteEntity, latch), "pages-thread");
             Thread lemmasCollectorThread = new Thread(() -> lemmasThreadBody(siteEntity, latch), "lemmas-thread");
 
             scrapingThread.start();
-            pagesSaverThread.start();
             lemmasCollectorThread.start();
 
             awaitLatch(latch);
             doActionsAfterIndexing(siteEntity);
 
         }
-        shutDownAction(pool);
+        pool.shutdownNow();
         writeLogAfterIndexing(start);
         setIndexingActionsStarted(false);
-    }
-
-    private void writeLogBeforeIndexing(@NotNull SiteEntity siteEntity) {
-        log.info(siteEntity.getName() + " with URL " + siteEntity.getUrl() + " started indexing");
-        log.info(pageRepository.count() + " pages, "
-                + lemmaRepository.count() + " lemmas, "
-                + indexRepository.count() + " indexes in table");
     }
 
     private void lemmasThreadBody(SiteEntity siteEntity, @NotNull CountDownLatch latch) {
@@ -101,17 +90,12 @@ public class IndexingActionsImpl implements IndexingActions {
         log.warn("lemmas-finding-thread finished, latch =  " + latch.getCount());
     }
 
-    private void pagesThreadBody(SiteEntity siteEntity, @NotNull CountDownLatch latch) {
-        pageSavingActions(siteEntity);
-        latch.countDown();
-        lemmasAndIndexCollectingService.setSavingPagesIsDone(true);
-        log.warn("saving-pages-thread finished, latch =  " + latch.getCount());
-    }
-
     private void crawlThreadBody(ForkJoinPool pool, SiteEntity siteEntity, @NotNull CountDownLatch latch) {
         scrapActions(pool, siteEntity);
         latch.countDown();
-        pagesSavingService.setScrapingIsDone(true);
+        lemmasAndIndexCollectingService.setScrapingIsDone(true);
+//        pagesSavingService.setScrapingIsDone(true);
+        log.info(pageRepository.countBySiteEntity(siteEntity) + " pages saved in DB");
         log.warn("crawl-thread finished, latch =  " + latch.getCount());
     }
 
@@ -121,28 +105,17 @@ public class IndexingActionsImpl implements IndexingActions {
         Set<SiteEntity> oneEntitySet = new HashSet<>();
         oneEntitySet.add(siteEntity);
         startFullIndexing(oneEntitySet);
-
     }
 
     private void lemmasCollectingActions(SiteEntity siteEntity) {
         lemmasAndIndexCollectingService.setIncomeQueue(queueOfPagesForLemmasCollecting);
-        lemmasAndIndexCollectingService.setSavingPagesIsDone(false);
+        lemmasAndIndexCollectingService.setScrapingIsDone(false);
         lemmasAndIndexCollectingService.setSiteEntity(siteEntity);
         lemmasAndIndexCollectingService.startCollecting();
     }
 
-    private void pageSavingActions(SiteEntity siteEntity) {
-        pagesSavingService.setOutcomeQueue(queueOfPagesForLemmasCollecting);
-        pagesSavingService.setIncomeQueue(queueOfPagesForSaving);
-        pagesSavingService.setScrapingIsDone(false);
-        pagesSavingService.setSiteEntity(siteEntity);
-        pagesSavingService.startSavingPages();
-
-    }
-
     private void scrapActions(@NotNull ForkJoinPool pool, @NotNull SiteEntity siteEntity) {
-        siteUrl = siteEntity.getUrl();
-        action = new ScrapingAction(siteEntity.getUrl(), siteEntity, queueOfPagesForSaving, environment);
+        action = new ScrapingAction(siteEntity.getUrl(), siteEntity, queueOfPagesForLemmasCollecting, environment, pageRepository, getHomeSiteUrl(siteEntity.getUrl()), siteEntity.getUrl());
         pool.invoke(action);
     }
 
@@ -154,15 +127,11 @@ public class IndexingActionsImpl implements IndexingActions {
         } catch (InterruptedException e) {
             log.error("I don't want to sleep");
         } finally {
-            shutDownAction(pool);
+            pool.shutdownNow();
             setEnabled(true);
             setIndexingActionsStarted(false);
 
         }
-        lemmaRepository.flush();
-        pageRepository.flush();
-        indexRepository.flush();
-        siteRepository.flush();
     }
 
     @Override
@@ -174,12 +143,7 @@ public class IndexingActionsImpl implements IndexingActions {
     public void setEnabled(boolean value) {
         enabled = value;
         lemmasAndIndexCollectingService.setEnabled(value);
-        pagesSavingService.setEnabled(value);
-        ScrapingAction.enabled = false;
-    }
-
-    private void shutDownAction(@NotNull ForkJoinPool pool) {
-        pool.shutdownNow();
+        ScrapingAction.enabled = value;
     }
 
     private void doActionsAfterIndexing(@NotNull SiteEntity siteEntity) {
@@ -198,17 +162,31 @@ public class IndexingActionsImpl implements IndexingActions {
             }
         }
         if (enabled) {
-            log.warn("Status of site " + siteEntity.getName() + " set to " + siteEntity.getStatus().toString() + ", error set to " + siteEntity.getLastError());
+            log.warn("Status of site " + siteEntity.getName()
+                    + " set to " + siteEntity.getStatus().toString()
+                    + ", error set to " + siteEntity.getLastError());
         } else {
             siteEntity.setLastError("Индексация остановлена пользователем");
             siteEntity.setStatus(IndexingStatus.FAILED);
-            log.warn("Status of site " + siteEntity.getName() + " set to " + siteEntity.getStatus().toString() + ", error set to " + siteEntity.getLastError());
+            log.warn("Status of site " + siteEntity.getName()
+                    + " set to " + siteEntity.getStatus().toString()
+                    + ", error set to " + siteEntity.getLastError());
         }
-        if (isPartialIndexing) {
-            siteEntity.setUrl(homeSiteUrl);
-        }
+
+        siteEntity.setUrl(getHomeSiteUrl(siteEntity.getUrl()));
         siteRepository.save(siteEntity);
         StringPool.clearAll();
+    }
+
+    private String getHomeSiteUrl(String url){
+        String result = null;
+        for (Site s: sitesList.getSites()) {
+            if (s.getUrl().startsWith(UrlFormatter.getShortUrl(url))){
+                result = s.getUrl();
+                break;
+            }
+        }
+        return result;
     }
 
     private void writeLogAfterIndexing(long start) {
@@ -220,11 +198,18 @@ public class IndexingActionsImpl implements IndexingActions {
         log.info("FINISHED. I'm ready to start again and again");
     }
 
-    private static void awaitLatch(@NotNull CountDownLatch latch) {
+    private void awaitLatch(@NotNull CountDownLatch latch) {
         try {
             latch.await();
         } catch (InterruptedException e) {
             log.error("Can't await latch");
         }
+    }
+
+    private void writeLogBeforeIndexing(@NotNull SiteEntity siteEntity) {
+        log.info(siteEntity.getName() + " with URL " + siteEntity.getUrl() + " started indexing");
+        log.info(pageRepository.count() + " pages, "
+                + lemmaRepository.count() + " lemmas, "
+                + indexRepository.count() + " indexes in table");
     }
 }

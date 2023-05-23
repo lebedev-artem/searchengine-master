@@ -15,13 +15,12 @@ import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
+import searchengine.tools.UrlFormatter;
 
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.*;
-
-import static searchengine.tools.indexing.IndexingActionsImpl.*;
 
 @Slf4j
 @Getter
@@ -106,7 +105,7 @@ public class SchemaActions {
 	}
 
 	public SiteEntity partialInit(String url) {
-		String path = getPath(url);
+		String path = "/" + url.replace(getHomeSiteUrl(url), "");
 		String hostName = url.substring(0, url.lastIndexOf(path) + 1);
 		Site site = findSiteInConfig(hostName);
 		SiteEntity siteEntity;
@@ -124,12 +123,21 @@ public class SchemaActions {
 
 			decreaseLemmasFreqByPage(pageEntities);
 		}
-		homeSiteUrl = siteEntity.getUrl();
 		siteEntity.setUrl(url);
 		log.info(siteEntity.getUrl() + " will be indexing now");
 		return siteEntity;
 	}
 
+	private String getHomeSiteUrl(String url){
+		String result = null;
+		for (Site s: sitesList.getSites()) {
+			if (s.getUrl().startsWith(UrlFormatter.getShortUrl(url))){
+				result = s.getUrl();
+				break;
+			}
+		}
+		return result;
+	}
 	@Nullable
 	private SiteEntity checkExistingSite(Site site) {
 		SiteEntity siteEntity;

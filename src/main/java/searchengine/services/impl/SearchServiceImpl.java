@@ -33,13 +33,13 @@ import static searchengine.tools.UrlFormatter.getShortUrl;
 @RequiredArgsConstructor
 public class SearchServiceImpl implements SearchService {
 
-	public static final double RATIO = 1.80;
 	private Integer totalPagesCount = 0;
 	private String rarestLemma = null;
+	private Map<String, LemmaEntity> nextStepLemmas = new HashMap<>();
+	public final double RATIO = 1.80;
 	private final LemmaFinder lemmaFinder;
 	private final SnippetGenerator snippetGenerator;
 	private final Environment environment;
-	private Map<String, LemmaEntity> nextStepLemmas = new HashMap<>();
 	private final Map<PageEntity, Float> returnPagesWithRelevance = new HashMap<>();
 	private final PageRepository pageRepository;
 	private final SiteRepository siteRepository;
@@ -147,7 +147,7 @@ public class SearchServiceImpl implements SearchService {
 	private List<PageEntity> getPagesByRarestLemma(SiteEntity site, Map<String, LemmaEntity> retrievedLemmas) {
 		int totalFreq = getTotalFrequency(retrievedLemmas);
 		double ratio = 1;
-		if (Objects.equals(environment.getProperty("user-settings.delete-most-frequently-lemmas"), "true")){
+		if (Objects.equals(environment.getProperty("user-settings.exclude-most-frequently-lemmas"), "true")){
 			ratio = RATIO;
 		}
 		float thresholdFreq = (float) ((totalFreq / retrievedLemmas.size()) * ratio);

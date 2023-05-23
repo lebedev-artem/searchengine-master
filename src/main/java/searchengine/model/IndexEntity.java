@@ -12,9 +12,9 @@ import javax.persistence.*;
 @Table(name = "search_index")
 public class IndexEntity {
 
-	@javax.persistence.Id
+	@Id
 	@Column(nullable = false)
-	@GeneratedValue(strategy = GenerationType.SEQUENCE)
+	@GeneratedValue(strategy = GenerationType.AUTO)
 	private Integer id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)

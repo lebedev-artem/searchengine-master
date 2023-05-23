@@ -19,8 +19,9 @@ public class LemmaEntity {
 
 	@Id
 	@Column(nullable = false)
-	@GeneratedValue(strategy = GenerationType.SEQUENCE)
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer id;
+
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(foreignKey = @ForeignKey(name = "lemma_site_FK"), columnDefinition = "Integer",
 			referencedColumnName = "id", name = "site_id", nullable = false, updatable = false)

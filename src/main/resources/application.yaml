@@ -61,7 +61,7 @@ indexing-settings:
 #    - url: https://www.artlebedev.ru/
 #      name: artlebedev.ru
     - url: https://www.svetlovka.ru/
-      name: Svetlovka
+      name: Светловка
 #    - url: https://www.tretyakovgallery.ru/
 #      name: Третьяковская галерея
 #    - url: https://gallery.tverreg.ru/
@@ -70,8 +70,8 @@ indexing-settings:
       name: Исторический музей
 #    - url: https://www.artlebedev.ru/technogrette/
 #      name: Студия Лебедева. Техногрет
-#    - url: https://www.artlebedev.ru/kovodstvo/sections/
-#      name: Студия Лебедева. Ководство
+    - url: https://www.artlebedev.ru/kovodstvo/sections/
+      name: Студия Лебедева. Ководство
     - url: https://nopaper.ru/
       name: Нет Бумаге!
     - url: https://mydiscoveries.ru/
@@ -88,6 +88,6 @@ indexing-settings:
 user-settings:
   clear-site-if-not-exists: true
   delete-next-level-pages: true
-  delete-most-frequently-lemmas: true
+  exclude-most-frequently-lemmas: true
   return-zero-pages-if-not-all-lemmas-found: true
   logging-enable: false

@@ -22,7 +22,7 @@ public class SnippetGenerator {
 	private List<String> queryWords;
 	private final LemmaFinder lemmaFinder;
 	private final Integer SNIPPET_LENGTH = 100;
-	private final Integer MAX_FULL_SNIPPET_LENGTH = 1000;
+	private final Integer MAX_FULL_SNIPPET_LENGTH = 500;
 
 	public void setText(String text) {
 		this.text = Jsoup
@@ -182,6 +182,7 @@ public class SnippetGenerator {
 //				.sorted(Map.Entry.comparingByValue())
 //				.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
 //						(oldValue, newValue) -> oldValue, LinkedHashMap::new));
+
 		//Reverse order
 		return resultMap.entrySet()
 				.stream()
