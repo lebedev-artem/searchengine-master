@@ -10,12 +10,12 @@ import searchengine.dto.statistics.DetailedStatisticsItem;
 import searchengine.dto.statistics.StatisticsData;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.TotalStatistics;
+import searchengine.model.IndexingStatus;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
 import searchengine.services.StatisticsService;
-import searchengine.tools.indexing.IndexingActions;
 
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -28,7 +28,6 @@ import java.util.List;
 public class StatisticsServiceImpl implements StatisticsService {
 
 	private final SitesList sites;
-	private final IndexingActions indexingActions;
 	private final SiteRepository siteRepository;
 	private final PageRepository pageRepository;
 	private final LemmaRepository lemmaRepository;
@@ -55,33 +54,33 @@ public class StatisticsServiceImpl implements StatisticsService {
 			}
 		}
 
-        TotalStatistics total = getTotalStatistics(totalPages, totalLemmas);
-        StatisticsData data = getStatisticsData(detailed, total);
+		TotalStatistics total = getTotalStatistics(totalPages, totalLemmas);
+		StatisticsData data = getStatisticsData(detailed, total);
 
-        return getResponse(data);
+		return getResponse(data);
 	}
 
-    private static StatisticsResponse getResponse(StatisticsData data) {
-        return StatisticsResponse.builder()
-                .statistics(data)
-                .result(true).build();
-    }
+	private static StatisticsResponse getResponse(StatisticsData data) {
+		return StatisticsResponse.builder()
+				.statistics(data)
+				.result(true).build();
+	}
 
-    private static StatisticsData getStatisticsData(List<DetailedStatisticsItem> detailed, TotalStatistics total) {
-        return StatisticsData.builder()
-                .total(total)
-                .detailed(detailed).build();
-    }
+	private static StatisticsData getStatisticsData(List<DetailedStatisticsItem> detailed, TotalStatistics total) {
+		return StatisticsData.builder()
+				.total(total)
+				.detailed(detailed).build();
+	}
 
-    private TotalStatistics getTotalStatistics(int totalPages, int totalLemmas) {
-        return TotalStatistics.builder()
-                .sites(sites.getSites().size())
-                .indexing(indexingActions.isIndexingActionsStarted())
-                .lemmas(totalLemmas)
-                .pages(totalPages).build();
-    }
+	private TotalStatistics getTotalStatistics(int totalPages, int totalLemmas) {
+		return TotalStatistics.builder()
+				.sites(sites.getSites().size())
+				.indexing(getIsIndexingStarted())
+				.lemmas(totalLemmas)
+				.pages(totalPages).build();
+	}
 
-    private @NotNull DetailedStatisticsItem getDetailedStatisticsItem(@NotNull Site site, int pages, int lemmas, @NotNull SiteEntity siteEntity) {
+	private @NotNull DetailedStatisticsItem getDetailedStatisticsItem(@NotNull Site site, int pages, int lemmas, @NotNull SiteEntity siteEntity) {
 
 		return DetailedStatisticsItem.builder()
 				.name(site.getName())
@@ -91,5 +90,16 @@ public class StatisticsServiceImpl implements StatisticsService {
 				.status(siteEntity.getStatus().toString())
 				.error(siteEntity.getLastError())
 				.statusTime(Date.from(siteEntity.getStatusTime().atZone(ZoneId.systemDefault()).toInstant())).build();
+	}
+
+	private Boolean getIsIndexingStarted() {
+		List<SiteEntity> sites = siteRepository.findAll();
+
+		for (SiteEntity s : sites) {
+			if (s.getStatus() == IndexingStatus.INDEXING) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

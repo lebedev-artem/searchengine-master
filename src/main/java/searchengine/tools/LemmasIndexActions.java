@@ -1,29 +1,27 @@
-package searchengine.tools.indexing;
+package searchengine.tools;
 
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
-import org.springframework.stereotype.Service;
 import searchengine.model.*;
 import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
-import searchengine.tools.LemmaFinder;
 
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
+
 import static java.lang.Thread.sleep;
 
 @Slf4j
 @Getter
 @Setter
 @RequiredArgsConstructor
-public class LemmasIndexCollector {
+public class LemmasIndexActions {
 
 	private Boolean enabled = true;
 	private Integer countPages = 0;
@@ -31,7 +29,7 @@ public class LemmasIndexCollector {
 	private Integer countIndexes = 0;
 	private SiteEntity siteEntity;
 	private IndexEntity indexEntity;
-	private boolean scrapingIsDone = false;
+	private boolean crawlingIsDone = false;
 	private BlockingQueue<PageEntity> incomeQueue;
 	private Set<IndexEntity> indexEntities = new HashSet<>();
 	private Map<String, Integer> collectedLemmas = new HashMap<>();
@@ -109,7 +107,7 @@ public class LemmasIndexCollector {
 	}
 
 	public Boolean allowed() {
-		return !scrapingIsDone | incomeQueue.iterator().hasNext();
+		return !crawlingIsDone | incomeQueue.iterator().hasNext();
 	}
 
 

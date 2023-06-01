@@ -1,4 +1,4 @@
-package searchengine.tools.indexing;
+package searchengine.tools;
 
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +17,6 @@ import org.springframework.core.env.Environment;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.PageRepository;
-import searchengine.tools.AcceptableContentTypes;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -34,7 +33,7 @@ import static searchengine.tools.StringPool.*;
 @Getter
 @Setter
 @RequiredArgsConstructor
-public class ScrapingAction extends RecursiveAction {
+public class CrawlAction extends RecursiveAction {
 
 	public static volatile Boolean enabled = true;
 	public String homeUrl;
@@ -52,9 +51,9 @@ public class ScrapingAction extends RecursiveAction {
 	private final ReadWriteLock lock = new ReentrantReadWriteLock();
 	private static final AcceptableContentTypes ACCEPTABLE_CONTENT_TYPES = new AcceptableContentTypes();
 
-	public ScrapingAction(String currentUrl,
-	                      @NotNull SiteEntity siteEntity,
-	                      BlockingQueue<PageEntity> outcomeQueue, Environment environment, PageRepository pageRepository, String homeUrl, String siteUrl) {
+	public CrawlAction(String currentUrl,
+	                   @NotNull SiteEntity siteEntity,
+	                   BlockingQueue<PageEntity> outcomeQueue, Environment environment, PageRepository pageRepository, String homeUrl, String siteUrl) {
 		this.siteEntity = siteEntity;
 		this.outcomeQueue = outcomeQueue;
 		this.currentUrl = currentUrl;
@@ -168,32 +167,32 @@ public class ScrapingAction extends RecursiveAction {
 	}
 
 	private void saveExtractedPage() {
-			lock.readLock().lock();
-			if (!savedPaths.containsKey(parentPath)){
-				pageRepository.save(pageEntity);
-				internSavedPath(pageEntity.getPath());
-				putPageEntityToOutcomeQueue();
-				writeLogAboutEachPage();
-			}
-			lock.readLock().unlock();
+		lock.readLock().lock();
+		if (!savedPaths.containsKey(parentPath)) {
+			pageRepository.save(pageEntity);
+			internSavedPath(pageEntity.getPath());
+			putPageEntityToOutcomeQueue();
+			writeLogAboutEachPage();
+		}
+		lock.readLock().unlock();
 	}
 
 	private void forkAndJoinTasks() {
 		if (!enabled)
 			return;
 
-		List<ScrapingAction> subTasks = new LinkedList<>();
+		List<CrawlAction> subTasks = new LinkedList<>();
 
 		for (String childLink : childLinksOfTask) {
 			if (childIsValidToFork(childLink)
 					&& !pages404.containsKey(childLink)
 					&& !visitedLinks.containsKey(childLink)) {
-				ScrapingAction action = new ScrapingAction(childLink, siteEntity, outcomeQueue, environment, pageRepository, homeUrl, siteUrl);
+				CrawlAction action = new CrawlAction(childLink, siteEntity, outcomeQueue, environment, pageRepository, homeUrl, siteUrl);
 				action.fork();
 				subTasks.add(action);
 			}
 		}
-		for (ScrapingAction task : subTasks) task.join();
+		for (CrawlAction task : subTasks) task.join();
 	}
 
 	private boolean childIsValidToFork(@NotNull String subLink) {

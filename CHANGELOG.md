@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 
 ___
 
+## [1.4] - 2023-06-02
+
+### Added
+
+### Fixed
+
+### Removed
+
+- IndexingActions class removed. All methods moved to IndexingService
+
+### Changed
+
+- LemmaIndexCollector not @Service now
+- ScrapAction renamed to CrawlAction
+
+___
+
 ## [1.4] - 2023-05-24
 
 ### Added

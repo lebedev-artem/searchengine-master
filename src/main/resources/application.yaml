@@ -78,10 +78,10 @@ indexing-settings:
 #      name: Новые открытия каждый день
 #    - url: https://opisanie-kartin.com/
 #      name: Описание картин
-    - url: http://cimus.biz/
-      name: Цимус
-#    - url: https://dombulgakova.ru/
-#      name: Home of Bulgakov
+#    - url: http://cimus.biz/
+#      name: Цимус
+    - url: https://dombulgakova.ru/
+      name: Home of Bulgakov
 #    - url: https://nikoartgallery.com/
 #      name: Niko Gallery
 

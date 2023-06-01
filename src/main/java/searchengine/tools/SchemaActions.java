@@ -1,4 +1,4 @@
-package searchengine.tools.indexing;
+package searchengine.tools;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -15,10 +15,6 @@ import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
-import searchengine.tools.UrlFormatter;
-
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -26,7 +22,6 @@ import java.util.*;
 @Getter
 @Setter
 @RequiredArgsConstructor
-@Component
 public class SchemaActions {
 
 	private final SitesList sitesList;
@@ -35,6 +30,7 @@ public class SchemaActions {
 	private final PageRepository pageRepository;
 	private final LemmaRepository lemmaRepository;
 	private final IndexRepository indexRepository;
+	private final UrlFormatter urlFormatter = new UrlFormatter();
 
 
 	public @NotNull Set<SiteEntity> fullInit() {
@@ -104,8 +100,9 @@ public class SchemaActions {
 		}
 	}
 
-	public SiteEntity partialInit(String url) {
-		String path = "/" + url.replace(getHomeSiteUrl(url), "");
+	public SiteEntity partialInit(@NotNull String url) {
+		urlFormatter.setSitesList(sitesList);
+		String path = "/" + url.replace(urlFormatter.getHomeSiteUrl(url), "");
 		String hostName = url.substring(0, url.lastIndexOf(path) + 1);
 		Site site = findSiteInConfig(hostName);
 		SiteEntity siteEntity;
@@ -128,16 +125,6 @@ public class SchemaActions {
 		return siteEntity;
 	}
 
-	private String getHomeSiteUrl(String url){
-		String result = null;
-		for (Site s: sitesList.getSites()) {
-			if (s.getUrl().startsWith(UrlFormatter.getShortUrl(url))){
-				result = s.getUrl();
-				break;
-			}
-		}
-		return result;
-	}
 	@Nullable
 	private SiteEntity checkExistingSite(Site site) {
 		SiteEntity siteEntity;
@@ -171,16 +158,6 @@ public class SchemaActions {
 			}
 		}
 		return null;
-	}
-
-	private String getPath(String url) {
-		String path = "";
-		try {
-			path = new URL(url).getPath();
-		} catch (MalformedURLException e) {
-			log.error("Can't get path or hostname from requested url");
-		}
-		return path;
 	}
 
 	private @NotNull SiteEntity initSiteRow(@NotNull Site site) {
