@@ -1,6 +1,7 @@
 package searchengine.tools.indexing;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -21,9 +22,8 @@ import static java.lang.Thread.sleep;
 @Slf4j
 @Getter
 @Setter
-@Service
 @RequiredArgsConstructor
-public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollectingService {
+public class LemmasIndexCollector {
 
 	private Boolean enabled = true;
 	private Integer countPages = 0;
@@ -112,7 +112,7 @@ public class LemmasAndIndexCollectingServiceImpl implements LemmasAndIndexCollec
 		return !scrapingIsDone | incomeQueue.iterator().hasNext();
 	}
 
-	@Override
+
 	public void setEnabled(boolean value) {
 		enabled = value;
 	}

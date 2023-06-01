@@ -98,9 +98,9 @@ public class SnippetGenerator {
 		List<Integer> sortedPositions = new ArrayList<>(dirtyForms.keySet());
 		Collections.sort(sortedPositions);
 
-		Map<String, Integer> markedSnipped = cuttingSnippetFromText(dirtyForms, sortedPositions);
+		Map<String, Integer> snippets = cuttingSnippetFromText(dirtyForms, sortedPositions);
 
-		Map<String, Integer> resultBoldedList = boldText(markedSnipped, new ArrayList<>(dirtyForms.values()));
+		Map<String, Integer> resultBoldedList = boldText(snippets, new ArrayList<>(dirtyForms.values()));
 		StringBuilder sb = getResultSnippet(resultBoldedList);
 
 		return sb.toString();
@@ -109,7 +109,7 @@ public class SnippetGenerator {
 	@NotNull
 	private Map<String, Integer> cuttingSnippetFromText(Map<Integer, String> dirtyForms, @NotNull List<Integer> sortedPositions) {
 		String prevSnippet = "";
-		Map<String, Integer> markedSnipped = new HashMap<>();
+		Map<String, Integer> snippets = new HashMap<>();
 		int totalLength = 0;
 		int prevPos = -1;
 		int start = -1;
@@ -121,7 +121,7 @@ public class SnippetGenerator {
 				int gap = pos - prevPos - dirtyForms.get(prevPos).length();
 				if (gap > SNIPPET_LENGTH) {
 					start = getLastDotPositionInText(pos);
-					markedSnipped.put(prevSnippet, 0);
+					snippets.put(prevSnippet, 0);
 				}
 			}
 
@@ -136,9 +136,9 @@ public class SnippetGenerator {
 		}
 
 		if (!prevSnippet.isEmpty()) {
-			markedSnipped.put(prevSnippet, 0);
+			snippets.put(prevSnippet, 0);
 		}
-		return markedSnipped;
+		return snippets;
 	}
 
 	private @NotNull StringBuilder getResultSnippet(@NotNull Map<String, Integer> resultBoldedList) {

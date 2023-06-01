@@ -16,6 +16,7 @@ import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
+import searchengine.tools.LemmaFinder;
 import searchengine.tools.StringPool;
 import searchengine.tools.UrlFormatter;
 
@@ -43,6 +44,7 @@ public class IndexingActionsImpl implements IndexingActions {
     private SiteEntity siteEntity;
     private BlockingQueue<PageEntity> queueOfPagesForLemmasCollecting = new LinkedBlockingQueue<>(1_000);
     private ScrapingAction action;
+    private LemmasIndexCollector lemmasIndexCollector;
     private boolean indexingActionsStarted = false;
     private final SitesList sitesList;
     private final Environment environment;
@@ -50,7 +52,7 @@ public class IndexingActionsImpl implements IndexingActions {
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
     private final SiteRepository siteRepository;
-    private final LemmasAndIndexCollectingService lemmasAndIndexCollectingService;
+    private final LemmaFinder lemmaFinder;
 
     @Override
     public void startFullIndexing(@NotNull Set<SiteEntity> siteEntities) {
@@ -85,6 +87,7 @@ public class IndexingActionsImpl implements IndexingActions {
     }
 
     private void lemmasThreadBody(SiteEntity siteEntity, @NotNull CountDownLatch latch) {
+       lemmasIndexCollector = new LemmasIndexCollector(lemmaFinder, pageRepository, indexRepository, lemmaRepository);
         lemmasCollectingActions(siteEntity);
         latch.countDown();
         log.warn("lemmas-finding-thread finished, latch =  " + latch.getCount());
@@ -93,7 +96,7 @@ public class IndexingActionsImpl implements IndexingActions {
     private void crawlThreadBody(ForkJoinPool pool, SiteEntity siteEntity, @NotNull CountDownLatch latch) {
         scrapActions(pool, siteEntity);
         latch.countDown();
-        lemmasAndIndexCollectingService.setScrapingIsDone(true);
+        lemmasIndexCollector.setScrapingIsDone(true);
 //        pagesSavingService.setScrapingIsDone(true);
         log.info(pageRepository.countBySiteEntity(siteEntity) + " pages saved in DB");
         log.warn("crawl-thread finished, latch =  " + latch.getCount());
@@ -108,14 +111,20 @@ public class IndexingActionsImpl implements IndexingActions {
     }
 
     private void lemmasCollectingActions(SiteEntity siteEntity) {
-        lemmasAndIndexCollectingService.setIncomeQueue(queueOfPagesForLemmasCollecting);
-        lemmasAndIndexCollectingService.setScrapingIsDone(false);
-        lemmasAndIndexCollectingService.setSiteEntity(siteEntity);
-        lemmasAndIndexCollectingService.startCollecting();
+        lemmasIndexCollector.setIncomeQueue(queueOfPagesForLemmasCollecting);
+        lemmasIndexCollector.setScrapingIsDone(false);
+        lemmasIndexCollector.setSiteEntity(siteEntity);
+        lemmasIndexCollector.startCollecting();
     }
 
     private void scrapActions(@NotNull ForkJoinPool pool, @NotNull SiteEntity siteEntity) {
-        action = new ScrapingAction(siteEntity.getUrl(), siteEntity, queueOfPagesForLemmasCollecting, environment, pageRepository, getHomeSiteUrl(siteEntity.getUrl()), siteEntity.getUrl());
+        action = new ScrapingAction(
+                siteEntity.getUrl(),
+                siteEntity,
+                queueOfPagesForLemmasCollecting,
+                environment, pageRepository,
+                getHomeSiteUrl(siteEntity.getUrl()),
+                siteEntity.getUrl());
         pool.invoke(action);
     }
 
@@ -142,7 +151,7 @@ public class IndexingActionsImpl implements IndexingActions {
     @Override
     public void setEnabled(boolean value) {
         enabled = value;
-        lemmasAndIndexCollectingService.setEnabled(value);
+        lemmasIndexCollector.setEnabled(value);
         ScrapingAction.enabled = value;
     }
 
