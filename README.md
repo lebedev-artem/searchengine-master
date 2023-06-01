@@ -94,7 +94,7 @@
 + Скачать базу данных, прикрепленную ниже, и восстановить.
 + скомпилировать илбо скачать ниже JAR файл
 + запустить его в консоли (Windows)
-`java -jar SearchEngine-1.0-SNAPSHOT.jar`
+`java -jar SearchEngine-1.5-SNAPSHOT.jar`
 
 ---
 ## Отдельная опция проекта - индексация отдельной страницы
@@ -111,7 +111,7 @@
 
 
 __Скомпилированный JAR__
-[SearchEngine-1.2-SNAPSHOT.jar](https://drive.google.com/file/d/1MTR8foSMbJh4suTfZy9wR_iL3kzCrWyb/view?usp=share_link)
+[SearchEngine-1.5-SNAPSHOT.jar](https://drive.google.com/file/d/1DPH2-7ofMUqEWN7rjW07rIMoOJyVgmsu/view?usp=sharing)
 
 __Наполненная тестовая MySQL база__ [Dump20230419.sql](https://drive.google.com/file/d/1Kf-k1OFsV_zgneCPj2pz8e7lmzNwoRL4/view?usp=share_link)
 
