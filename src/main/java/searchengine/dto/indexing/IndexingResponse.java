@@ -30,7 +30,7 @@ public class IndexingResponse {
 				new IndexingResponse(
 						false,
 						"Индексация уже запущена"),
-				HttpStatus.BAD_REQUEST);
+				HttpStatus.OK);
 	}
 
 	public ResponseEntity<IndexingResponse> stopFailed() {
@@ -38,7 +38,7 @@ public class IndexingResponse {
 				new IndexingResponse(
 						false,
 						"Индексация не запущена"),
-				HttpStatus.BAD_REQUEST);
+				HttpStatus.OK);
 	}
 
 	public ResponseEntity<IndexingResponse> startFailedEmptyQuery() {
@@ -46,7 +46,7 @@ public class IndexingResponse {
 				new IndexingResponse(
 						false,
 						"Индексацию запустить не удалось. Пустой поисковый запрос или список сайтов"),
-				HttpStatus.BAD_REQUEST);
+				HttpStatus.OK);
 	}
 
 	public ResponseEntity<IndexingResponse> indexPageFailed() {
@@ -54,6 +54,6 @@ public class IndexingResponse {
 				new IndexingResponse(false,
 						"Данная страница находится за пределами сайтов, " +
 								"указанных в конфигурационном файле"),
-				HttpStatus.NOT_FOUND);
+				HttpStatus.OK);
 	}
 }

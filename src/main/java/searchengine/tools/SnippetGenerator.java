@@ -21,8 +21,10 @@ public class SnippetGenerator {
 	private String text;
 	private List<String> queryWords;
 	private final LemmaFinder lemmaFinder;
-	private final Integer SNIPPET_LENGTH = 100;
-	private final Integer MAX_FULL_SNIPPET_LENGTH = 500;
+	private final Integer SNIPPET_LENGTH = 90;
+	private final Integer MAX_PIECES_SNIPPET_LENGTH = 900;
+	private final Integer MAX_FULL_SNIPPET_LENGTH = 250;
+
 
 	public void setText(String text) {
 		this.text = Jsoup
@@ -129,7 +131,7 @@ public class SnippetGenerator {
 			prevSnippet = text.substring(start, end);
 			totalLength = totalLength + prevSnippet.length();
 
-			if (totalLength >= MAX_FULL_SNIPPET_LENGTH) {
+			if (totalLength >= MAX_PIECES_SNIPPET_LENGTH) {
 				break;
 			}
 			prevPos = pos;
@@ -144,7 +146,7 @@ public class SnippetGenerator {
 	private @NotNull StringBuilder getResultSnippet(@NotNull Map<String, Integer> resultBoldedList) {
 		StringBuilder sb = new StringBuilder();
 		for (String s : resultBoldedList.keySet()) {
-			sb.append("&#8195").append(s).append(" . . .").append("<br><br>");
+			sb.append("&nbsp".repeat(6)).append(s).append("   ...").append("<br>");
 			if (sb.length() >= MAX_FULL_SNIPPET_LENGTH) {
 				break;
 			}

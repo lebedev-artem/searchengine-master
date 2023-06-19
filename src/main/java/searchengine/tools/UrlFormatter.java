@@ -18,8 +18,12 @@ public class UrlFormatter {
 		return index;
 	}
 
-	public static @NotNull String getShortUrl(String url) {
-		return url.substring(0, findNthOccurrence(url, '/', 3) + 1);
+	public static @NotNull String getShortUrl(@NotNull String url) {
+		String result = url.substring(0, findNthOccurrence(url, '/', 3) + 1);
+		if (!result.equals("")){
+			return result;
+		}
+		return url;
 	}
 
 	public String getHomeSiteUrl(String url){

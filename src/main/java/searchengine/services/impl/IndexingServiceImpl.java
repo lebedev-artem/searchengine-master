@@ -77,6 +77,7 @@ public class IndexingServiceImpl implements IndexingService {
 
 	@Override
 	public ResponseEntity<IndexingResponse> indexingPageStart(String url) {
+		urlFormatter.setSitesList(sitesList);
 		log.warn("Mapping /indexPage executed");
 		schemaActions = new SchemaActions(sitesList, environment, siteRepository, pageRepository, lemmaRepository, indexRepository);
 
@@ -85,6 +86,10 @@ public class IndexingServiceImpl implements IndexingService {
 
 		if (url == null || url.equals(""))
 			return indexingResponse.startFailedEmptyQuery();
+
+		if (urlFormatter.getHomeSiteUrl(url) == null){
+			return indexingResponse.indexPageFailed();
+		}
 
 		SiteEntity siteEntity = schemaActions.partialInit(url);
 		if (siteEntity == null) return indexingResponse.indexPageFailed();

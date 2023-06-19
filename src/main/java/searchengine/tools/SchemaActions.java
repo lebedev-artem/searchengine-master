@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.core.env.Environment;
-import org.springframework.stereotype.Component;
+
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.model.*;

@@ -92,7 +92,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 				.statusTime(Date.from(siteEntity.getStatusTime().atZone(ZoneId.systemDefault()).toInstant())).build();
 	}
 
-	private Boolean getIsIndexingStarted() {
+	private @NotNull Boolean getIsIndexingStarted() {
 		List<SiteEntity> sites = siteRepository.findAll();
 
 		for (SiteEntity s : sites) {
