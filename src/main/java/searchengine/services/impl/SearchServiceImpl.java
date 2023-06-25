@@ -70,7 +70,6 @@ public class SearchServiceImpl implements SearchService {
 		return getResponse(totalData);
 	}
 
-	@NotNull
 	private List<SearchData> getTotalData(Set<String> queryLemmas, @NotNull Map<PageEntity, Float> subsetMap) {
 		List<SearchData> totalData = new ArrayList<>();
 

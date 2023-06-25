@@ -62,12 +62,14 @@ public class IndexingServiceImpl implements IndexingService {
 	public ResponseEntity<IndexingResponse> indexingStart() {
 		log.warn("Mapping /startIndexing executed");
 		schemaActions = new SchemaActions(sitesList, environment, siteRepository, pageRepository, lemmaRepository, indexRepository);
-		if (isIndexingStarted())
+		if (isIndexingStarted()) {
 			return indexingResponse.startFailed();
+		}
 
 		Set<SiteEntity> siteEntities = schemaActions.fullInit();
-		if (siteEntities.size() == 0)
+		if (siteEntities.size() == 0) {
 			return indexingResponse.startFailedEmptyQuery();
+		}
 
 		SINGLE_TASK = new Thread(() -> startFullIndexing(siteEntities), "0day-thread");
 		SINGLE_TASK.start();
@@ -81,18 +83,22 @@ public class IndexingServiceImpl implements IndexingService {
 		log.warn("Mapping /indexPage executed");
 		schemaActions = new SchemaActions(sitesList, environment, siteRepository, pageRepository, lemmaRepository, indexRepository);
 
-		if (isIndexingStarted())
+		if (isIndexingStarted()) {
 			return indexingResponse.startFailed();
+		}
 
-		if (url == null || url.equals(""))
+		if (url == null || url.equals("")) {
 			return indexingResponse.startFailedEmptyQuery();
+		}
 
-		if (urlFormatter.getHomeSiteUrl(url) == null){
+		if (urlFormatter.getHomeSiteUrl(url) == null) {
 			return indexingResponse.indexPageFailed();
 		}
 
 		SiteEntity siteEntity = schemaActions.partialInit(url);
-		if (siteEntity == null) return indexingResponse.indexPageFailed();
+		if (siteEntity == null) {
+			return indexingResponse.indexPageFailed();
+		}
 		SINGLE_TASK = new Thread(() -> startPartialIndexing(siteEntity), "0day-thread");
 		SINGLE_TASK.start();
 		return indexingResponse.successfully();
@@ -102,8 +108,9 @@ public class IndexingServiceImpl implements IndexingService {
 	public ResponseEntity<IndexingResponse> indexingStop() {
 		log.warn("Mapping /stopIndexing executed");
 
-		if (!isIndexingStarted())
+		if (!isIndexingStarted()) {
 			return indexingResponse.stopFailed();
+		}
 
 		setEnabled(false);
 		setIndexingStarted(false);
